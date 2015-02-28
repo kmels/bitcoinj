@@ -15,19 +15,19 @@ public class Context {
     private static final Logger log = LoggerFactory.getLogger(Context.class);
     protected TxConfidenceTable confidenceTable;
 
+    private static volatile Context lastHold;
+    private static final ThreadLocal<Context> contextHolder = new ThreadLocal<Context>();
+
     /**
      * Creates a new context object. For now, this will be done for you by the framework. Eventually you will be
      * expected to do this yourself in the same manner as fetching a NetworkParameters object (at the start of your app).
      */
     public Context() {
         confidenceTable = new TxConfidenceTable();
-        lastConstructed = this;
+        lastHold = this;
         // We may already have a context in our TLS slot. This can happen a lot during unit tests, so just ignore it.
-        slot.set(this);
+        contextHolder.set(lastHold);
     }
-
-    private static volatile Context lastConstructed;
-    private static final ThreadLocal<Context> slot = new ThreadLocal<Context>();
 
     /**
      * Returns the current context that is associated with the <b>calling thread</b>. BitcoinJ is an API that has thread
@@ -40,20 +40,20 @@ public class Context {
      * @throws java.lang.IllegalStateException if no context exists at all.
      */
     public static Context get() {
-        Context tls = slot.get();
-        if (tls == null) {
-            if (lastConstructed == null)
+        Context threadLocalSlot = contextHolder.get();
+        if (threadLocalSlot == null) {
+            if (lastHold == null)
                 throw new IllegalStateException("You must construct a Context object before using bitcoinj!");
-            slot.set(lastConstructed);
+            contextHolder.set(lastHold);
             log.error("Performing thread fixup: you are accessing bitcoinj via a thread that has not had any context set on it.");
             log.error("This error has been corrected for, but doing this makes your app less robust.");
             log.error("You should use Context.propagate() or a ContextPropagatingThreadFactory.");
             log.error("Please refer to the user guide for more information about this.");
             // TODO: Actually write the user guide section about this.
             // TODO: If the above TODO makes it past the 0.13 release, kick Mike and tell him he sucks.
-            return lastConstructed;
+            return lastHold;
         } else {
-            return tls;
+            return threadLocalSlot;
         }
     }
 
@@ -64,7 +64,7 @@ public class Context {
         } catch (IllegalStateException e) {
             log.warn("Implicitly creating context. This is a migration step and this message will eventually go away.");
             new Context();
-            return slot.get();
+            return contextHolder.get();
         }
     }
 
@@ -77,8 +77,8 @@ public class Context {
      * @throws java.lang.IllegalStateException if this thread already has a context
      */
     public static void propagate(Context context) {
-        checkState(slot.get() == null);
-        slot.set(checkNotNull(context));
+        checkState(contextHolder.get() == null);
+        contextHolder.set(checkNotNull(context));
     }
 
     /**
