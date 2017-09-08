@@ -181,6 +181,11 @@ public class BCCMainNetParams extends AbstractBitcoinNetParams {
     }
 
     @Override
+    public boolean getUseForkId() {
+        return true;
+    }
+
+    @Override
     public void checkDifficultyTransitions(final StoredBlock storedPrev, final Block nextBlock,
                                            final BlockStore blockStore) throws VerificationException, BlockStoreException {
         Block prev = storedPrev.getHeader();

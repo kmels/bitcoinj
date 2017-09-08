@@ -3924,7 +3924,7 @@ public class Wallet extends BaseTaggableObject
         try {
             checkArgument(!req.completed, "Given SendRequest has already been completed.");
             // set version
-            if(req.getUseForkId())
+            if(req.getUseForkId() || getParams().getUseForkId())
                 req.tx.setVersion(Transaction.CURRENT_VERSION);
 
             // Calculate the amount of value we need to import.

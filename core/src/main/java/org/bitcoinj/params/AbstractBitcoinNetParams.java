@@ -142,6 +142,11 @@ public abstract class AbstractBitcoinNetParams extends NetworkParameters {
     }
 
     @Override
+    public boolean getUseForkId() {
+        return false;
+    }
+
+    @Override
     public Coin getDefaultTxFee() {
         return Transaction.DEFAULT_TX_FEE;
     }

@@ -531,6 +531,8 @@ public abstract class NetworkParameters {
 
     public abstract Coin getDefaultTxFee();
 
+    public abstract boolean getUseForkId();
+
     public static enum ProtocolVersion {
         MINIMUM(70000),
         PONG(60001),

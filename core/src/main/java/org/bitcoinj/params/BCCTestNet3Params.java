@@ -120,6 +120,11 @@ public class BCCTestNet3Params extends AbstractBitcoinNetParams {
         return version == ProtocolVersion.CURRENT? ProtocolVersion.BCC_CURRENT.getBitcoinProtocolVersion() : version.getBitcoinProtocolVersion();
     }
 
+    @Override
+    public boolean getUseForkId() {
+        return true;
+    }
+
     // February 16th 2012
     private static final Date testnetDiffDate = new Date(1329264000000L);
 
