@@ -397,7 +397,7 @@ public class ECKeyTest {
             while (in.available() > 0 && (c = in.read()) != '"')
                 sig.append((char)c);
 
-            assertTrue(TransactionSignature.isEncodingCanonical(HEX.decode(sig.toString())));
+            assertTrue(TransactionSignature.isEncodingCanonical(HEX.decode(sig.toString()), false));
         }
         in.close();
     }
@@ -420,7 +420,7 @@ public class ECKeyTest {
 
             try {
                 final String sigStr = sig.toString();
-                assertFalse(TransactionSignature.isEncodingCanonical(HEX.decode(sigStr)));
+                assertFalse(TransactionSignature.isEncodingCanonical(HEX.decode(sigStr), false));
             } catch (IllegalArgumentException e) {
                 // Expected for non-hex strings in the JSON that we should ignore
             }
@@ -443,7 +443,7 @@ public class ECKeyTest {
         byte[] sigBytes = key.sign(Sha256Hash.wrap(hash)).encodeToDER();
         byte[] encodedSig = Arrays.copyOf(sigBytes, sigBytes.length + 1);
         encodedSig[sigBytes.length] = Transaction.SigHash.ALL.byteValue();
-        if (!TransactionSignature.isEncodingCanonical(encodedSig)) {
+        if (!TransactionSignature.isEncodingCanonical(encodedSig, false)) {
             log.error(Utils.HEX.encode(sigBytes));
             fail();
         }

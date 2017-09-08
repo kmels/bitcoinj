@@ -3246,7 +3246,7 @@ public class WalletTest extends TestWithWallet {
                 input.getScriptSig().correctlySpends(req.tx, i, t3.getOutput(0).getScriptPubKey());
             }
         }
-        assertTrue(TransactionSignature.isEncodingCanonical(dummySig));
+        assertTrue(TransactionSignature.isEncodingCanonical(dummySig, false));
     }
 
     @Test

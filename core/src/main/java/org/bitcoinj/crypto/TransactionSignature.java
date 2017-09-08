@@ -98,7 +98,7 @@ public class TransactionSignature extends ECKey.ECDSASignature {
      * and generally violates people's mental model of how Bitcoin should work, thus, non-canonical signatures are now
      * not relayed by default.
      */
-    public static boolean isEncodingCanonical(byte[] signature) {
+    public static boolean isEncodingCanonical(byte[] signature, boolean useForkId) {
         // See Bitcoin Core's IsCanonicalSignature, https://bitcointalk.org/index.php?topic=8392.msg127623#msg127623
         // A canonical signature exists of: <30> <total len> <02> <len R> <R> <02> <len S> <S> <hashtype>
         // Where R and S are not negative (their first byte has its highest bit not set), and not
@@ -107,7 +107,7 @@ public class TransactionSignature extends ECKey.ECDSASignature {
         if (signature.length < 9 || signature.length > 73)
             return false;
 
-        int hashType = (signature[signature.length-1] & 0xff) & ~(Transaction.SigHash.ANYONECANPAY.value| SigHash.FORKID.value); // mask the byte to prevent sign-extension hurting us
+        int hashType = (signature[signature.length-1] & 0xff) & ~(Transaction.SigHash.ANYONECANPAY.value | (useForkId? SigHash.FORKID.value : 0x00)); // mask the byte to prevent sign-extension hurting us
         if (hashType < Transaction.SigHash.ALL.value || hashType > Transaction.SigHash.SINGLE.value)
             return false;
 
@@ -184,8 +184,9 @@ public class TransactionSignature extends ECKey.ECDSASignature {
      */
     @Deprecated
     public static TransactionSignature decodeFromBitcoin(byte[] bytes,
-                                                         boolean requireCanonicalEncoding) throws VerificationException {
-        return decodeFromBitcoin(bytes, requireCanonicalEncoding, false);
+                                                         boolean requireCanonicalEncoding,
+                                                         boolean useForkId) throws VerificationException {
+        return decodeFromBitcoin(bytes, requireCanonicalEncoding, false, useForkId);
     }
 
     /**
@@ -199,9 +200,10 @@ public class TransactionSignature extends ECKey.ECDSASignature {
      */
     public static TransactionSignature decodeFromBitcoin(byte[] bytes,
                                                          boolean requireCanonicalEncoding,
-                                                         boolean requireCanonicalSValue) throws VerificationException {
+                                                         boolean requireCanonicalSValue,
+                                                         boolean useForkId) throws VerificationException {
         // Bitcoin encoding is DER signature + sighash byte.
-        if (requireCanonicalEncoding && !isEncodingCanonical(bytes))
+        if (requireCanonicalEncoding && !isEncodingCanonical(bytes, useForkId))
             throw new VerificationException("Signature encoding is not canonical.");
         ECKey.ECDSASignature sig;
         try {

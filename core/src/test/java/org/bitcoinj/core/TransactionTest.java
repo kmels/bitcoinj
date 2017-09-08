@@ -408,7 +408,7 @@ public class TransactionTest {
     @Test
     public void testHashForSignature()
     {
-        MainNetParams MAIN = new MainNetParams();
+        BCCMainNetParams MAIN = new BCCMainNetParams();
         String dumpedPrivateKey = "KyYyHLChvJKrM4kxCEpdmqR2usQoET2V1JbexZjaxV36wytPw7v1";
         DumpedPrivateKey dumpedPrivateKey1 = DumpedPrivateKey.fromBase58(MAIN, dumpedPrivateKey);
         ECKey key = dumpedPrivateKey1.getKey();

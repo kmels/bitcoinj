@@ -239,7 +239,6 @@ public abstract class PaymentChannelServerState {
         stateMachine.checkState(State.READY);
         checkNotNull(refundSize);
         checkNotNull(signatureBytes);
-        TransactionSignature signature = TransactionSignature.decodeFromBitcoin(signatureBytes, true);
         // We allow snapping to zero for the payment amount because it's treated specially later, but not less than
         // the dust level because that would prevent the transaction from being relayed/mined.
         final boolean fullyUsedUp = refundSize.equals(Coin.ZERO);
@@ -250,6 +249,7 @@ public abstract class PaymentChannelServerState {
             throw new ValueOutOfRangeException("Attempt to roll back payment on the channel.");
 
         SendRequest req = makeUnsignedChannelContract(newValueToMe);
+        TransactionSignature signature = TransactionSignature.decodeFromBitcoin(signatureBytes, true, req.tx.getParams().getUseForkId());
 
         if (!fullyUsedUp && refundSize.isLessThan(req.tx.getOutput(0).getMinNonDustValue()))
             throw new ValueOutOfRangeException("Attempt to refund negative value or value too small to be accepted by the network");

@@ -480,7 +480,7 @@ public class Script {
      * Returns the index where a signature by the key should be inserted.  Only applicable to
      * a P2SH scriptSig.
      */
-    public int getSigInsertionIndex(Sha256Hash hash, ECKey signingKey) {
+    public int getSigInsertionIndex(Sha256Hash hash, ECKey signingKey, boolean useForkId) {
         // Iterate over existing signatures, skipping the initial OP_0, the final redeem script
         // and any placeholder OP_0 sigs.
         List<ScriptChunk> existingChunks = chunks.subList(1, chunks.size() - 1);
@@ -495,7 +495,7 @@ public class Script {
                 // OP_0, skip
             } else {
                 checkNotNull(chunk.data);
-                if (myIndex < redeemScript.findSigInRedeem(chunk.data, hash))
+                if (myIndex < redeemScript.findSigInRedeem(chunk.data, hash, useForkId))
                     return sigCount;
                 sigCount++;
             }
@@ -531,10 +531,10 @@ public class Script {
         return result;
     }
 
-    private int findSigInRedeem(byte[] signatureBytes, Sha256Hash hash) {
+    private int findSigInRedeem(byte[] signatureBytes, Sha256Hash hash, boolean useForkId) {
         checkArgument(chunks.get(0).isOpCode()); // P2SH scriptSig
         int numKeys = Script.decodeFromOpN(chunks.get(chunks.size() - 2).opcode);
-        TransactionSignature signature = TransactionSignature.decodeFromBitcoin(signatureBytes, true);
+        TransactionSignature signature = TransactionSignature.decodeFromBitcoin(signatureBytes, true, useForkId);
         for (int i = 0 ; i < numKeys ; i++) {
             if (ECKey.fromPublicOnly(chunks.get(i + 1).data).verify(hash, signature)) {
                 return i;
@@ -1455,7 +1455,7 @@ public class Script {
         boolean sigValid = false;
         try {
             TransactionSignature sig  = TransactionSignature.decodeFromBitcoin(sigBytes, requireCanonical,
-                verifyFlags.contains(VerifyFlag.LOW_S));
+                verifyFlags.contains(VerifyFlag.LOW_S), txContainingThis.getParams().getUseForkId());
 
             // TODO: Should check hash type is known
             Sha256Hash hash = sig.useForkId() ?
@@ -1533,7 +1533,7 @@ public class Script {
             // We could reasonably move this out of the loop, but because signature verification is significantly
             // more expensive than hashing, its not a big deal.
             try {
-                TransactionSignature sig = TransactionSignature.decodeFromBitcoin(sigs.getFirst(), requireCanonical);
+                TransactionSignature sig = TransactionSignature.decodeFromBitcoin(sigs.getFirst(), requireCanonical, txContainingThis.getParams().getUseForkId());
                 Sha256Hash hash = sig.useForkId() ?
                         txContainingThis.hashForSignatureWitness(index, connectedScript, value, sig.sigHashMode(), sig.anyoneCanPay()):
                         txContainingThis.hashForSignature(index, connectedScript, (byte) sig.sighashFlags);
