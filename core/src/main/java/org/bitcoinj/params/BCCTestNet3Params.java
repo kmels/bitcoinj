@@ -19,10 +19,14 @@ package org.bitcoinj.params;
 
 import java.math.BigInteger;
 import java.util.Date;
+import java.util.concurrent.TimeUnit;
 
+import com.google.common.base.Stopwatch;
 import org.bitcoinj.core.*;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static com.google.common.base.Preconditions.checkState;
 
@@ -31,6 +35,9 @@ import static com.google.common.base.Preconditions.checkState;
  * and testing of applications and new Bitcoin versions.
  */
 public class BCCTestNet3Params extends AbstractBitcoinNetParams {
+
+    private static final Logger log = LoggerFactory.getLogger(BCCTestNet3Params.class);
+
     public BCCTestNet3Params() {
         super();
         id = ID_TESTNET;
@@ -144,7 +151,114 @@ public class BCCTestNet3Params extends AbstractBitcoinNetParams {
                             Long.toHexString(nextBlock.getDifficultyTarget()));
             }
         } else {
-            super.checkDifficultyTransitions(storedPrev, nextBlock, blockStore);
+            Block prev = storedPrev.getHeader();
+
+            // Is this supposed to be a difficulty transition point?
+            if (!isDifficultyTransitionPoint(storedPrev)) {
+
+                if(storedPrev.getHeader().getDifficultyTargetAsInteger().equals(getMaxTarget()))
+                {
+                    // No ... so check the difficulty didn't actually change.
+                    if (nextBlock.getDifficultyTarget() != prev.getDifficultyTarget())
+                        throw new VerificationException("Unexpected change in difficulty at height " + storedPrev.getHeight() +
+                                ": " + Long.toHexString(nextBlock.getDifficultyTarget()) + " vs " +
+                                Long.toHexString(prev.getDifficultyTarget()));
+                    return;
+                }
+                // If producing the last 6 block took less than 12h, we keep the same
+                // difficulty.
+                StoredBlock cursor = blockStore.get(prev.getHash());
+                for (int i = 0; i < 6; i++) {
+                    if (cursor == null) {
+                        return;
+                        // This should never happen. If it does, it means we are following an incorrect or busted chain.
+                        //throw new VerificationException(
+                        //      "We did not find a way back to the genesis block.");
+                    }
+                    cursor = blockStore.get(cursor.getHeader().getPrevBlockHash());
+                }
+                long mpt6blocks = 0;
+                try {
+                    mpt6blocks = AbstractBlockChain.getMedianTimestampOfRecentBlocks(storedPrev, blockStore) - AbstractBlockChain.getMedianTimestampOfRecentBlocks(cursor, blockStore);
+                } catch (NullPointerException x)
+                {
+                    return;
+                }
+
+                // If producing the last 6 block took more than 12h, increase the difficulty
+                // target by 1/4 (which reduces the difficulty by 20%). This ensure the
+                // chain do not get stuck in case we lose hashrate abruptly.
+                if(mpt6blocks >= 12 * 3600)
+                {
+                    BigInteger nPow = storedPrev.getHeader().getDifficultyTargetAsInteger();
+                    nPow = nPow.add(nPow.shiftRight(2));
+
+                    if(nPow.compareTo(getMaxTarget()) > 0)
+                        nPow = getMaxTarget();
+
+                    if (nextBlock.getDifficultyTarget() != Utils.encodeCompactBits(nPow))
+                        throw new VerificationException("Unexpected change in difficulty [6 blocks >12 hours] at height " + storedPrev.getHeight() +
+                                ": " + Long.toHexString(nextBlock.getDifficultyTarget()) + " vs " +
+                                Utils.encodeCompactBits(nPow));
+                    return;
+                }
+
+
+
+
+                // No ... so check the difficulty didn't actually change.
+                if (nextBlock.getDifficultyTarget() != prev.getDifficultyTarget())
+                    throw new VerificationException("Unexpected change in difficulty at height " + storedPrev.getHeight() +
+                            ": " + Long.toHexString(nextBlock.getDifficultyTarget()) + " vs " +
+                            Long.toHexString(prev.getDifficultyTarget()));
+                return;
+            }
+
+            // We need to find a block far back in the chain. It's OK that this is expensive because it only occurs every
+            // two weeks after the initial block chain download.
+            final Stopwatch watch = Stopwatch.createStarted();
+            StoredBlock cursor = blockStore.get(prev.getHash());
+            for (int i = 0; i < this.getInterval() - 1; i++) {
+                if (cursor == null) {
+                    // This should never happen. If it does, it means we are following an incorrect or busted chain.
+                    throw new VerificationException(
+                            "Difficulty transition point but we did not find a way back to the genesis block.");
+                }
+                cursor = blockStore.get(cursor.getHeader().getPrevBlockHash());
+            }
+            watch.stop();
+            if (watch.elapsed(TimeUnit.MILLISECONDS) > 50)
+                log.info("Difficulty transition traversal took {}", watch);
+
+            Block blockIntervalAgo = cursor.getHeader();
+            int timespan = (int) (prev.getTimeSeconds() - blockIntervalAgo.getTimeSeconds());
+            // Limit the adjustment step.
+            final int targetTimespan = this.getTargetTimespan();
+            if (timespan < targetTimespan / 4)
+                timespan = targetTimespan / 4;
+            if (timespan > targetTimespan * 4)
+                timespan = targetTimespan * 4;
+
+            BigInteger newTarget = Utils.decodeCompactBits(prev.getDifficultyTarget());
+            newTarget = newTarget.multiply(BigInteger.valueOf(timespan));
+            newTarget = newTarget.divide(BigInteger.valueOf(targetTimespan));
+
+            if (newTarget.compareTo(this.getMaxTarget()) > 0) {
+                log.info("Difficulty hit proof of work limit: {}", newTarget.toString(16));
+                newTarget = this.getMaxTarget();
+            }
+
+            int accuracyBytes = (int) (nextBlock.getDifficultyTarget() >>> 24) - 3;
+            long receivedTargetCompact = nextBlock.getDifficultyTarget();
+
+            // The calculated difficulty is to a higher precision than received, so reduce here.
+            BigInteger mask = BigInteger.valueOf(0xFFFFFFL).shiftLeft(accuracyBytes * 8);
+            newTarget = newTarget.and(mask);
+            long newTargetCompact = Utils.encodeCompactBits(newTarget);
+
+            if (newTargetCompact != receivedTargetCompact)
+                throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
+                        Long.toHexString(newTargetCompact) + " vs " + Long.toHexString(receivedTargetCompact));
         }
     }
 }

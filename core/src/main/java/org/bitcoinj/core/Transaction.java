@@ -943,6 +943,7 @@ public class Transaction extends ChildMessage {
         Sha256Hash hash = hashForSignature(inputIndex, redeemScript, hashType, anyoneCanPay);
         return new TransactionSignature(key.sign(hash), hashType, anyoneCanPay);
     }
+
     public TransactionSignature calculateWitnessSignature(
             int inputIndex,
             ECKey key,
@@ -972,6 +973,7 @@ public class Transaction extends ChildMessage {
         Sha256Hash hash = hashForSignature(inputIndex, redeemScript.getProgram(), hashType, anyoneCanPay);
         return new TransactionSignature(key.sign(hash), hashType, anyoneCanPay);
     }
+
     public TransactionSignature calculateWitnessSignature(
             int inputIndex,
             ECKey key,
