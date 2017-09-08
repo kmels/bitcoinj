@@ -16,6 +16,7 @@
 
 package org.bitcoinj.params;
 
+import org.bitcoinj.core.Block;
 import org.bitcoinj.core.Utils;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -69,5 +70,15 @@ public class TestNet2Params extends AbstractBitcoinNetParams {
     @Override
     public String getPaymentProtocolId() {
         return null;
+    }
+
+    @Override
+    public int getMaxBlockSize() {
+        return Block.MAX_BLOCK_SIZE;
+    }
+
+    @Override
+    public int getMaxBlockSigops() {
+        return Block.MAX_BLOCK_SIGOPS;
     }
 }

@@ -57,6 +57,7 @@ public class Context {
         log.info("Creating bitcoinj {} context.", VersionMessage.BITCOINJ_VERSION);
         this.confidenceTable = new TxConfidenceTable();
         this.params = params;
+        this.feePerKb = params.getDefaultTxFee();
         lastConstructed = this;
         // We may already have a context in our TLS slot. This can happen a lot during unit tests, so just ignore it.
         slot.set(this);

@@ -55,7 +55,7 @@ public abstract class AbstractBitcoinNetParams extends NetworkParameters {
 
     @Override
     public void checkDifficultyTransitions(final StoredBlock storedPrev, final Block nextBlock,
-    	final BlockStore blockStore, AbstractBlockChain blockChain) throws VerificationException, BlockStoreException {
+       final BlockStore blockStore) throws VerificationException, BlockStoreException {
         Block prev = storedPrev.getHeader();
 
         // Is this supposed to be a difficulty transition point?
@@ -84,7 +84,7 @@ public abstract class AbstractBitcoinNetParams extends NetworkParameters {
             }
             long mpt6blocks = 0;
             try {
-                mpt6blocks = blockChain.getMedianTimestampOfRecentBlocks(storedPrev, blockStore) - blockChain.getMedianTimestampOfRecentBlocks(cursor, blockStore);
+                mpt6blocks = AbstractBlockChain.getMedianTimestampOfRecentBlocks(storedPrev, blockStore) - AbstractBlockChain.getMedianTimestampOfRecentBlocks(cursor, blockStore);
             } catch (NullPointerException x)
             {
                 return;
@@ -174,6 +174,16 @@ public abstract class AbstractBitcoinNetParams extends NetworkParameters {
     @Override
     public Coin getMinNonDustOutput() {
         return Transaction.MIN_NONDUST_OUTPUT;
+    }
+
+    @Override
+    public Coin getReferenceDefaultMinTxFee() {
+        return Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
+    }
+
+    @Override
+    public Coin getDefaultTxFee() {
+        return Transaction.DEFAULT_TX_FEE;
     }
 
     @Override

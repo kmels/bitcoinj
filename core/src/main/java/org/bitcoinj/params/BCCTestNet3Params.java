@@ -30,8 +30,8 @@ import static com.google.common.base.Preconditions.checkState;
  * Parameters for the testnet, a separate public instance of Bitcoin that has relaxed rules suitable for development
  * and testing of applications and new Bitcoin versions.
  */
-public class TestNet3Params extends AbstractBitcoinNetParams {
-    public TestNet3Params() {
+public class BCCTestNet3Params extends AbstractBitcoinNetParams {
+    public BCCTestNet3Params() {
         super();
         id = ID_TESTNET;
         // Genesis hash is 000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943
@@ -54,7 +54,7 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         alertSigningKey = Utils.HEX.decode("04302390343f91cc401d56d68b123028bf52e5fca1939df127f63c6467cdf9c8e2c14b61104cf817d0b780da337893ecc4aaff1309e536162dabbdb45200ca2b0a");
 
         dnsSeeds = new String[] {
-               "testnet-seed.bitcoinabc.org",
+                "testnet-seed.bitcoinabc.org",
                 "testnet-seed-abc.bitcoinforks.org",
                 "testnet-seed.bitcoinunlimited.info",
                 "testnet-seed.bitprim.org",
@@ -70,10 +70,10 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         majorityWindow = TestNet2Params.TESTNET_MAJORITY_WINDOW;
     }
 
-    private static TestNet3Params instance;
-    public static synchronized TestNet3Params get() {
+    private static BCCTestNet3Params instance;
+    public static synchronized BCCTestNet3Params get() {
         if (instance == null) {
-            instance = new TestNet3Params();
+            instance = new BCCTestNet3Params();
         }
         return instance;
     }
@@ -90,7 +90,22 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
 
     @Override
     public int getMaxBlockSigops() {
-        return Block.MAX_BLOCK_SIGOPS;
+        return Block.BCC_MAX_BLOCK_SIGOPS;
+    }
+
+    @Override
+    public Coin getReferenceDefaultMinTxFee() {
+        return Transaction.BCC_REFERENCE_DEFAULT_MIN_TX_FEE;
+    }
+
+    @Override
+    public Coin getDefaultTxFee() {
+        return Transaction.BCC_DEFAULT_TX_FEE;
+    }
+
+    @Override
+    public int getProtocolVersionNum(final ProtocolVersion version) {
+        return version == ProtocolVersion.CURRENT? ProtocolVersion.BCC_CURRENT.getBitcoinProtocolVersion() : version.getBitcoinProtocolVersion();
     }
 
     // February 16th 2012
@@ -109,19 +124,19 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
             // There is an integer underflow bug in bitcoin-qt that means mindiff blocks are accepted when time
             // goes backwards.
             if (timeDelta >= 0 && timeDelta <= NetworkParameters.TARGET_SPACING * 2) {
-        	// Walk backwards until we find a block that doesn't have the easiest proof of work, then check
-        	// that difficulty is equal to that one.
-        	StoredBlock cursor = storedPrev;
-        	while (!cursor.getHeader().equals(getGenesisBlock()) &&
-                       cursor.getHeight() % getInterval() != 0 &&
-                       cursor.getHeader().getDifficultyTargetAsInteger().equals(getMaxTarget()))
+                // Walk backwards until we find a block that doesn't have the easiest proof of work, then check
+                // that difficulty is equal to that one.
+                StoredBlock cursor = storedPrev;
+                while (!cursor.getHeader().equals(getGenesisBlock()) &&
+                        cursor.getHeight() % getInterval() != 0 &&
+                        cursor.getHeader().getDifficultyTargetAsInteger().equals(getMaxTarget()))
                     cursor = cursor.getPrev(blockStore);
-        	BigInteger cursorTarget = cursor.getHeader().getDifficultyTargetAsInteger();
-        	BigInteger newTarget = nextBlock.getDifficultyTargetAsInteger();
-        	if (!cursorTarget.equals(newTarget))
+                BigInteger cursorTarget = cursor.getHeader().getDifficultyTargetAsInteger();
+                BigInteger newTarget = nextBlock.getDifficultyTargetAsInteger();
+                if (!cursorTarget.equals(newTarget))
                     throw new VerificationException("Testnet block transition that is not allowed: " +
-                	Long.toHexString(cursor.getHeader().getDifficultyTarget()) + " vs " +
-                	Long.toHexString(nextBlock.getDifficultyTarget()));
+                            Long.toHexString(cursor.getHeader().getDifficultyTarget()) + " vs " +
+                            Long.toHexString(nextBlock.getDifficultyTarget()));
             }
         } else {
             super.checkDifficultyTransitions(storedPrev, nextBlock, blockStore);

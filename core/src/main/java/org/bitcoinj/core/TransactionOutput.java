@@ -244,7 +244,7 @@ public class TransactionOutput extends ChildMessage {
      * {@link Transaction#MIN_NONDUST_OUTPUT}.
      */
     public Coin getMinNonDustValue() {
-        return getMinNonDustValue(Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.multiply(3));
+        return getMinNonDustValue(getParams().getReferenceDefaultMinTxFee().multiply(3));
     }
 
     /**

@@ -18,21 +18,18 @@
 package org.bitcoinj.params;
 
 import org.bitcoinj.core.*;
-import org.bitcoinj.net.discovery.*;
-
-import java.net.*;
 
 import static com.google.common.base.Preconditions.*;
 
 /**
  * Parameters for the main production network on which people trade goods and services.
  */
-public class MainNetParams extends AbstractBitcoinNetParams {
+public class BCCMainNetParams extends AbstractBitcoinNetParams {
     public static final int MAINNET_MAJORITY_WINDOW = 1000;
     public static final int MAINNET_MAJORITY_REJECT_BLOCK_OUTDATED = 950;
     public static final int MAINNET_MAJORITY_ENFORCE_BLOCK_UPGRADE = 750;
 
-    public MainNetParams() {
+    public BCCMainNetParams() {
         super();
         interval = INTERVAL;
         targetTimespan = TARGET_TIMESPAN;
@@ -71,22 +68,20 @@ public class MainNetParams extends AbstractBitcoinNetParams {
         checkpoints.put(200000, Sha256Hash.wrap("000000000000034a7dedef4a161fa058a2d67a173a90155f3a2fe6fc132e0ebf"));
 
         dnsSeeds = new String[] {
-                "seed.bitcoin.sipa.be",         // Pieter Wuille
-                "dnsseed.bluematt.me",          // Matt Corallo
-                "dnsseed.bitcoin.dashjr.org",   // Luke Dashjr
-                "seed.bitcoinstats.com",        // Chris Decker
-                "seed.bitnodes.io",             // Addy Yeow
-                "bitseed.xf2.org",              // Jeff Garzik
-                "bitcoin.bloqseeds.net",        // Bloq
-                "seed.bitcoin.jonasschnelli.ch" // Jonas Schnelli
+                "seed.bitcoinabc.org",
+                "seed-abc.bitcoinforks.org",
+                "btccash-seeder.bitcoinunlimited.info",
+                "seed.bitprim.org",
+                "seed.deadalnix.me",
+                "seeder.criptolayer.net"
         };
-        httpSeeds = new HttpDiscovery.Details[] {
+        httpSeeds = null; /*new HttpDiscovery.Details[] {
                 // Andreas Schildbach
                 new HttpDiscovery.Details(
                         ECKey.fromPublicOnly(Utils.HEX.decode("0238746c59d46d5408bf8b1d0af5740fe1a6e1703fcb56b2953f0b965c740d256f")),
                         URI.create("http://httpseed.bitcoin.schildbach.de/peers")
                 )
-        };
+        };*/
 
         addrSeeds = new int[] {
                 0x1ddb1032, 0x6242ce40, 0x52d6a445, 0x2dd7a445, 0x8a53cd47, 0x73263750, 0xda23c257, 0xecd4ed57,
@@ -132,10 +127,10 @@ public class MainNetParams extends AbstractBitcoinNetParams {
         };
     }
 
-    private static MainNetParams instance;
-    public static synchronized MainNetParams get() {
+    private static BCCMainNetParams instance;
+    public static synchronized BCCMainNetParams get() {
         if (instance == null) {
-            instance = new MainNetParams();
+            instance = new BCCMainNetParams();
         }
         return instance;
     }
@@ -147,11 +142,26 @@ public class MainNetParams extends AbstractBitcoinNetParams {
 
     @Override
     public int getMaxBlockSize() {
-        return Block.MAX_BLOCK_SIZE;
+        return Block.BCC_MAX_BLOCK_SIZE;
     }
 
     @Override
     public int getMaxBlockSigops() {
-        return Block.MAX_BLOCK_SIGOPS;
+        return Block.BCC_MAX_BLOCK_SIGOPS;
+    }
+
+    @Override
+    public Coin getReferenceDefaultMinTxFee() {
+        return Transaction.BCC_REFERENCE_DEFAULT_MIN_TX_FEE;
+    }
+
+    @Override
+    public Coin getDefaultTxFee() {
+        return Transaction.BCC_DEFAULT_TX_FEE;
+    }
+
+    @Override
+    public int getProtocolVersionNum(final ProtocolVersion version) {
+        return version == ProtocolVersion.CURRENT? ProtocolVersion.BCC_CURRENT.getBitcoinProtocolVersion() : version.getBitcoinProtocolVersion();
     }
 }

@@ -4090,8 +4090,8 @@ public class Wallet extends BaseTaggableObject
             boolean ensureMinRequiredFee) {
         final int size = tx.unsafeBitcoinSerialize().length + estimateBytesForSigning(coinSelection);
         Coin fee = feePerKb.multiply(size).divide(1000);
-        if (ensureMinRequiredFee && fee.compareTo(Transaction.REFERENCE_DEFAULT_MIN_TX_FEE) < 0)
-            fee = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
+        if (ensureMinRequiredFee && fee.compareTo(getParams().getReferenceDefaultMinTxFee()) < 0)
+            fee = getParams().getReferenceDefaultMinTxFee();
         TransactionOutput output = tx.getOutput(0);
         output.setValue(output.getValue().subtract(fee));
         return !output.isDust();
@@ -4840,8 +4840,8 @@ public class Wallet extends BaseTaggableObject
             resetTxInputs(req, originalInputs);
 
             Coin fees = req.feePerKb.multiply(lastCalculatedSize).divide(1000);
-            if (needAtLeastReferenceFee && fees.compareTo(Transaction.REFERENCE_DEFAULT_MIN_TX_FEE) < 0)
-                fees = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
+            if (needAtLeastReferenceFee && fees.compareTo(getParams().getReferenceDefaultMinTxFee()) < 0)
+                fees = getParams().getReferenceDefaultMinTxFee();
 
             valueNeeded = value.add(fees);
             if (additionalValueForNextCategory != null)
@@ -4874,12 +4874,12 @@ public class Wallet extends BaseTaggableObject
 
             // If change is < 0.01 BTC, we will need to have at least minfee to be accepted by the network
             if (req.ensureMinRequiredFee && !change.equals(Coin.ZERO) &&
-                    change.compareTo(Coin.CENT) < 0 && fees.compareTo(Transaction.REFERENCE_DEFAULT_MIN_TX_FEE) < 0) {
+                    change.compareTo(Coin.CENT) < 0 && fees.compareTo(getParams().getReferenceDefaultMinTxFee()) < 0) {
                 // This solution may fit into category 2, but it may also be category 3, we'll check that later
                 eitherCategory2Or3 = true;
                 additionalValueForNextCategory = Coin.CENT;
                 // If the change is smaller than the fee we want to add, this will be negative
-                change = change.subtract(Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.subtract(fees));
+                change = change.subtract(getParams().getReferenceDefaultMinTxFee().subtract(fees));
             }
 
             int size = 0;
@@ -4896,7 +4896,7 @@ public class Wallet extends BaseTaggableObject
                 if (req.ensureMinRequiredFee && changeOutput.isDust()) {
                     // This solution definitely fits in category 3
                     isCategory3 = true;
-                    additionalValueForNextCategory = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.add(
+                    additionalValueForNextCategory = getParams().getReferenceDefaultMinTxFee().add(
                                                      changeOutput.getMinNonDustValue().add(Coin.SATOSHI));
                 } else {
                     size += changeOutput.unsafeBitcoinSerialize().length + VarInt.sizeOf(req.tx.getOutputs().size()) - VarInt.sizeOf(req.tx.getOutputs().size() - 1);
@@ -4908,7 +4908,7 @@ public class Wallet extends BaseTaggableObject
                 if (eitherCategory2Or3) {
                     // This solution definitely fits in category 3 (we threw away change because it was smaller than MIN_TX_FEE)
                     isCategory3 = true;
-                    additionalValueForNextCategory = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.add(Coin.SATOSHI);
+                    additionalValueForNextCategory = getParams().getReferenceDefaultMinTxFee().add(Coin.SATOSHI);
                 }
             }
 
@@ -5254,7 +5254,7 @@ public class Wallet extends BaseTaggableObject
             }
             // When not signing, don't waste addresses.
             rekeyTx.addOutput(toMove.valueGathered, sign ? freshReceiveAddress() : currentReceiveAddress());
-            if (!adjustOutputDownwardsForFee(rekeyTx, toMove, Transaction.DEFAULT_TX_FEE, true)) {
+            if (!adjustOutputDownwardsForFee(rekeyTx, toMove, getParams().getDefaultTxFee(), true)) {
                 log.error("Failed to adjust rekey tx for fees.");
                 return null;
             }
