@@ -144,14 +144,4 @@ public class MainNetParams extends AbstractBitcoinNetParams {
     public String getPaymentProtocolId() {
         return PAYMENT_PROTOCOL_ID_MAINNET;
     }
-
-    @Override
-    public int getMaxBlockSize() {
-        return Block.MAX_BLOCK_SIZE;
-    }
-
-    @Override
-    public int getMaxBlockSigops() {
-        return Block.MAX_BLOCK_SIGOPS;
-    }
 }

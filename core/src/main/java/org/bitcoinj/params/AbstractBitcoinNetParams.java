@@ -132,6 +132,16 @@ public abstract class AbstractBitcoinNetParams extends NetworkParameters {
     }
 
     @Override
+    public int getMaxBlockSize() {
+        return Block.MAX_BLOCK_SIZE;
+    }
+
+    @Override
+    public int getMaxBlockSigops() {
+        return Block.MAX_BLOCK_SIGOPS;
+    }
+
+    @Override
     public Coin getDefaultTxFee() {
         return Transaction.DEFAULT_TX_FEE;
     }

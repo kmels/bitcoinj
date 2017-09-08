@@ -83,16 +83,6 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         return PAYMENT_PROTOCOL_ID_TESTNET;
     }
 
-    @Override
-    public int getMaxBlockSize() {
-        return Block.MAX_BLOCK_SIZE;
-    }
-
-    @Override
-    public int getMaxBlockSigops() {
-        return Block.MAX_BLOCK_SIGOPS;
-    }
-
     // February 16th 2012
     private static final Date testnetDiffDate = new Date(1329264000000L);
 
