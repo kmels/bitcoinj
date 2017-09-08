@@ -159,7 +159,7 @@ public class PaymentChannelV1ClientState extends PaymentChannelClientState {
         if (Context.get().isEnsureMinRequiredFee()) {
             // Must pay min fee.
             final Coin valueAfterFee = totalValue.subtract(params.getReferenceDefaultMinTxFee());
-            if (Transaction.MIN_NONDUST_OUTPUT.compareTo(valueAfterFee) > 0)
+            if (params.getMinNonDustOutput().compareTo(valueAfterFee) > 0)
                 throw new ValueOutOfRangeException("totalValue too small to use");
             refundTx.addOutput(valueAfterFee, myKey.toAddress(params));
             refundFees = multisigFee.add(params.getReferenceDefaultMinTxFee());

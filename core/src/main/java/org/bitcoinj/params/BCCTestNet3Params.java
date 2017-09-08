@@ -104,6 +104,11 @@ public class BCCTestNet3Params extends AbstractBitcoinNetParams {
     }
 
     @Override
+    public Coin getMinNonDustOutput() {
+        return Transaction.BCC_MIN_NONDUST_OUTPUT;
+    }
+
+    @Override
     public int getProtocolVersionNum(final ProtocolVersion version) {
         return version == ProtocolVersion.CURRENT? ProtocolVersion.BCC_CURRENT.getBitcoinProtocolVersion() : version.getBitcoinProtocolVersion();
     }
