@@ -4058,7 +4058,10 @@ public class Wallet extends BaseTaggableObject
                     // We assume if its already signed, its hopefully got a SIGHASH type that will not invalidate when
                     // we sign missing pieces (to check this would require either assuming any signatures are signing
                     // standard output types or a way to get processed signatures out of script execution)
-                    txIn.getScriptSig().correctlySpends(tx, i, txIn.getConnectedOutput().getScriptPubKey());
+                    if (getParams().getUseForkId())
+                        txIn.getScriptSig().correctlySpends(tx, i, txIn.getConnectedOutput().getScriptPubKey(), txIn.getConnectedOutput().getValue());
+                    else
+                        txIn.getScriptSig().correctlySpends(tx, i, txIn.getConnectedOutput().getScriptPubKey());
                     log.warn("Input {} already correctly spends output, assuming SIGHASH type used will be safe and skipping signing.", i);
                     continue;
                 } catch (ScriptException e) {
@@ -4072,7 +4075,9 @@ public class Wallet extends BaseTaggableObject
                 txIn.setScriptSig(scriptPubKey.createEmptyInputScript(redeemData.keys.get(0), redeemData.redeemScript));
             }
 
-            TransactionSigner.ProposedTransaction proposal = new TransactionSigner.ProposedTransaction(tx, req.getUseForkId());
+            TransactionSigner.ProposedTransaction proposal = getParams().getUseForkId() ?
+                    new TransactionSigner.ProposedTransaction(tx) :
+                    new TransactionSigner.ProposedTransaction(tx, true);
             for (TransactionSigner signer : signers) {
                 if (!signer.signInputs(proposal, maybeDecryptingKeyBag))
                     log.info("{} returned false for the tx", signer.getClass().getName());

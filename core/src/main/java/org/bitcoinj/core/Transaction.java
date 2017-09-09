@@ -813,7 +813,7 @@ public class Transaction extends ChildMessage {
         addInput(input);
         Sha256Hash hash = hashForSignature(inputs.size() - 1, scriptPubKey, sigHash, anyoneCanPay);
         ECKey.ECDSASignature ecSig = sigKey.sign(hash);
-        TransactionSignature txSig = new TransactionSignature(ecSig, sigHash, anyoneCanPay, false);
+        TransactionSignature txSig = new TransactionSignature(ecSig, sigHash, anyoneCanPay);
         if (scriptPubKey.isSentToRawPubKey())
             input.setScriptSig(ScriptBuilder.createInputScript(txSig));
         else if (scriptPubKey.isSentToAddress())
