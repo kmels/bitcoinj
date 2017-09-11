@@ -92,7 +92,7 @@ public class BCCTestNet3Params extends AbstractBitcoinNetParams {
 
     @Override
     public int getMaxBlockSize() {
-        return Block.MAX_BLOCK_SIZE;
+        return Block.BCC_MAX_BLOCK_SIZE;
     }
 
     @Override
