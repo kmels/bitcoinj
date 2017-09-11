@@ -4076,8 +4076,8 @@ public class Wallet extends BaseTaggableObject
             }
 
             TransactionSigner.ProposedTransaction proposal = getParams().getUseForkId() ?
-                    new TransactionSigner.ProposedTransaction(tx) :
-                    new TransactionSigner.ProposedTransaction(tx, true);
+                    new TransactionSigner.ProposedTransaction(tx, true) :
+                    new TransactionSigner.ProposedTransaction(tx);
             for (TransactionSigner signer : signers) {
                 if (!signer.signInputs(proposal, maybeDecryptingKeyBag))
                     log.info("{} returned false for the tx", signer.getClass().getName());
