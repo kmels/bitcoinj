@@ -57,7 +57,8 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
                 "testnet-seed.bitcoin.jonasschnelli.ch", // Jonas Schnelli
                 "testnet-seed.bluematt.me",              // Matt Corallo
                 "testnet-seed.bitcoin.petertodd.org",    // Peter Todd
-                "testnet-seed.bitcoin.schildbach.de"    // Andreas
+                "testnet-seed.bitcoin.schildbach.de",    // Andreas
+                "bitcoin-testnet.bloqseeds.net"         // Bloq
         };
         addrSeeds = null;
         bip32HeaderPub = 0x043587CF;
