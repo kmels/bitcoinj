@@ -206,7 +206,7 @@ public class BCCMainNetParams extends AbstractBitcoinNetParams {
             StoredBlock blockLast = getSuitableBlock(storedPrev, blockStore); // Let B_last be chosen[2] from [B_n-2, B_n-1, B_n].
             StoredBlock block_m144 = getBlockMinus144(storedPrev, blockStore);
             if (block_m144 == null) return;
-            StoredBlock blockFirst = getSuitableBlock(block_m144, blockStore);
+            StoredBlock blockFirst = getSuitableBlock(block_m144, blockStore); // Let B_first be chosen[2] from [B_n-146, B_n-145, B_n-144].
 
             if (blockLast == null || blockFirst == null || blockLast.getHeight() > blockFirst.getHeight()) return;
 
@@ -215,9 +215,9 @@ public class BCCMainNetParams extends AbstractBitcoinNetParams {
             between B_last and B_first within the range [72 * 600, 288 * 600].
             Values outside should be treated as their respective limit
              */
-            int timespan = (int) (blockLast.getHeader().getTimeSeconds() - blockFirst.getHeader().getTimeSeconds());
-            int lowerLimit = 72 * 600;
-            int upperLimit = 288 * 600;
+            long timespan = blockLast.getHeader().getTimeSeconds() - blockFirst.getHeader().getTimeSeconds();
+            long lowerLimit = 72 * 600;
+            long upperLimit = 288 * 600;
             if (timespan < lowerLimit) {
                 timespan = lowerLimit;
             }
@@ -228,22 +228,26 @@ public class BCCMainNetParams extends AbstractBitcoinNetParams {
             /*
             Let the Work Performed (W) be equal to the difference in chainwork[3] between B_last and B_first.
              */
-            int workPerformed = blockLast.getChainWork().intValue() - blockFirst.getChainWork().intValue();
+            BigInteger workPerformed = blockLast.getChainWork().subtract(blockFirst.getChainWork());
 
             /*
             Let the Projected Work (PW) be equal to (W * 600) / TS.
              */
-            int projectedWork = (workPerformed * 600) / timespan;
+            BigInteger projectedWork = workPerformed.multiply(BigInteger.valueOf(600)).divide(BigInteger.valueOf(timespan));
 
             /*
             Let Target (T) be equal to the (2^256 - PW) / PW.
             This is calculated by taking the two’s complement of PW (-PW) and dividing it by PW (-PW / PW).
              */
-            long target = ((long) Math.pow(2, 256) - projectedWork) / projectedWork;
+            BigInteger target = projectedWork.negate().divide(projectedWork);
 
-            if (target != nextBlock.getDifficultyTarget()) {
+            BigInteger lesser = new BigInteger("00000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16);
+
+            target = target.min(lesser);
+
+            if (target.compareTo(BigInteger.valueOf(nextBlock.getDifficultyTarget())) != 0) {
                 throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
-                        Long.toHexString(target) + " vs " + Long.toHexString(nextBlock.getDifficultyTarget()));
+                        Long.toHexString(target.longValue()) + " vs " + Long.toHexString(nextBlock.getDifficultyTarget()));
             }
 
             return;
