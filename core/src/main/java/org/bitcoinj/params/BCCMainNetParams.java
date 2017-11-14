@@ -25,6 +25,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigInteger;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.*;
@@ -188,6 +190,65 @@ public class BCCMainNetParams extends AbstractBitcoinNetParams {
     @Override
     public void checkDifficultyTransitions(final StoredBlock storedPrev, final Block nextBlock,
                                            final BlockStore blockStore) throws VerificationException, BlockStoreException {
+
+
+        /*
+        To calculate the difficulty of a given block (B_n+1),
+        with an MTP-11[1] greater than or equal to the unix timestamp 1510600000, perform the following steps:
+         */
+
+        // The MTP-11 of a block is defined as the median timestamp of the last 11 blocks prior to, and including, a specific block
+
+        long mtp11 = AbstractBlockChain.getMedianTimestampOfRecentBlocks(storedPrev, nextBlock, blockStore);
+
+        if (mtp11 >= 1510600000) {
+
+            StoredBlock blockLast = getSuitableBlock(storedPrev, blockStore); // Let B_last be chosen[2] from [B_n-2, B_n-1, B_n].
+            StoredBlock block_m144 = getBlockMinus144(storedPrev, blockStore);
+            if (block_m144 == null) return;
+            StoredBlock blockFirst = getSuitableBlock(block_m144, blockStore);
+
+            if (blockLast == null || blockFirst == null || blockLast.getHeight() > blockFirst.getHeight()) return;
+
+            /*
+            Let the Timespan (TS) be equal to the difference in UNIX timestamps (in seconds)
+            between B_last and B_first within the range [72 * 600, 288 * 600].
+            Values outside should be treated as their respective limit
+             */
+            int timespan = (int) (blockLast.getHeader().getTimeSeconds() - blockFirst.getHeader().getTimeSeconds());
+            int lowerLimit = 72 * 600;
+            int upperLimit = 288 * 600;
+            if (timespan < lowerLimit) {
+                timespan = lowerLimit;
+            }
+            if (timespan > upperLimit) {
+                timespan = upperLimit;
+            }
+
+            /*
+            Let the Work Performed (W) be equal to the difference in chainwork[3] between B_last and B_first.
+             */
+            int workPerformed = blockLast.getChainWork().intValue() - blockFirst.getChainWork().intValue();
+
+            /*
+            Let the Projected Work (PW) be equal to (W * 600) / TS.
+             */
+            int projectedWork = (workPerformed * 600) / timespan;
+
+            /*
+            Let Target (T) be equal to the (2^256 - PW) / PW.
+            This is calculated by taking the two’s complement of PW (-PW) and dividing it by PW (-PW / PW).
+             */
+            long target = ((long) Math.pow(2, 256) - projectedWork) / projectedWork;
+
+            if (target != nextBlock.getDifficultyTarget()) {
+                throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
+                        Long.toHexString(target) + " vs " + Long.toHexString(nextBlock.getDifficultyTarget()));
+            }
+
+            return;
+        }
+
         Block prev = storedPrev.getHeader();
 
         // Is this supposed to be a difficulty transition point?
@@ -296,5 +357,43 @@ public class BCCMainNetParams extends AbstractBitcoinNetParams {
         if (newTargetCompact != receivedTargetCompact)
             throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
                     Long.toHexString(newTargetCompact) + " vs " + Long.toHexString(receivedTargetCompact));
+    }
+
+    private StoredBlock getBlockMinus144(StoredBlock storedBlock, BlockStore blockStore) throws BlockStoreException {
+        int c = 143;
+        while (c >= 0 && (storedBlock = storedBlock.getPrev(blockStore)) != null) c--;
+        return storedBlock;
+    }
+
+    private StoredBlock getSuitableBlock(StoredBlock storedPrev, BlockStore blockStore) throws BlockStoreException {
+        StoredBlock b_nm1 = storedPrev.getPrev(blockStore);
+        if (b_nm1 == null) return null;
+        StoredBlock b_nm2 = b_nm1.getPrev(blockStore);
+        StoredBlock[] blocks = {
+                b_nm2, b_nm1, storedPrev
+        };
+
+        /*
+        A block is chosen via the following mechanism:
+        Given a list: S = [B_n-2, B_n-1, B_n]
+            a. If timestamp(S[0]) greater than timestamp(S[2]) then swap S[0] and S[2].
+            b. If timestamp(S[0]) greater than timestamp(S[1]) then swap S[0] and S[1].
+            c. If timestamp(S[1]) greater than timestamp(S[2]) then swap S[1] and S[2].
+            d. Return S[1].
+         */
+
+        if (blocks[0].getHeader().getTimeSeconds() > blocks[2].getHeader().getTimeSeconds()) {
+            Collections.swap(Arrays.asList(blocks), 0, 2);
+        }
+
+        if (blocks[0].getHeader().getTimeSeconds() > blocks[1].getHeader().getTimeSeconds()) {
+            Collections.swap(Arrays.asList(blocks), 0, 1);
+        }
+
+        if (blocks[1].getHeader().getTimeSeconds() > blocks[2].getHeader().getTimeSeconds()) {
+            Collections.swap(Arrays.asList(blocks), 1, 2);
+        }
+
+        return blocks[1];
     }
 }

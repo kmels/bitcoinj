@@ -725,6 +725,23 @@ public abstract class AbstractBlockChain {
         Arrays.sort(timestamps, unused+1, 11);
         return timestamps[unused + (11-unused)/2];
     }
+
+    /**
+     * Gets the median timestamp of the last 11 blocks
+     */
+    public static long getMedianTimestampOfRecentBlocks(StoredBlock storedBlock, Block block,
+                                                        BlockStore store) throws BlockStoreException {
+        long[] timestamps = new long[11];
+        int unused = 9;
+        timestamps[10] = block.getTimeSeconds() * 1000;
+
+        do {
+            timestamps[unused--] = storedBlock.getHeader().getTimeSeconds() * 1000;
+        } while (unused >= 0 && (storedBlock = storedBlock.getPrev(store)) != null);
+
+        Arrays.sort(timestamps, unused+1, 11);
+        return timestamps[unused + (11-unused)/2];
+    }
     
     /**
      * Disconnect each transaction in the block (after reading it from the block store)
