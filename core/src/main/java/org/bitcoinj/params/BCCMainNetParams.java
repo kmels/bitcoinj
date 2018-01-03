@@ -39,6 +39,11 @@ public class BCCMainNetParams extends AbstractBitcoinNetParams {
     public static final int MAINNET_MAJORITY_REJECT_BLOCK_OUTDATED = 950;
     public static final int MAINNET_MAJORITY_ENFORCE_BLOCK_UPGRADE = 750;
 
+    /**
+     * Scheme part for Bitcoin Cash URIs.
+     */
+    public static final String BITCOIN_CASH_SCHEME = "bitcoincash";
+
     private static final Logger log = LoggerFactory.getLogger(BCCMainNetParams.class);
 
     public BCCMainNetParams() {
@@ -185,6 +190,11 @@ public class BCCMainNetParams extends AbstractBitcoinNetParams {
     @Override
     public boolean getUseForkId() {
         return true;
+    }
+
+    @Override
+    public String getUriScheme() {
+        return BITCOIN_CASH_SCHEME;
     }
 
     @Override

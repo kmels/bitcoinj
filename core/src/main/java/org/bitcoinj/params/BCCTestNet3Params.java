@@ -125,6 +125,11 @@ public class BCCTestNet3Params extends AbstractBitcoinNetParams {
         return true;
     }
 
+    @Override
+    public String getUriScheme() {
+        return BCCMainNetParams.BITCOIN_CASH_SCHEME;
+    }
+
     // February 16th 2012
     private static final Date testnetDiffDate = new Date(1329264000000L);
 
