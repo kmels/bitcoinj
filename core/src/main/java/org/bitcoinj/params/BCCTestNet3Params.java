@@ -38,6 +38,11 @@ public class BCCTestNet3Params extends AbstractBitcoinNetParams {
 
     private static final Logger log = LoggerFactory.getLogger(BCCTestNet3Params.class);
 
+    /**
+     * Scheme part for Bitcoin Cash TestNet URIs.
+     */
+    public static final String BITCOIN_CASH_TESTNET_SCHEME = "bchtest";
+
     public BCCTestNet3Params() {
         super();
         id = ID_TESTNET;
@@ -127,7 +132,7 @@ public class BCCTestNet3Params extends AbstractBitcoinNetParams {
 
     @Override
     public String getUriScheme() {
-        return BCCMainNetParams.BITCOIN_CASH_SCHEME;
+        return BITCOIN_CASH_TESTNET_SCHEME;
     }
 
     // February 16th 2012
