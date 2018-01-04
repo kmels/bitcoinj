@@ -154,6 +154,10 @@ public class Address extends VersionedChecksummedBytes {
         return params;
     }
 
+    public CashAddress toCashAddress() {
+        return new CashAddress(this);
+    }
+
     /**
      * Given an address, examines the version byte and attempts to find a matching NetworkParameters. If you aren't sure
      * which network the address is intended for (eg, it was provided by a user), you can use this to decide if it is
