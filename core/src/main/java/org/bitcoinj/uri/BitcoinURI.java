@@ -16,10 +16,7 @@
 
 package org.bitcoinj.uri;
 
-import org.bitcoinj.core.Address;
-import org.bitcoinj.core.AddressFormatException;
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.*;
 import org.bitcoinj.params.AbstractBitcoinNetParams;
 
 import javax.annotation.Nullable;
@@ -126,6 +123,8 @@ public class BitcoinURI {
             ? AbstractBitcoinNetParams.BITCOIN_SCHEME
             : params.getUriScheme();
 
+        System.out.println("scheme = " + scheme);
+
         // Attempt to form the URI (fail fast syntax checking to official standards).
         URI uri;
         try {
@@ -153,7 +152,6 @@ public class BitcoinURI {
         } else {
             throw new BitcoinURIParseException("Unsupported URI scheme: " + uri.getScheme());
         }
-
         // Split off the address from the rest of the query parameters.
         String[] addressSplitTokens = schemeSpecificPart.split("\\?", 2);
         if (addressSplitTokens.length == 0)
@@ -174,12 +172,21 @@ public class BitcoinURI {
 
         if (!addressToken.isEmpty()) {
             // Attempt to parse the addressToken as a Bitcoin address for this network
+            Address address;
             try {
-                Address address = Address.fromBase58(params, addressToken);
-                putWithValidation(FIELD_ADDRESS, address);
-            } catch (final AddressFormatException e) {
-                throw new BitcoinURIParseException("Bad address", e);
+                address = Address.fromBase58(params, addressToken);
+            } catch (final AddressFormatException e1) {
+                try {
+                    address = CashAddress.decode(scheme + ":" + addressToken);
+                } catch (AddressFormatException e2) {
+                    try {
+                        address = CopayAddress.decode(params, addressToken);
+                    } catch (AddressFormatException e3) {
+                        throw new BitcoinURIParseException("Bad address", e3);
+                    }
+                }
             }
+            putWithValidation(FIELD_ADDRESS, address);
         }
 
         if (addressToken.isEmpty() && getPaymentRequestUrl() == null) {
@@ -371,9 +378,13 @@ public class BitcoinURI {
         }
         
         StringBuilder builder = new StringBuilder();
-        String scheme = params.getUriScheme();
-        builder.append(scheme).append(":").append(address);
-        
+        if (!address.contains(":")) {
+            String scheme = params.getUriScheme();
+            builder.append(scheme).append(":").append(address);
+        } else {
+            builder.append(address);
+        }
+
         boolean questionMarkHasBeenOutput = false;
         
         if (amount != null) {

@@ -154,8 +154,22 @@ public class Address extends VersionedChecksummedBytes {
         return params;
     }
 
-    public CashAddress toCashAddress() {
-        return new CashAddress(this);
+    public String toCashAddress() {
+        try {
+            return new CashAddress(this).encode();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public String toCopayAddress() {
+        try {
+            return new CopayAddress(this).encode();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     /**

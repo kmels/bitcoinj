@@ -1,14 +1,53 @@
 package org.bitcoinj.core;
 
 import org.bitcoinj.params.BCCMainNetParams;
+import org.bitcoinj.params.BCCTestNet3Params;
 
 import java.lang.reflect.Array;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 
 public class CashAddress {
     private static final String CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+    private static final HashMap<String, Integer> CHARSET_INVERSE_INDEX = new HashMap<>();
+
+    static {
+        CHARSET_INVERSE_INDEX.put("q", 0);
+        CHARSET_INVERSE_INDEX.put("p", 1);
+        CHARSET_INVERSE_INDEX.put("z", 2);
+        CHARSET_INVERSE_INDEX.put("r", 3);
+        CHARSET_INVERSE_INDEX.put("y", 4);
+        CHARSET_INVERSE_INDEX.put("9", 5);
+        CHARSET_INVERSE_INDEX.put("x", 6);
+        CHARSET_INVERSE_INDEX.put("8", 7);
+        CHARSET_INVERSE_INDEX.put("g", 8);
+        CHARSET_INVERSE_INDEX.put("f", 9);
+        CHARSET_INVERSE_INDEX.put("2", 10);
+        CHARSET_INVERSE_INDEX.put("t", 11);
+        CHARSET_INVERSE_INDEX.put("v", 12);
+        CHARSET_INVERSE_INDEX.put("d", 13);
+        CHARSET_INVERSE_INDEX.put("w", 14);
+        CHARSET_INVERSE_INDEX.put("0", 15);
+        CHARSET_INVERSE_INDEX.put("s", 16);
+        CHARSET_INVERSE_INDEX.put("3", 17);
+        CHARSET_INVERSE_INDEX.put("j", 18);
+        CHARSET_INVERSE_INDEX.put("n", 19);
+        CHARSET_INVERSE_INDEX.put("5", 20);
+        CHARSET_INVERSE_INDEX.put("4", 21);
+        CHARSET_INVERSE_INDEX.put("k", 22);
+        CHARSET_INVERSE_INDEX.put("h", 23);
+        CHARSET_INVERSE_INDEX.put("c", 24);
+        CHARSET_INVERSE_INDEX.put("e", 25);
+        CHARSET_INVERSE_INDEX.put("6", 26);
+        CHARSET_INVERSE_INDEX.put("m", 27);
+        CHARSET_INVERSE_INDEX.put("u", 28);
+        CHARSET_INVERSE_INDEX.put("a", 29);
+        CHARSET_INVERSE_INDEX.put("7", 30);
+        CHARSET_INVERSE_INDEX.put("l", 31);
+
+    }
 
     private NetworkParameters mNetworkParameters;
     private int[] mPayload;
@@ -23,21 +62,6 @@ public class CashAddress {
             mPayload[i] = hash160[i] & 0xFF;
         }
         if (address.isP2SHAddress()) mVersion = 1;
-    }
-
-    public String encode() throws Exception {
-        String prefix = mNetworkParameters.getUriScheme();
-        int[]  prefixData = prefixToArray();
-        int[] versionByte = new int[] {getVersionByte()};
-        int[] data = concatenate(versionByte, mPayload);
-        int[] payloadData = convertBits(data, 8, 5, false);
-        int[] prefAndPayloadData = concatenate(prefixData, payloadData);
-        int[] checksumData = concatenate(prefAndPayloadData, new int[]{0,0,0,0,0,0,0,0});
-        BigInteger polymodResult = polymod(checksumData);
-        int[] polymodArray = checksumToArray(polymodResult);
-        int[] payload = concatenate(payloadData, polymodArray);
-        String encodedPayload = encodeBase32(payload);
-        return prefix+":"+encodedPayload;
     }
 
     private int[] checksumToArray(BigInteger checksum) {
@@ -55,8 +79,7 @@ public class CashAddress {
      * of the address' checksum.
      *
      */
-    private int[] prefixToArray() {
-        String prefix = mNetworkParameters.getUriScheme();
+    private static int[] prefixToArray(String prefix) {
         int[] result = new int[prefix.length()+1];
 
         for (int i = 0; i < prefix.length(); i++) {
@@ -83,7 +106,7 @@ public class CashAddress {
      * @param {number} to Length in bits of elements in the output array.
      * @param {bool} strict Require the conversion to be completed without padding.
      */
-    private int[] convertBits(int[] data, int from, int to, boolean strict) throws Exception {
+    private static int[] convertBits(int[] data, int from, int to, boolean strict) throws AddressFormatException {
         int accumulator = 0;
         int bits = 0;
         ArrayList<Integer> result = new ArrayList<>();
@@ -91,7 +114,7 @@ public class CashAddress {
 
         for (int value : data) {
             if (value < 0 || (value >> from) != 0) {
-                throw new Exception("Invalid value: "+value);
+                throw new AddressFormatException("Invalid value: "+value);
             }
 
             accumulator = (accumulator << from) | value;
@@ -108,7 +131,7 @@ public class CashAddress {
                 result.add((accumulator << (to - bits)) & mask);
             }
         } else if (bits >= from || ((accumulator << (to - bits)) & mask) != 0) {
-            throw new Exception("Conversion requires padding but strict mode was used.");
+            throw new AddressFormatException("Conversion requires padding but strict mode was used.");
         }
 
         int[] realResult = new int[result.size()];
@@ -118,7 +141,7 @@ public class CashAddress {
         return realResult;
     }
 
-    private BigInteger polymod(int[] data) {
+    private static BigInteger polymod(int[] data) {
         BigInteger[] GENERATOR = new BigInteger[] {
                 new BigInteger("98f2bc8e61", 16),
                 new BigInteger("79b76d99e2", 16),
@@ -138,16 +161,28 @@ public class CashAddress {
         return checksum.xor(BigInteger.ONE);
     }
 
-    private String encodeBase32(int[] data) throws Exception {
+    private static String encodeBase32(int[] data) throws AddressFormatException {
         StringBuilder base32 = new StringBuilder();
         for (int value : data) {
             if (0 <= value && value < 32) {
                 base32.append(CHARSET.charAt(value));
             } else {
-                throw new Exception("Invalid value: "+value);
+                throw new AddressFormatException("Invalid value: "+value);
             }
         }
         return base32.toString();
+    }
+
+    private static int[] decodeBase32(String base32) throws AddressFormatException {
+        int[] data = new int[base32.length()];
+        for (int i = 0; i < base32.length(); i++) {
+            String value = base32.substring(i, i+1);
+            if (!CHARSET_INVERSE_INDEX.containsKey(value)) {
+                throw new AddressFormatException("Invalid value: "+value);
+            }
+            data[i] = CHARSET_INVERSE_INDEX.get(value);
+        }
+        return data;
     }
 
     private static <T> T concatenate(T a, T b) {
@@ -187,11 +222,136 @@ public class CashAddress {
         }
     }
 
+    private static boolean hasSingleCase(String string) {
+        boolean hasLowerCase = false;
+        boolean hasUpperCase = false;
+        for (int i = 0; i < string.length(); i++) {
+            String letter = string.substring(i,i+1);
+            hasLowerCase = hasLowerCase || !letter.equals(letter.toUpperCase());
+            hasUpperCase = hasUpperCase || !letter.equals(letter.toLowerCase());
+            if (hasLowerCase && hasUpperCase) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean validChecksum(String prefix, int[] payload) {
+        int[] prefixData = prefixToArray(prefix);
+        int[] data = concatenate(prefixData, payload);
+        System.out.println("data = " + Arrays.toString(data));
+        BigInteger polymod = polymod(data);
+        System.out.println("polymod = " + polymod);
+        return polymod.compareTo(BigInteger.ZERO) == 0;
+    }
+
+    private static int getHashSize(int versionByte) {
+        switch (versionByte & 7) {
+            case 0:
+                return 160;
+            case 1:
+                return 192;
+            case 2:
+                return 224;
+            case 3:
+                return 256;
+            case 4:
+                return 320;
+            case 5:
+                return 384;
+            case 6:
+                return 448;
+            case 7:
+                return 512;
+            default:
+                return 0;
+        }
+    }
+
+    private static String getType(int versionByte) throws AddressFormatException {
+        switch (versionByte & 120) {
+            case 0:
+                return "P2PKH";
+            case 8:
+                return "P2SH";
+            default:
+                throw new AddressFormatException("Invalid address type in version byte: "+versionByte);
+        }
+    }
+
+    public String encode() throws AddressFormatException {
+        String prefix = mNetworkParameters.getUriScheme();
+        int[]  prefixData = prefixToArray(prefix);
+        int[] versionByte = new int[] {getVersionByte()};
+        int[] data = concatenate(versionByte, mPayload);
+        int[] payloadData = convertBits(data, 8, 5, false);
+        int[] prefAndPayloadData = concatenate(prefixData, payloadData);
+        int[] checksumData = concatenate(prefAndPayloadData, new int[]{0,0,0,0,0,0,0,0});
+        BigInteger polymodResult = polymod(checksumData);
+        int[] polymodArray = checksumToArray(polymodResult);
+        int[] payload = concatenate(payloadData, polymodArray);
+        System.out.println("payload = " + Arrays.toString(payload));
+        String encodedPayload = encodeBase32(payload);
+        return prefix+":"+encodedPayload;
+    }
+
+    public static Address decode(String bchAddress) throws AddressFormatException {
+        String[] pieces = bchAddress.split(":");
+        if (pieces.length != 2) {
+            throw new AddressFormatException("Missing prefix: "+bchAddress);
+        }
+        String prefix = pieces[0];
+        NetworkParameters networkParameters;
+        switch (prefix) {
+            case BCCMainNetParams.BITCOIN_CASH_SCHEME:
+                networkParameters = BCCMainNetParams.get();
+                break;
+            case BCCTestNet3Params.BITCOIN_CASH_TESTNET_SCHEME:
+                networkParameters = BCCTestNet3Params.get();
+                break;
+            default:
+                throw new AddressFormatException("Invalid prefix: " + prefix);
+        }
+
+        String encodedPayload = pieces[1];
+
+        if (!hasSingleCase(encodedPayload)) {
+            throw new AddressFormatException("Mixed case in address payload: "+encodedPayload);
+        }
+
+        int[] payload = decodeBase32(encodedPayload.toLowerCase());
+
+        if (!validChecksum(prefix, payload)) {
+            throw new AddressFormatException("Invalid checksum: "+bchAddress);
+        }
+
+        int[] data = Arrays.copyOfRange(payload, 0, payload.length - 8);
+        int[] result = convertBits(data, 5, 8, true);
+        int versionByte = result[0];
+        System.out.println("versionByte = " + versionByte);
+        int[] hash = Arrays.copyOfRange(result, 1, result.length);
+
+        System.out.println("hash = " + Arrays.toString(hash));
+
+        if (getHashSize(versionByte) != hash.length * 8) {
+            throw new AddressFormatException("Invalid hash size: "+bchAddress);
+        }
+
+        byte[] hashByteArray = new byte[hash.length];
+        for (int i = 0; i < hash.length; i++) {
+            hashByteArray[i] = (byte) hash[i];
+        }
+
+        return new Address(networkParameters, versionByte == 1? networkParameters.p2shHeader : networkParameters.addressHeader, hashByteArray);
+    }
+
     public static void main(String[] args) {
-        Address address = Address.fromBase58(BCCMainNetParams.get(), "31nwvkZwyPdgzjBJZXfDmSWsC4ZLKpYyUw");
-        CashAddress cashAddress = new CashAddress(address);
         try {
-            System.out.println(cashAddress.encode());
+            Address address1 = Address.fromBase58(BCCMainNetParams.get(), "1F18bHRRkTFKrbjDbjY7EwaXesGLQ261n5");
+            System.out.println("address1.toCashAddress() = " + address1.toCashAddress());
+
+            Address address2 = CashAddress.decode("bitcoincash:qzvesxgz06gwpg2qg4zhqj2vu2yh9v8dcue88wnxm7");
+            System.out.println(address2.toBase58());
         } catch (Exception e) {
             e.printStackTrace();
         }

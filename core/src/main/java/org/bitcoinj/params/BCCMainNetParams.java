@@ -39,6 +39,9 @@ public class BCCMainNetParams extends AbstractBitcoinNetParams {
     public static final int MAINNET_MAJORITY_REJECT_BLOCK_OUTDATED = 950;
     public static final int MAINNET_MAJORITY_ENFORCE_BLOCK_UPGRADE = 750;
 
+    public static final int COPAY_ADDRESS_HEADER = 28;
+    public static final int COPAY_P2SH_HEADER = 40;
+
     /**
      * Scheme part for Bitcoin Cash URIs.
      */
@@ -54,7 +57,7 @@ public class BCCMainNetParams extends AbstractBitcoinNetParams {
         dumpedPrivateKeyHeader = 128;
         addressHeader = 0;
         p2shHeader = 5;
-        acceptableAddressCodes = new int[] { addressHeader, p2shHeader };
+        acceptableAddressCodes = new int[] { addressHeader, p2shHeader, COPAY_ADDRESS_HEADER, COPAY_P2SH_HEADER };
         port = 8333;
         packetMagic = 0xf9beb4d9L;
         bip32HeaderPub = 0x0488B21E; //The 4 byte header that serializes in base58 to "xpub".

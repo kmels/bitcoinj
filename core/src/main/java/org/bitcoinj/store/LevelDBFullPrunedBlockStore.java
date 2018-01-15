@@ -28,18 +28,7 @@ import java.util.concurrent.TimeUnit;
 import java.io.*;
 import java.nio.ByteBuffer;
 
-import org.bitcoinj.core.Address;
-import org.bitcoinj.core.AddressFormatException;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.ScriptException;
-import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.StoredBlock;
-import org.bitcoinj.core.StoredUndoableBlock;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionOutputChanges;
-import org.bitcoinj.core.UTXO;
-import org.bitcoinj.core.UTXOProviderException;
-import org.bitcoinj.core.VerificationException;
+import org.bitcoinj.core.*;
 import org.bitcoinj.script.Script;
 import org.iq80.leveldb.*;
 import org.slf4j.Logger;
@@ -798,9 +787,23 @@ public class LevelDBFullPrunedBlockStore implements FullPrunedBlockStore {
             try {
                 a = Address.fromBase58(params, out.getAddress());
             } catch (AddressFormatException e) {
-                if (instrument)
-                    endMethod("addUnspentTransactionOutput");
-                return;
+                if (params.getUseForkId()) {
+                    try {
+                        a = CashAddress.decode(out.getAddress());
+                    }  catch (AddressFormatException e2) {
+                        try {
+                            a = CopayAddress.decode(getParams(), out.getAddress());
+                        }  catch (AddressFormatException e3) {
+                            if (instrument)
+                                endMethod("addUnspentTransactionOutput");
+                            return;
+                        }
+                    }
+                } else {
+                    if (instrument)
+                        endMethod("addUnspentTransactionOutput");
+                    return;
+                }
             }
         }
         ByteBuffer bb = ByteBuffer.allocate(57);
@@ -893,12 +896,31 @@ public class LevelDBFullPrunedBlockStore implements FullPrunedBlockStore {
                 hashBytes = a.getHash160();
             } else {
                 a = Address.fromBase58(params, out.getAddress());
+
                 hashBytes = a.getHash160();
             }
         } catch (AddressFormatException e) {
-            if (instrument)
-                endMethod("removeUnspentTransactionOutput");
-            return;
+            if (params.getUseForkId()) {
+                try {
+                    a = CashAddress.decode(out.getAddress());
+
+                    hashBytes = a.getHash160();
+                }  catch (AddressFormatException e2) {
+                    try {
+                        a = CopayAddress.decode(getParams(), out.getAddress());
+
+                        hashBytes = a.getHash160();
+                    }  catch (AddressFormatException e3) {
+                        if (instrument)
+                            endMethod("removeUnspentTransactionOutput");
+                        return;
+                    }
+                }
+            } else {
+                if (instrument)
+                    endMethod("removeUnspentTransactionOutput");
+                return;
+            }
         } catch (ScriptException e) {
             if (instrument)
                 endMethod("removeUnspentTransactionOutput");
