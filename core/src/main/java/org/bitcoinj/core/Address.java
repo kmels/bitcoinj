@@ -49,6 +49,8 @@ public class Address extends VersionedChecksummedBytes {
 
     private transient NetworkParameters params;
 
+    private int type = 0;
+
     /**
      * Construct an address from parameters, the address version, and the hash160 form. Example:<p>
      *
@@ -217,5 +219,29 @@ public class Address extends VersionedChecksummedBytes {
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
         in.defaultReadObject();
         params = NetworkParameters.fromID(in.readUTF());
+    }
+
+    public int getType() {
+        return type;
+    }
+
+    public void setType(int type) {
+        this.type = type;
+    }
+
+    @Override
+    public String toString() {
+        if (getParameters().getUseForkId()) {
+            switch (type) {
+                case 1:
+                    return toCashAddress();
+                case 2:
+                    return toCopayAddress();
+                default:
+                    return super.toString();
+            }
+        } else {
+            return super.toString();
+        }
     }
 }

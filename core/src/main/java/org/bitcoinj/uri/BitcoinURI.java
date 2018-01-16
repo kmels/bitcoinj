@@ -178,9 +178,11 @@ public class BitcoinURI {
             } catch (final AddressFormatException e1) {
                 try {
                     address = CashAddress.decode(scheme + ":" + addressToken);
+                    address.setType(1);
                 } catch (AddressFormatException e2) {
                     try {
                         address = CopayAddress.decode(params, addressToken);
+                        address.setType(2);
                     } catch (AddressFormatException e3) {
                         throw new BitcoinURIParseException("Bad address", e3);
                     }
