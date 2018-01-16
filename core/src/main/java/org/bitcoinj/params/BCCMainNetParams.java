@@ -17,6 +17,7 @@
 
 package org.bitcoinj.params;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import org.bitcoinj.core.*;
 import org.bitcoinj.store.BlockStore;
@@ -49,6 +50,13 @@ public class BCCMainNetParams extends AbstractBitcoinNetParams {
 
     private static final Logger log = LoggerFactory.getLogger(BCCMainNetParams.class);
 
+    // Aug, 1 hard fork
+    int uahfHeight = 478559;
+    /** Activation time at which the cash HF kicks in. */
+    long cashHardForkActivationTime;
+
+    int daaHeight;
+
     public BCCMainNetParams() {
         super();
         interval = INTERVAL;
@@ -59,7 +67,7 @@ public class BCCMainNetParams extends AbstractBitcoinNetParams {
         p2shHeader = 5;
         acceptableAddressCodes = new int[] { addressHeader, p2shHeader, COPAY_ADDRESS_HEADER, COPAY_P2SH_HEADER };
         port = 8333;
-        packetMagic = 0xf9beb4d9L;
+        packetMagic = 0xe3e1f3e8L;
         bip32HeaderPub = 0x0488B21E; //The 4 byte header that serializes in base58 to "xpub".
         bip32HeaderPriv = 0x0488ADE4; //The 4 byte header that serializes in base58 to "xprv"
 
@@ -86,6 +94,7 @@ public class BCCMainNetParams extends AbstractBitcoinNetParams {
         checkpoints.put(91842, Sha256Hash.wrap("00000000000a4d0a398161ffc163c503763b1f4360639393e0e4c8e300e0caec"));
         checkpoints.put(91880, Sha256Hash.wrap("00000000000743f190a18c5577a3c2d2a1f610ae9601ac046a38084ccb7cd721"));
         checkpoints.put(200000, Sha256Hash.wrap("000000000000034a7dedef4a161fa058a2d67a173a90155f3a2fe6fc132e0ebf"));
+        checkpoints.put(478559, Sha256Hash.wrap("000000000000000000651ef99cb9fcbe0dadde1d424bd9f15ff20136191a5eec"));
 
         dnsSeeds = new String[] {
                 "seed.bitcoinabc.org",
@@ -103,7 +112,7 @@ public class BCCMainNetParams extends AbstractBitcoinNetParams {
                 )
         };*/
 
-        addrSeeds = new int[] {
+        addrSeeds = null; /*new int[] {
                 0x1ddb1032, 0x6242ce40, 0x52d6a445, 0x2dd7a445, 0x8a53cd47, 0x73263750, 0xda23c257, 0xecd4ed57,
                 0x0a40ec59, 0x75dce160, 0x7df76791, 0x89370bad, 0xa4f214ad, 0x767700ae, 0x638b0418, 0x868a1018,
                 0xcd9f332e, 0x0129653e, 0xcc92dc3e, 0x96671640, 0x56487e40, 0x5b66f440, 0xb1d01f41, 0xf1dc6041,
@@ -144,7 +153,12 @@ public class BCCMainNetParams extends AbstractBitcoinNetParams {
                 0x6d27c257, 0x977fffad, 0x7baa5d5d, 0x1213be43, 0xb167e5a9, 0x640fe8ca, 0xbc9ea655, 0x0f820a4c,
                 0x0f097059, 0x69ac957c, 0x366d8453, 0xb1ba2844, 0x8857f081, 0x70b5be63, 0xc545454b, 0xaf36ded1,
                 0xb5a4b052, 0x21f062d1, 0x72ab89b2, 0x74a45318, 0x8312e6bc, 0xb916965f, 0x8aa7c858, 0xfe7effad,
-        };
+        };*/
+
+        // Aug, 1 hard fork
+        uahfHeight = 478559;
+        /** Activation time at which the cash HF kicks in. */
+        cashHardForkActivationTime = 1510600000;
     }
 
     private static BCCMainNetParams instance;
@@ -204,75 +218,17 @@ public class BCCMainNetParams extends AbstractBitcoinNetParams {
     public void checkDifficultyTransitions(final StoredBlock storedPrev, final Block nextBlock,
                                            final BlockStore blockStore) throws VerificationException, BlockStoreException {
 
+        Block prev = storedPrev.getHeader();
 
-        /*
-        To calculate the difficulty of a given block (B_n+1),
-        with an MTP-11[1] greater than or equal to the unix timestamp 1510600000, perform the following steps:
-         */
-
-        // The MTP-11 of a block is defined as the median timestamp of the last 11 blocks prior to, and including, a specific block
-
-        long mtp11 = AbstractBlockChain.getMedianTimestampOfRecentBlocks(storedPrev, nextBlock, blockStore);
-
-        if (mtp11 >= 1510600000) {
-
-            StoredBlock blockLast = getSuitableBlock(storedPrev, blockStore); // Let B_last be chosen[2] from [B_n-2, B_n-1, B_n].
-            StoredBlock block_m144 = getBlockMinus144(storedPrev, blockStore);
-            if (block_m144 == null) return;
-            StoredBlock blockFirst = getSuitableBlock(block_m144, blockStore); // Let B_first be chosen[2] from [B_n-146, B_n-145, B_n-144].
-
-            if (blockLast == null || blockFirst == null || blockLast.getHeight() > blockFirst.getHeight()) return;
-
-            /*
-            Let the Timespan (TS) be equal to the difference in UNIX timestamps (in seconds)
-            between B_last and B_first within the range [72 * 600, 288 * 600].
-            Values outside should be treated as their respective limit
-             */
-            long timespan = blockLast.getHeader().getTimeSeconds() - blockFirst.getHeader().getTimeSeconds();
-            long lowerLimit = 72 * 600;
-            long upperLimit = 288 * 600;
-            if (timespan < lowerLimit) {
-                timespan = lowerLimit;
-            }
-            if (timespan > upperLimit) {
-                timespan = upperLimit;
-            }
-
-            /*
-            Let the Work Performed (W) be equal to the difference in chainwork[3] between B_last and B_first.
-             */
-            BigInteger workPerformed = blockLast.getChainWork().subtract(blockFirst.getChainWork());
-
-            /*
-            Let the Projected Work (PW) be equal to (W * 600) / TS.
-             */
-            BigInteger projectedWork = workPerformed.multiply(BigInteger.valueOf(600)).divide(BigInteger.valueOf(timespan));
-
-            /*
-            Let Target (T) be equal to the (2^256 - PW) / PW.
-            This is calculated by taking the two’s complement of PW (-PW) and dividing it by PW (-PW / PW).
-             */
-            BigInteger target = projectedWork.negate().divide(projectedWork);
-
-            BigInteger lesser = new BigInteger("00000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16);
-
-            target = target.min(lesser);
-
-            if (target.compareTo(BigInteger.valueOf(nextBlock.getDifficultyTarget())) != 0) {
-                throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
-                        Long.toHexString(target.longValue()) + " vs " + Long.toHexString(nextBlock.getDifficultyTarget()));
-            }
-
+        if (storedPrev.getHeight() +1 >= daaHeight) {
+            checkNextCashWorkRequired(storedPrev, nextBlock, blockStore);
             return;
         }
 
-        Block prev = storedPrev.getHeader();
-
-        // Is this supposed to be a difficulty transition point?
+        // Is this supposed to be a difficulty transition point
         if (!isDifficultyTransitionPoint(storedPrev)) {
 
-            if(storedPrev.getHeader().getDifficultyTargetAsInteger().equals(getMaxTarget()))
-            {
+            if (storedPrev.getHeader().getDifficultyTargetAsInteger().equals(getMaxTarget())) {
                 // No ... so check the difficulty didn't actually change.
                 if (nextBlock.getDifficultyTarget() != prev.getDifficultyTarget())
                     throw new VerificationException("Unexpected change in difficulty at height " + storedPrev.getHeight() +
@@ -295,20 +251,18 @@ public class BCCMainNetParams extends AbstractBitcoinNetParams {
             long mpt6blocks = 0;
             try {
                 mpt6blocks = AbstractBlockChain.getMedianTimestampOfRecentBlocks(storedPrev, blockStore) - AbstractBlockChain.getMedianTimestampOfRecentBlocks(cursor, blockStore);
-            } catch (NullPointerException x)
-            {
+            } catch (NullPointerException x) {
                 return;
             }
 
             // If producing the last 6 block took more than 12h, increase the difficulty
             // target by 1/4 (which reduces the difficulty by 20%). This ensure the
             // chain do not get stuck in case we lose hashrate abruptly.
-            if(mpt6blocks >= 12 * 3600)
-            {
+            if (mpt6blocks >= 12 * 3600) {
                 BigInteger nPow = storedPrev.getHeader().getDifficultyTargetAsInteger();
                 nPow = nPow.add(nPow.shiftRight(2));
 
-                if(nPow.compareTo(getMaxTarget()) > 0)
+                if (nPow.compareTo(getMaxTarget()) > 0)
                     nPow = getMaxTarget();
 
                 if (nextBlock.getDifficultyTarget() != Utils.encodeCompactBits(nPow))
@@ -317,8 +271,6 @@ public class BCCMainNetParams extends AbstractBitcoinNetParams {
                             Utils.encodeCompactBits(nPow));
                 return;
             }
-
-
 
 
             // No ... so check the difficulty didn't actually change.
@@ -358,6 +310,25 @@ public class BCCMainNetParams extends AbstractBitcoinNetParams {
         newTarget = newTarget.multiply(BigInteger.valueOf(timespan));
         newTarget = newTarget.divide(BigInteger.valueOf(targetTimespan));
 
+        verifyDifficulty(newTarget, nextBlock);
+
+        /*if (newTarget.compareTo(this.getMaxTarget()) > 0) {
+            log.info("Difficulty hit proof of work limit: {}", newTarget.toString(16));
+            newTarget = this.getMaxTarget();
+        }
+        int accuracyBytes = (int) (nextBlock.getDifficultyTarget() >>> 24) - 3;
+        long receivedTargetCompact = nextBlock.getDifficultyTarget();
+        // The calculated difficulty is to a higher precision than received, so reduce here.
+        BigInteger mask = BigInteger.valueOf(0xFFFFFFL).shiftLeft(accuracyBytes * 8);
+        newTarget = newTarget.and(mask);
+        long newTargetCompact = Utils.encodeCompactBits(newTarget);
+        if (newTargetCompact != receivedTargetCompact)
+            throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
+                    Long.toHexString(newTargetCompact) + " vs " + Long.toHexString(receivedTargetCompact));
+                    */
+    }
+
+    void verifyDifficulty(BigInteger newTarget, Block nextBlock) {
         if (newTarget.compareTo(this.getMaxTarget()) > 0) {
             log.info("Difficulty hit proof of work limit: {}", newTarget.toString(16));
             newTarget = this.getMaxTarget();
@@ -376,41 +347,155 @@ public class BCCMainNetParams extends AbstractBitcoinNetParams {
                     Long.toHexString(newTargetCompact) + " vs " + Long.toHexString(receivedTargetCompact));
     }
 
-    private StoredBlock getBlockMinus144(StoredBlock storedBlock, BlockStore blockStore) throws BlockStoreException {
-        int c = 143;
-        while (c >= 0 && (storedBlock = storedBlock.getPrev(blockStore)) != null) c--;
-        return storedBlock;
+    /**
+     * The number that is one greater than the largest representable SHA-256
+     * hash.
+     */
+    private static BigInteger LARGEST_HASH = BigInteger.ONE.shiftLeft(256);
+
+    /**
+     * Compute the a target based on the work done between 2 blocks and the time
+     * required to produce that work.
+     */
+    BigInteger ComputeTarget(StoredBlock pindexFirst,
+                             StoredBlock pindexLast) {
+
+        Preconditions.checkState(pindexLast.getHeight() > pindexFirst.getHeight());
+
+        /**
+         * From the total work done and the time it took to produce that much work,
+         * we can deduce how much work we expect to be produced in the targeted time
+         * between blocks.
+         */
+        BigInteger work = pindexLast.getChainWork().subtract(pindexFirst.getChainWork());
+        work = work.multiply(BigInteger.valueOf(this.TARGET_SPACING));
+
+        // In order to avoid difficulty cliffs, we bound the amplitude of the
+        // adjustement we are going to do.
+        //assert(pindexLast->nTime > pindexFirst->nTime);
+        long nActualTimespan = pindexLast.getHeader().getTimeSeconds() - pindexFirst.getHeader().getTimeSeconds();
+        if (nActualTimespan > 288 * TARGET_SPACING) {
+            nActualTimespan = 288 * TARGET_SPACING;
+        } else if (nActualTimespan < 72 * TARGET_SPACING) {
+            nActualTimespan = 72 * TARGET_SPACING;
+        }
+
+        work = work.divide(BigInteger.valueOf(nActualTimespan));
+
+        /**
+         * We need to compute T = (2^256 / W) - 1 but 2^256 doesn't fit in 256 bits.
+         * By expressing 1 as W / W, we get (2^256 - W) / W, and we can compute
+         * 2^256 - W as the complement of W.
+         */
+        //return (-work) / work;
+        //return BigInteger.valueOf(2).pow(256).divide(work).subtract(BigInteger.valueOf(1));
+
+        //return Block.LARGEST_HASH.divide(target.add(BigInteger.ONE))
+
+        return LARGEST_HASH.divide(work).subtract(BigInteger.ONE);//target.add(BigInteger.ONE))
     }
 
-    private StoredBlock getSuitableBlock(StoredBlock storedPrev, BlockStore blockStore) throws BlockStoreException {
-        StoredBlock b_nm1 = storedPrev.getPrev(blockStore);
-        if (b_nm1 == null) return null;
-        StoredBlock b_nm2 = b_nm1.getPrev(blockStore);
-        StoredBlock[] blocks = {
-                b_nm2, b_nm1, storedPrev
-        };
+    /**
+     * To reduce the impact of timestamp manipulation, we select the block we are
+     * basing our computation on via a median of 3.
+     */
+    StoredBlock GetSuitableBlock(StoredBlock pindex, BlockStore blockStore) throws BlockStoreException{
+        //assert(pindex->nHeight >= 3);
 
-        /*
-        A block is chosen via the following mechanism:
-        Given a list: S = [B_n-2, B_n-1, B_n]
-            a. If timestamp(S[0]) greater than timestamp(S[2]) then swap S[0] and S[2].
-            b. If timestamp(S[0]) greater than timestamp(S[1]) then swap S[0] and S[1].
-            c. If timestamp(S[1]) greater than timestamp(S[2]) then swap S[1] and S[2].
-            d. Return S[1].
+        /**
+         * In order to avoid a block is a very skewed timestamp to have too much
+         * influence, we select the median of the 3 top most blocks as a starting
+         * point.
          */
+        StoredBlock blocks[] = new StoredBlock[3];
+        blocks[2] = pindex;
+        blocks[1] = pindex.getPrev(blockStore);
+        blocks[0] = blocks[1].getPrev(blockStore);
 
+        // Sorting network.
         if (blocks[0].getHeader().getTimeSeconds() > blocks[2].getHeader().getTimeSeconds()) {
-            Collections.swap(Arrays.asList(blocks), 0, 2);
+            //std::swap(blocks[0], blocks[2]);
+            StoredBlock temp = blocks[0];
+            blocks[0] = blocks[2];
+            blocks[2] = temp;
         }
 
         if (blocks[0].getHeader().getTimeSeconds() > blocks[1].getHeader().getTimeSeconds()) {
-            Collections.swap(Arrays.asList(blocks), 0, 1);
+            //std::swap(blocks[0], blocks[1]);
+            StoredBlock temp = blocks[0];
+            blocks[0] = blocks[1];
+            blocks[1] = temp;
         }
 
         if (blocks[1].getHeader().getTimeSeconds() > blocks[2].getHeader().getTimeSeconds()) {
-            Collections.swap(Arrays.asList(blocks), 1, 2);
+            //std::swap(blocks[1], blocks[2]);
+            StoredBlock temp = blocks[1];
+            blocks[1] = blocks[2];
+            blocks[2] = temp;
         }
 
+        // We should have our candidate in the middle now.
         return blocks[1];
     }
+
+    /**
+     * Compute the next required proof of work using a weighted average of the
+     * estimated hashrate per block.
+     *
+     * Using a weighted average ensure that the timestamp parameter cancels out in
+     * most of the calculation - except for the timestamp of the first and last
+     * block. Because timestamps are the least trustworthy information we have as
+     * input, this ensures the algorithm is more resistant to malicious inputs.
+     */
+    void checkNextCashWorkRequired(StoredBlock pindexPrev,
+                                   Block pblock, BlockStore blockStore) {
+        // This cannot handle the genesis block and early blocks in general.
+        //assert(pindexPrev);
+
+        // Special difficulty rule for testnet:
+        // If the new block's timestamp is more than 2* 10 minutes then allow
+        // mining of a min-difficulty block.
+        /*if (params.fPowAllowMinDifficultyBlocks &&
+                (pblock->GetBlockTime() >
+                        pindexPrev->GetBlockTime() + 2 * params.nPowTargetSpacing)) {
+            return UintToArith256(params.powLimit).GetCompact();
+        }*/
+
+        // Compute the difficulty based on the full adjustement interval.
+        int nHeight = pindexPrev.getHeight();
+        Preconditions.checkState(nHeight >= this.interval);
+
+        // Get the last suitable block of the difficulty interval.
+        try {
+            StoredBlock pindexLast = GetSuitableBlock(pindexPrev, blockStore);
+            //assert (pindexLast);
+
+            // Get the first suitable block of the difficulty interval.
+            int nHeightFirst = nHeight - 144;
+
+            StoredBlock pindexFirst = pindexPrev;
+
+            for (int i = 144; i > 0; --i)
+            {
+                pindexFirst = pindexFirst.getPrev(blockStore);
+                if(pindexFirst == null)
+                    return;
+            }
+
+            pindexFirst = GetSuitableBlock(pindexFirst, blockStore);
+            //assert (pindexFirst);
+
+            // Compute the target based on time and work done during the interval.
+            BigInteger nextTarget =
+                    ComputeTarget(pindexFirst, pindexLast);
+
+            verifyDifficulty(nextTarget, pblock);
+        }
+        catch (BlockStoreException x)
+        {
+            //this means we don't have enough blocks, yet.  let it go until we do.
+            return;
+        }
+    }
+
 }
