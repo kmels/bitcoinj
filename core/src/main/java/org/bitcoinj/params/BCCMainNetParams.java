@@ -159,7 +159,7 @@ public class BCCMainNetParams extends AbstractBitcoinNetParams {
         uahfHeight = 478559;
         /** Activation time at which the cash HF kicks in. */
         cashHardForkActivationTime = 1510600000;
-        daaHeight = 1188697;
+        daaHeight = 504031+1;
     }
 
     private static BCCMainNetParams instance;
