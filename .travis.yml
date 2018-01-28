@@ -1,4 +1,4 @@
-# configuration for https://travis-ci.org/bitcoinj/bitcoinj
+# configuration for https://travis-ci.org/kmels/bitcoinj
 sudo: false
 dist: trusty
 language: java
@@ -16,5 +16,4 @@ after_success:
 
 notifications:
   irc:
-    channels: "irc.freenode.net#bitcoinj"
     skip_join: true
