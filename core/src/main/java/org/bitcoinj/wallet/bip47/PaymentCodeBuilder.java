@@ -39,7 +39,7 @@ public class PaymentCodeBuilder {
     }
 
     public PaymentCodeBuilder pubKey(byte[] pubkey) {
-        checkArgument(pubkey.length==33, "Expected a pubKey of length 32");
+        checkArgument(pubkey.length==33, "Expected a pubKey of length 33");
         checkArgument(pubkey[0]==0x02 || pubkey[0]==0x03, "Expected the first byte of pubKey "+
                 Utils.HEX.encode(pubkey)+") to be 0x02 or 0x03. ");
 
