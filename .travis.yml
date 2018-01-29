@@ -13,7 +13,3 @@ script:
 after_success:
   - cd ../core
   - mvn jacoco:report coveralls:report
-
-notifications:
-  irc:
-    skip_join: true

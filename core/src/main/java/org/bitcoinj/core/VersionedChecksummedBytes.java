@@ -45,7 +45,7 @@ public class VersionedChecksummedBytes implements Serializable, Cloneable, Compa
         System.arraycopy(versionAndDataBytes, 1, bytes, 0, versionAndDataBytes.length - 1);
     }
 
-    protected VersionedChecksummedBytes(int version, byte[] bytes) {
+    public VersionedChecksummedBytes(int version, byte[] bytes) {
         checkArgument(version >= 0 && version < 256);
         this.version = version;
         this.bytes = bytes;
