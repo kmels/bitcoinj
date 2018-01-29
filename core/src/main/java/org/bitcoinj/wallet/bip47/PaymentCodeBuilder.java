@@ -1,6 +1,8 @@
 package org.bitcoinj.wallet.bip47;
 
+import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.Utils;
+import org.bitcoinj.crypto.DeterministicKey;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -24,6 +26,11 @@ public class PaymentCodeBuilder {
         bytes = new byte[80];
     }
 
+    /** Creates a PaymentCodeBuilder with an empty payload*/
+    public PaymentCodeBuilder(byte[] payload) {
+        bytes = new byte[80];
+    }
+
     /** Creates a PaymentCodeBuilder with the given version and an empty payload */
     public PaymentCodeBuilder version(int version) {
         bytes[0] = (byte) version;
@@ -35,6 +42,11 @@ public class PaymentCodeBuilder {
         checkArgument(pubkey.length==33, "Expected a pubKey of length 32");
         checkArgument(pubkey[0]==0x02 || pubkey[0]==0x03, "Expected the first byte of pubKey "+
                 Utils.HEX.encode(pubkey)+") to be 0x02 or 0x03. ");
+
+        if(pubkey[0] != 0x02 && pubkey[0] != 0x03)   {
+            throw new AddressFormatException("invalid public key");
+        }
+
         // set bytes 2 - 34
         System.arraycopy(pubkey, 0, bytes, 2, pubkey.length);
         return this;
@@ -44,6 +56,10 @@ public class PaymentCodeBuilder {
         checkArgument(chainCode.length==32, "Expected a pubKey of length 32");
         System.arraycopy(chainCode, 0, bytes, 35, chainCode.length);
         return this;
+    }
+
+    public PaymentCodeBuilder fromBIP32Key(DeterministicKey k){
+        return this.pubKey(k.getPubKey()).chainCode(k.getChainCode());
     }
 
     public PaymentCode build(){

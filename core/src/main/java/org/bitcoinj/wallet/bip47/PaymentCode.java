@@ -3,6 +3,11 @@ package org.bitcoinj.wallet.bip47;
 import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.Base58;
 import org.bitcoinj.core.VersionedChecksummedBytes;
+import org.bitcoinj.crypto.DeterministicKey;
+import org.bitcoinj.crypto.HDKeyDerivation;
+
+import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 /*
     A payment code contains the following elements:
@@ -32,16 +37,33 @@ public class PaymentCode {
         return address.toBase58();
     }
 
+    public DeterministicKey makeMasterPubKey(){
+        return HDKeyDerivation.createMasterPubKeyFromBytes(Arrays.copyOfRange(payload, 2, 35), Arrays.copyOfRange(payload, 35, 67));
+    }
+
     public boolean isValid(){
         byte[] decodedBytes = Base58.decodeChecked(this.toBase58());
-        if (decodedBytes[2] == 0x02 || decodedBytes[3] == 0.03)
+
+        ByteBuffer byteBuffer = ByteBuffer.wrap(decodedBytes);
+        if(byteBuffer.get() != 0x47)   {
+            throw new AddressFormatException("invalid version: " + this.toBase58());
+        }
+        if (decodedBytes[3] == 0x02 || decodedBytes[3] == 0x03)
             return true;
+
         return false;
     }
 
     @Override
     public String toString(){
         return this.toBase58();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        return Arrays.equals(payload, ((PaymentCode)o).payload);
     }
 }
 
