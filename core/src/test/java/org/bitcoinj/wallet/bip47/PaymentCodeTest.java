@@ -1,12 +1,15 @@
 package org.bitcoinj.wallet.bip47;
 
+import org.bitcoinj.core.Base58;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.crypto.*;
 import org.junit.Assert;
 import org.junit.Test;
+import org.spongycastle.util.encoders.Hex;
 
 import java.util.List;
 
+import static org.bitcoinj.core.Utils.HEX;
 import static org.junit.Assert.*;
 
 public class PaymentCodeTest {
@@ -43,5 +46,26 @@ public class PaymentCodeTest {
         assertEquals(new PaymentCodeBuilder().version(1).fromBIP32Key(aliceIdentity).build(),
                 new PaymentCodeBuilder().version(1).fromBIP32Key(aliceIdentity).build());
 
+    }
+
+    @Test
+    public void isBase58CheckedWorking(){
+        String P = "PM8TJaWSfZYLLuJnXctJ8npNYrUr5UCeT6KGmayJ4ENDSqj7VZr7uyX9exCo5JA8mFLkeXPaHoCBKuMDpYFs3tdxP2UxNiHSsZtb1KkKSVQyiwFhdLTZ";
+        PaymentCode p = new PaymentCodeBuilder().fromBase58Checked(P).build();
+        assertEquals(p.toBase58(), P);
+    }
+
+    @Test
+    public void myOwnPaymentCodeIsValidates(){
+        String P = "PM8TJaWSfZYLLuJnXctJ8npNYrUr5UCeT6KGmayJ4ENDSqj7VZr7uyX9exCo5JA8mFLkeXPaHoCBKuMDpYFs3tdxP2UxNiHSsZtb1KkKSVQyiwFhdLTZ";
+        PaymentCode p = new PaymentCodeBuilder().fromBase58Checked(P).build();
+        assertTrue(p.isValid());
+    }
+
+    @Test
+    public void hexPaymentCodeValidates(){
+        String P = "010003a32596cd836ac88ad53c087253f7bafd080902fbf36eef5809c3a553411f0d55a843966e5aa48de7c4de3c18023e480c4b2f2a25be31489219d32b4def03ab1500000000000000000000000000";
+        PaymentCode p = new PaymentCode(Hex.decode(P));
+        assertTrue(p.isValid());
     }
 }

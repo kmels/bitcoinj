@@ -1,6 +1,7 @@
 package org.bitcoinj.wallet.bip47;
 
 import org.bitcoinj.core.AddressFormatException;
+import org.bitcoinj.core.Base58;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.DeterministicKey;
 
@@ -60,6 +61,13 @@ public class PaymentCodeBuilder {
 
     public PaymentCodeBuilder fromBIP32Key(DeterministicKey k){
         return this.pubKey(k.getPubKey()).chainCode(k.getChainCode());
+    }
+
+    public PaymentCodeBuilder fromBase58Checked(String a){
+        byte[] versionAndDataBytes = Base58.decodeChecked(a);
+        bytes = new byte[versionAndDataBytes.length - 1];
+        System.arraycopy(versionAndDataBytes, 1, bytes, 0, versionAndDataBytes.length - 1);
+        return this;
     }
 
     public PaymentCode build(){

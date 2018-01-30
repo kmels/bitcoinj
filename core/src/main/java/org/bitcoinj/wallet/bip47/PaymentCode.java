@@ -37,15 +37,10 @@ public class PaymentCode {
         return address.toBase58();
     }
 
-    public DeterministicKey makeMasterPubKey(){
-        return HDKeyDerivation.createMasterPubKeyFromBytes(Arrays.copyOfRange(payload, 2, 35), Arrays.copyOfRange(payload, 35, 67));
-    }
-
     public boolean isValid(){
         byte[] decodedBytes = Base58.decodeChecked(this.toBase58());
 
-        ByteBuffer byteBuffer = ByteBuffer.wrap(decodedBytes);
-        if(byteBuffer.get() != 0x47)   {
+        if(decodedBytes[0] != 0x47)   {
             throw new AddressFormatException("invalid version: " + this.toBase58());
         }
         if (decodedBytes[3] == 0x02 || decodedBytes[3] == 0x03)
