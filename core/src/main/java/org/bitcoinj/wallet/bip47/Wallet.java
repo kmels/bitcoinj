@@ -12,6 +12,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.bitcoinj.wallet.bip47.BIP47Util;
 import org.bitcoinj.wallet.bip47.Bip47Address;
 import org.bitcoinj.wallet.bip47.Bip47Meta;
@@ -75,6 +76,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -270,8 +272,10 @@ public class Wallet {
         mBlockchainDownloadProgressTracker = downloadProgressTracker;
     }
 
-    /*STASH:FIXME
-    public void loadBip47MetaData() {
+    /**
+     *
+     */
+    public void loadBip47MetaData(String nym, Function<ImmutablePair<String,String>, String> decryptWithNym) {
         File file = new File(directory, getCoin().concat(".bip47"));
         String encryptedJson;
         try {
@@ -281,11 +285,10 @@ public class Wallet {
             return;
         }
 
-        String nym = OTAPI.getNym();
         if (StringUtils.isEmpty(encryptedJson)) {
             return;
         }
-        String jsonString = OTAPI.decrypt(nym, encryptedJson);
+        String jsonString = decryptWithNym.apply(new ImmutablePair(nym, encryptedJson));
 
         log.debug("loadBip47MetaData: "+jsonString);
 
@@ -299,14 +302,13 @@ public class Wallet {
         }
     }
 
-    public synchronized void saveBip47MetaData() {
+    public synchronized void saveBip47MetaData(String nym, Function<ImmutablePair<String,String>, String> encryptWithNym) {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         String json = gson.toJson(bip47MetaData.values());
 
         log.debug("saveBip47MetaData: "+json);
 
-        String nym = OTAPI.getNym();
-        String encryptedJson = OTAPI.encrypt(nym, json);
+        String encryptedJson = encryptWithNym.apply(new ImmutablePair(nym, json));
 
         File file = new File(directory, getCoin().concat(".bip47"));
 
@@ -317,7 +319,7 @@ public class Wallet {
             e.printStackTrace();
         }
     }
-    */
+
     public void addTransactionEventListener(TransactionEventListener coinsReceivedEventListener) {
         if (mTransactionEventListener != null) {
             vWallet.removeCoinsReceivedEventListener(mTransactionEventListener);
