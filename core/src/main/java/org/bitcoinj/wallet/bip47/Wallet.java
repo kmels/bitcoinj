@@ -275,7 +275,7 @@ public class Wallet {
     /**
      *
      */
-    public void loadBip47MetaData(String nym, Function<ImmutablePair<String,String>, String> decryptWithNym) {
+    public void loadBip47MetaData(Function<String,String> decryption) {
         File file = new File(directory, getCoin().concat(".bip47"));
         String encryptedJson;
         try {
@@ -288,7 +288,7 @@ public class Wallet {
         if (StringUtils.isEmpty(encryptedJson)) {
             return;
         }
-        String jsonString = decryptWithNym.apply(new ImmutablePair(nym, encryptedJson));
+        String jsonString = decryption.apply(encryptedJson);
 
         log.debug("loadBip47MetaData: "+jsonString);
 
@@ -302,13 +302,13 @@ public class Wallet {
         }
     }
 
-    public synchronized void saveBip47MetaData(String nym, Function<ImmutablePair<String,String>, String> encryptWithNym) {
+    public synchronized void saveBip47MetaData(Function<String, String> encryption) {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         String json = gson.toJson(bip47MetaData.values());
 
         log.debug("saveBip47MetaData: "+json);
 
-        String encryptedJson = encryptWithNym.apply(new ImmutablePair(nym, json));
+        String encryptedJson = encryption.apply(json);
 
         File file = new File(directory, getCoin().concat(".bip47"));
 
