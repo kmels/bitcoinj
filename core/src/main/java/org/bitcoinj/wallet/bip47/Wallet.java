@@ -280,8 +280,10 @@ public class Wallet {
         String jsonString;
         try {
             jsonString = FileUtils.readFileToString(file, Charset.defaultCharset());
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (IOException e){
+            log.debug("Creating BIP47 wallet file at " + file.getAbsolutePath() + "  ...");
+            saveBip47MetaData();
+            loadBip47MetaData();
             return;
         }
 
@@ -302,6 +304,12 @@ public class Wallet {
     }
 
     public synchronized void saveBip47MetaData() {
+        try {
+            vWallet.saveToFile(vWalletFile);
+        } catch (IOException io){
+            log.error("Failed to save wallet file",io);
+        }
+
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         String json = gson.toJson(bip47MetaData.values());
 
