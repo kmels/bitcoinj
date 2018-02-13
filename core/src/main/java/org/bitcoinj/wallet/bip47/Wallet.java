@@ -275,20 +275,19 @@ public class Wallet {
     /**
      *
      */
-    public void loadBip47MetaData(Function<String,String> decryption) {
+    public void loadBip47MetaData() {
         File file = new File(directory, getCoin().concat(".bip47"));
-        String encryptedJson;
+        String jsonString;
         try {
-            encryptedJson = FileUtils.readFileToString(file, Charset.defaultCharset());
+            jsonString = FileUtils.readFileToString(file, Charset.defaultCharset());
         } catch (IOException e) {
             e.printStackTrace();
             return;
         }
 
-        if (StringUtils.isEmpty(encryptedJson)) {
+        if (StringUtils.isEmpty(jsonString)) {
             return;
         }
-        String jsonString = decryption.apply(encryptedJson);
 
         log.debug("loadBip47MetaData: "+jsonString);
 
@@ -302,18 +301,16 @@ public class Wallet {
         }
     }
 
-    public synchronized void saveBip47MetaData(Function<String, String> encryption) {
+    public synchronized void saveBip47MetaData() {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        String json = gson.toJson(bip47MetaData.values());
+        String jsonString = gson.toJson(bip47MetaData.values());
 
-        log.debug("saveBip47MetaData: "+json);
-
-        String encryptedJson = encryption.apply(json);
+        log.debug("saveBip47MetaData: "+jsonString);
 
         File file = new File(directory, getCoin().concat(".bip47"));
 
         try {
-            FileUtils.writeStringToFile(file, encryptedJson, Charset.defaultCharset(), false);
+            FileUtils.writeStringToFile(file, jsonString, Charset.defaultCharset(), false);
             log.debug("saveBip47MetaData: saved");
         } catch (IOException e) {
             e.printStackTrace();
