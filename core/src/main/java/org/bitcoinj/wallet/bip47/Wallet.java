@@ -293,13 +293,14 @@ public class Wallet {
 
         log.debug("loadBip47MetaData: "+jsonString);
 
-
         Gson gson = new Gson();
         Type collectionType = new TypeToken<Collection<Bip47Meta>>(){}.getType();
         List<Bip47Meta> bip47MetaList = gson.fromJson(jsonString, collectionType);
 
-        for (Bip47Meta bip47Meta: bip47MetaList) {
-            bip47MetaData.put(bip47Meta.getPaymentCode(), bip47Meta);
+        if (bip47MetaList != null) {
+            for (Bip47Meta bip47Meta: bip47MetaList) {
+                bip47MetaData.put(bip47Meta.getPaymentCode(), bip47Meta);
+            }
         }
     }
 
