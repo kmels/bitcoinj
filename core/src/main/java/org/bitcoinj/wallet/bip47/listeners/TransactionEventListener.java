@@ -5,6 +5,7 @@
 
 package org.bitcoinj.wallet.bip47.listeners;
 
+import org.bitcoinj.core.listeners.OnTransactionBroadcastListener;
 import org.bitcoinj.wallet.bip47.Wallet;
 
 import org.bitcoinj.core.Coin;
@@ -16,7 +17,7 @@ import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
  * Created by jimmy on 9/29/17.
  */
 
-public abstract class TransactionEventListener implements WalletCoinsReceivedEventListener, TransactionConfidenceEventListener {
+public abstract class TransactionEventListener implements OnTransactionBroadcastListener, WalletCoinsReceivedEventListener, TransactionConfidenceEventListener {
     protected Wallet wallet;
 
     public void setWallet(Wallet wallet) {

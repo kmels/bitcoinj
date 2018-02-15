@@ -204,6 +204,7 @@ public class PeerGroup implements TransactionBroadcaster {
             // and possibly retransmit if so. The recalculation process will end up including the tx hash into the
             // filter. In case (1), we need to retransmit the filter to the connected peers. In case (2), we don't
             // and shouldn't, we should just recalculate and cache the new filter for next time.
+            log.info("PEERGROUP ONCOINSRECEIVED");
             for (TransactionOutput output : tx.getOutputs()) {
                 if (output.getScriptPubKey().isSentToRawPubKey() && output.isMine(wallet)) {
                     if (tx.getConfidence().getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING)

@@ -64,6 +64,7 @@ import org.bitcoinj.signers.*;
 import org.bitcoinj.utils.*;
 import org.bitcoinj.wallet.Protos.Wallet.*;
 import org.bitcoinj.wallet.WalletTransaction.*;
+import org.bitcoinj.wallet.bip47.Bip47Meta;
 import org.bitcoinj.wallet.listeners.KeyChainEventListener;
 import org.bitcoinj.wallet.listeners.ScriptsChangeEventListener;
 import org.bitcoinj.wallet.listeners.WalletChangeEventListener;
@@ -1638,6 +1639,8 @@ public class Wallet extends BaseTaggableObject
     public boolean notifyTransactionIsInBlock(Sha256Hash txHash, StoredBlock block,
                                               BlockChain.NewBlockType blockType,
                                               int relativityOffset) throws VerificationException {
+
+        log.info("*** Notifying that tx "  + txHash + " is in block ... " + block.getHeight());
         lock.lock();
         try {
             Transaction tx = transactions.get(txHash);
@@ -1672,6 +1675,7 @@ public class Wallet extends BaseTaggableObject
      * transaction lists like any other pending transaction (even when not relevant).</p>
      */
     public void receivePending(Transaction tx, @Nullable List<Transaction> dependencies, boolean overrideIsRelevant) throws VerificationException {
+        log.debug("Receive pending tx {} and dependencies {} overriding relevance: {}", tx.getHash(), dependencies, overrideIsRelevant);
         // Can run in a peer thread. This method will only be called if a prior call to isPendingTransactionRelevant
         // returned true, so we already know by this point that it sends coins to or from our wallet, or is a double
         // spend against one of our other pending transactions.
@@ -1776,7 +1780,7 @@ public class Wallet extends BaseTaggableObject
             //   - Spend our coins
             //   - Double spend a tx in our wallet
             if (!isTransactionRelevant(tx)) {
-                log.debug("Received tx that isn't relevant to this wallet, discarding.");
+                log.warn("Received tx that isn't relevant to this wallet, discarding.");
                 return false;
             }
             return true;
@@ -1796,9 +1800,11 @@ public class Wallet extends BaseTaggableObject
     public boolean isTransactionRelevant(Transaction tx) throws ScriptException {
         lock.lock();
         try {
+            boolean isBip47Tx = tx.getValueSentToMe(this).signum() > 0;
             return tx.getValueSentFromMe(this).signum() > 0 ||
                    tx.getValueSentToMe(this).signum() > 0 ||
-                   !findDoubleSpendsAgainst(tx, transactions).isEmpty();
+                   !findDoubleSpendsAgainst(tx, transactions).isEmpty() ||
+                    isBip47Tx;
         } finally {
             lock.unlock();
         }
@@ -1898,6 +1904,7 @@ public class Wallet extends BaseTaggableObject
         // Runs in a peer thread.
         checkState(lock.isHeldByCurrentThread());
 
+        System.out.println("**** WALLET RECEIVE() .... ");
         Coin prevBalance = getBalance();
         Sha256Hash txHash = tx.getHash();
         boolean bestChain = blockType == BlockChain.NewBlockType.BEST_CHAIN;
@@ -2027,6 +2034,7 @@ public class Wallet extends BaseTaggableObject
             checkBalanceFuturesLocked(newBalance);
         }
 
+        log.debug("informing listeners on receive");
         informConfidenceListenersIfNotReorganizing();
         isConsistentOrThrow();
         // Optimization for the case where a block has tons of relevant transactions.
@@ -2082,6 +2090,7 @@ public class Wallet extends BaseTaggableObject
     }
 
     private void informConfidenceListenersIfNotReorganizing() {
+        System.out.println("INFORMING CONFIDENCE LISTENERS? ... " + !insideReorg);
         if (insideReorg)
             return;
         for (Map.Entry<Transaction, TransactionConfidence.Listener.ChangeReason> entry : confidenceChanged.entrySet()) {
@@ -2138,6 +2147,7 @@ public class Wallet extends BaseTaggableObject
                 }
             }
 
+            log.debug("informing listeners on notifyNewBestBlock ("+block.getHeight()+")");
             informConfidenceListenersIfNotReorganizing();
             maybeQueueOnWalletChanged();
 
@@ -2158,6 +2168,7 @@ public class Wallet extends BaseTaggableObject
      * re-org. Places the tx into the right pool, handles coinbase transactions, handles double-spends and so on.
      */
     private void processTxFromBestChain(Transaction tx, boolean forceAddToPool) throws VerificationException {
+        System.out.println("PROCESSING TX FROM BEST CHAIN ...");
         checkState(lock.isHeldByCurrentThread());
         checkState(!pending.containsKey(tx.getHash()));
 
@@ -2185,7 +2196,10 @@ public class Wallet extends BaseTaggableObject
         // against our pending transactions. Note that a tx may double spend our pending transactions and also send
         // us money/spend our money.
         boolean hasOutputsToMe = tx.getValueSentToMe(this).signum() > 0;
+
         if (hasOutputsToMe) {
+            System.out.println("TX HAS OUTPUTS TO ME...");
+
             // Needs to go into either unspent or spent (if the outputs were already spent by a pending tx).
             if (tx.isEveryOwnedOutputSpent(this)) {
                 log.info("  tx {} ->spent (by pending)", tx.getHashAsString());
@@ -2399,6 +2413,8 @@ public class Wallet extends BaseTaggableObject
      * @return true if the tx was added to the wallet, or false if it was already in the pending pool
      */
     public boolean maybeCommitTx(Transaction tx) throws VerificationException {
+
+        log.info("BINGO!!!!!!!!!!  COMMIT TX.... "+tx.getHashAsString());
         tx.verify();
         lock.lock();
         try {
@@ -2410,6 +2426,7 @@ public class Wallet extends BaseTaggableObject
             // Put any outputs that are sending money back to us into the unspents map, and calculate their total value.
             Coin valueSentToMe = Coin.ZERO;
             for (TransactionOutput o : tx.getOutputs()) {
+
                 if (!o.isMineOrWatched(this)) continue;
                 valueSentToMe = valueSentToMe.add(o.getValue());
             }
@@ -2471,10 +2488,12 @@ public class Wallet extends BaseTaggableObject
                 maybeQueueOnWalletChanged();
             } catch (ScriptException e) {
                 // Cannot happen as we just created this transaction ourselves.
+                log.error("ScriptException",e);
                 throw new RuntimeException(e);
             }
 
             isConsistentOrThrow();
+            log.debug("informing listeners on maybeCommitTx");
             informConfidenceListenersIfNotReorganizing();
             saveNow();
         } finally {
@@ -2495,6 +2514,7 @@ public class Wallet extends BaseTaggableObject
      * <p>Triggers an auto save.</p>
      */
     public void commitTx(Transaction tx) throws VerificationException {
+        System.out.println("BINGO !! Committing TX..." + tx.getHashAsString());
         checkArgument(maybeCommitTx(tx), "commitTx called on the same transaction twice");
     }
 
@@ -2722,6 +2742,7 @@ public class Wallet extends BaseTaggableObject
     private void queueOnTransactionConfidenceChanged(final Transaction tx) {
         checkState(lock.isHeldByCurrentThread());
         for (final ListenerRegistration<TransactionConfidenceEventListener> registration : transactionConfidenceListeners) {
+            System.out.println("CALLING CONFIDENCE LISTENER WITH TX: "+tx.getHash());
             if (registration.executor == Threading.SAME_THREAD) {
                 registration.listener.onTransactionConfidenceChanged(this, tx);
             } else {
@@ -2757,6 +2778,7 @@ public class Wallet extends BaseTaggableObject
             registration.executor.execute(new Runnable() {
                 @Override
                 public void run() {
+                    log.info("INVOKING ONCOINSRECEIVED");
                     registration.listener.onCoinsReceived(Wallet.this, tx, balance, newBalance);
                 }
             });
@@ -4540,6 +4562,7 @@ public class Wallet extends BaseTaggableObject
             onWalletChangedSuppressions--;
             maybeQueueOnWalletChanged();
             checkBalanceFuturesLocked(balance);
+            log.debug("informing listeners on reorganize");
             informConfidenceListenersIfNotReorganizing();
             saveLater();
         } finally {
@@ -4571,6 +4594,7 @@ public class Wallet extends BaseTaggableObject
 
     @Override
     public void beginBloomFilterCalculation() {
+        System.out.println("BEGINNING BLOOM FILTER CALCULATION ... ");
         if (bloomFilterGuard.incrementAndGet() > 1)
             return;
         lock.lock();
@@ -4589,8 +4613,11 @@ public class Wallet extends BaseTaggableObject
         for (Transaction tx : all) {
             for (TransactionOutput out : tx.getOutputs()) {
                 try {
-                    if (isTxOutputBloomFilterable(out))
-                        bloomOutPoints.add(out.getOutPointFor());
+                    if (isTxOutputBloomFilterable(out)) {
+                        TransactionOutPoint tOutpoint = out.getOutPointFor();
+                        System.out.println("ADDING OUTPOINT TO BLOOM FILTER FOR INDEX ... "+ tOutpoint.getIndex());
+                        bloomOutPoints.add(tOutpoint);
+                    }
                 } catch (ScriptException e) {
                     // If it is ours, we parsed the script correctly, so this shouldn't happen.
                     throw new RuntimeException(e);
@@ -4695,6 +4722,7 @@ public class Wallet extends BaseTaggableObject
     private boolean isTxOutputBloomFilterable(TransactionOutput out) {
         Script script = out.getScriptPubKey();
         boolean isScriptTypeSupported = script.isSentToRawPubKey() || script.isPayToScriptHash();
+        System.out.println("CHECKING IF TX OUTPUT IS BLOOMFILTERABLE ... " + ((isScriptTypeSupported && myUnspents.contains(out)) || watchedScripts.contains(script)));
         return (isScriptTypeSupported && myUnspents.contains(out)) || watchedScripts.contains(script);
     }
 
@@ -5087,6 +5115,14 @@ public class Wallet extends BaseTaggableObject
             log.info("New broadcaster so uploading waiting tx {}", tx.getHash());
             broadcaster.broadcastTransaction(tx);
         }
+    }
+
+    public TransactionBroadcaster getvTransactionBroadcaster() {
+        return vTransactionBroadcaster;
+    }
+
+    {
+
     }
 
     /**

@@ -89,7 +89,7 @@ public class HeadersMessage extends Message {
 
         if (log.isDebugEnabled()) {
             for (int i = 0; i < numHeaders; ++i) {
-                log.debug(this.blockHeaders.get(i).toString());
+                //log.debug(this.blockHeaders.get(i).toString());
             }
         }
     }

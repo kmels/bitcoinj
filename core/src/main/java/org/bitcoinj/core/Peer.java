@@ -173,6 +173,7 @@ public class Peer extends PeerSocketHandler {
                 }
             });
 
+    private boolean listenersAreDone;
     /**
      * <p>Construct a peer that reads/writes from the given block chain.</p>
      *
@@ -361,6 +362,10 @@ public class Peer extends PeerSocketHandler {
         onTransactionEventListeners.add(new ListenerRegistration<OnTransactionBroadcastListener>(listener, executor));
     }
 
+    public CopyOnWriteArrayList<ListenerRegistration<OnTransactionBroadcastListener>> getOnTransactionEventListeners() {
+        return onTransactionEventListeners;
+    }
+
     /** Registers a listener that is called immediately before a message is received */
     public void addPreMessageReceivedEventListener(PreMessageReceivedEventListener listener) {
         addPreMessageReceivedEventListener(Threading.USER_THREAD, listener);
@@ -467,8 +472,13 @@ public class Peer extends PeerSocketHandler {
         // If we are in the middle of receiving transactions as part of a filtered block push from the remote node,
         // and we receive something that's not a transaction, then we're done.
         if (currentFilteredBlock != null && !(m instanceof Transaction)) {
-            endFilteredBlock(currentFilteredBlock);
-            currentFilteredBlock = null;
+
+            if (listenersAreDone) {
+                log.info("*** We are ending current filter (NOT Transaction) - " + m.getClass());
+                log.info("Current filtered block: " + currentFilteredBlock.getBlockHeader().getHashAsString());
+                endFilteredBlock(currentFilteredBlock);
+                currentFilteredBlock = null;
+            }
         }
 
         // No further communication is possible until version handshake is complete.
@@ -618,6 +628,8 @@ public class Peer extends PeerSocketHandler {
         // messages stream in. We'll call endFilteredBlock when a non-tx message arrives (eg, another
         // FilteredBlock) or when a tx that isn't needed by that block is found. A ping message is sent after
         // a getblocks, to force the non-tx message path.
+        log.info("*** Starting filtered block: "+m.getHash());
+        listenersAreDone = false;
         currentFilteredBlock = m;
         // Potentially refresh the server side filter. Because the remote node adds hits back into the filter
         // to save round-tripping back through us, the filter degrades over time as false positives get added,
@@ -763,11 +775,12 @@ public class Peer extends PeerSocketHandler {
     }
 
     protected void processTransaction(final Transaction tx) throws VerificationException {
+        log.debug("*** Processing tx...");
         // Check a few basic syntax issues to ensure the received TX isn't nonsense.
         tx.verify();
         lock.lock();
         try {
-            log.debug("{}: Received tx {}", getAddress(), tx.getHashAsString());
+            log.debug("{}: Received tx ! {}", getAddress(), tx.getHashAsString());
             // Label the transaction as coming in from the P2P network (as opposed to being created by us, direct import,
             // etc). This helps the wallet decide how to risk analyze it later.
             //
@@ -779,20 +792,24 @@ public class Peer extends PeerSocketHandler {
             confidence.setSource(TransactionConfidence.Source.NETWORK);
             pendingTxDownloads.remove(confidence);
             if (maybeHandleRequestedData(tx)) {
+                log.warn("*** Don't tell wallets 0 ...");
                 return;
             }
             if (currentFilteredBlock != null) {
                 if (!currentFilteredBlock.provideTransaction(tx)) {
                     // Got a tx that didn't fit into the filtered block, so we must have received everything.
+                    log.warn("**** endFilteredBlock We must have received everything");
                     endFilteredBlock(currentFilteredBlock);
                     currentFilteredBlock = null;
                 }
                 // Don't tell wallets or listeners about this tx as they'll learn about it when the filtered block is
                 // fully downloaded instead.
-                return;
+                log.warn("*** Don't tell wallets 1...");
+                //return;
             }
             // It's a broadcast transaction. Tell all wallets about this tx so they can check if it's relevant or not.
             for (final Wallet wallet : wallets) {
+                log.warn("*** Telling " + wallets.size() + " wallets ...");
                 try {
                     if (wallet.isPendingTransactionRelevant(tx)) {
                         if (vDownloadTxDependencyDepth > 0) {
@@ -843,15 +860,19 @@ public class Peer extends PeerSocketHandler {
         } finally {
             lock.unlock();
         }
+        log.info("**** Number of event listeners: "+onTransactionEventListeners.size());
         // Tell all listeners about this tx so they can decide whether to keep it or not. If no listener keeps a
         // reference around then the memory pool will forget about it after a while too because it uses weak references.
         for (final ListenerRegistration<OnTransactionBroadcastListener> registration : onTransactionEventListeners) {
             registration.executor.execute(new Runnable() {
                 @Override
                 public void run() {
+                    log.info("Running Peer on TX listener ... "+tx.getHashAsString());
                     registration.listener.onTransaction(Peer.this, tx);
+                    listenersAreDone = true;
                 }
             });
+
         }
     }
 
@@ -1038,14 +1059,13 @@ public class Peer extends PeerSocketHandler {
 
     // TODO: Fix this duplication.
     protected void endFilteredBlock(FilteredBlock m) {
-        if (log.isDebugEnabled())
-            log.debug("{}: Received broadcast filtered block {}", getAddress(), m.getHash().toString());
+        log.debug("{}: Received broadcast filtered block {}", getAddress(), m.getHash().toString());
         if (!vDownloadData) {
-            log.debug("{}: Received block we did not ask for: {}", getAddress(), m.getHash().toString());
+            log.warn("{}: Received block we did not ask for: {}", getAddress(), m.getHash().toString());
             return;
         }
         if (blockChain == null) {
-            log.debug("Received filtered block but was not configured with an AbstractBlockChain");
+            log.warn("Received filtered block but was not configured with an AbstractBlockChain");
             return;
         }
         // Note that we currently do nothing about peers which maliciously do not include transactions which

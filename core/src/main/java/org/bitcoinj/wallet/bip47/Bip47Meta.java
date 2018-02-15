@@ -64,12 +64,15 @@ public class Bip47Meta {
     }
 
     public void generateKeys(Wallet wallet) throws NotSecp256k1Exception, NoSuchProviderException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+        System.out.println("GENERATING KEYS ...");
         for (int i = 0; i < LOOKAHEAD; i++) {
             ECKey key = BIP47Util.getReceiveAddress(wallet, paymentCode, i).getReceiveECKey();
             Address address = wallet.getAddressOfKey(key);
 
             log.debug("New address generated");
+            System.out.println("New address generated ...");
             log.debug(address.toString());
+            System.out.println(address.toString()+" ...");
             wallet.importKey(key);
             incomingAddresses.add(i, new Bip47Address(address.toString(), i));
         }

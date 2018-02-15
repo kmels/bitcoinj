@@ -296,6 +296,8 @@ public class Transaction extends ChildMessage {
         // This is tested in WalletTest.
         Coin v = Coin.ZERO;
         for (TransactionOutput o : outputs) {
+            log.debug("Checking isMineOrWatched from getValueSentToMe()");
+
             if (!o.isMineOrWatched(transactionBag)) continue;
             v = v.add(o.getValue());
         }
@@ -379,6 +381,8 @@ public class Transaction extends ChildMessage {
                 continue;
             // The connected output may be the change to the sender of a previous input sent to this wallet. In this
             // case we ignore it.
+
+            log.debug("Checking isMineOrWatched from getValueSentFromMe()");
             if (!connected.isMineOrWatched(wallet))
                 continue;
             v = v.add(connected.getValue());
@@ -457,6 +461,7 @@ public class Transaction extends ChildMessage {
      */
     public boolean isEveryOwnedOutputSpent(TransactionBag transactionBag) {
         for (TransactionOutput output : outputs) {
+            log.debug("Checking isMineOrWatched from isEveryOwnedOutputSpent()");
             if (output.isAvailableForSpending() && output.isMineOrWatched(transactionBag))
                 return false;
         }
@@ -1366,6 +1371,7 @@ public class Transaction extends ChildMessage {
     public List<TransactionOutput> getWalletOutputs(TransactionBag transactionBag){
         List<TransactionOutput> walletOutputs = new LinkedList<TransactionOutput>();
         for (TransactionOutput o : outputs) {
+            log.debug("Checking isMineOrWatched from getWalletOutputs()");
             if (!o.isMineOrWatched(transactionBag)) continue;
             walletOutputs.add(o);
         }

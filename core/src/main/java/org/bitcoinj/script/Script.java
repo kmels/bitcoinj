@@ -113,8 +113,13 @@ public class Script {
      */
     public Script(byte[] programBytes) throws ScriptException {
         program = programBytes;
-        parse(programBytes);
-        creationTimeSeconds = 0;
+        try {
+            parse(programBytes);
+            creationTimeSeconds = 0;
+        } catch (ScriptException e){
+            log.error("*** Failed to parse script: " + new String(programBytes));
+            throw e;
+        }
     }
 
     public Script(byte[] programBytes, long creationTimeSeconds) throws ScriptException {

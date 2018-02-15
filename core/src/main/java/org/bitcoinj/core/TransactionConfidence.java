@@ -453,6 +453,7 @@ public class TransactionConfidence {
             registration.executor.execute(new Runnable() {
                 @Override
                 public void run() {
+                    System.out.println("INVOKING ON CONFIDENCE CHANGED ...");
                     registration.listener.onConfidenceChanged(TransactionConfidence.this, reason);
                 }
             });

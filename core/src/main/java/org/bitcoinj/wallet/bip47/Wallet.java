@@ -13,6 +13,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.bitcoinj.core.listeners.OnTransactionBroadcastListener;
 import org.bitcoinj.wallet.bip47.BIP47Util;
 import org.bitcoinj.wallet.bip47.Bip47Address;
 import org.bitcoinj.wallet.bip47.Bip47Meta;
@@ -64,6 +65,7 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.nio.charset.Charset;
@@ -90,7 +92,7 @@ public class Wallet {
     protected final Blockchain blockchain;
     private volatile BlockChain vChain;
     private volatile BlockStore vStore;
-    private volatile org.bitcoinj.wallet.Wallet vWallet;
+    public volatile org.bitcoinj.wallet.Wallet vWallet;
     private volatile PeerGroup vPeerGroup;
 
     private final File directory;
@@ -222,8 +224,11 @@ public class Wallet {
             } else if (blockchain.getCoin().equals("tBCH")) {
                 vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("158.69.119.35"), 8333));
                 vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("144.217.73.86"), 18333));
+                log.debug("Adding localhost to peers");
+                vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("192.168.56.1"), 18333));
             }
 
+            vPeerGroup.setUseLocalhostPeerWhenPossible(true);
             vPeerGroup.addPeerDiscovery(new DnsDiscovery(blockchain.getNetworkParameters()));
 
             vChain.addWallet(vWallet);
@@ -280,6 +285,11 @@ public class Wallet {
         String jsonString;
         try {
             jsonString = FileUtils.readFileToString(file, Charset.defaultCharset());
+        } catch (FileNotFoundException f){
+            log.debug(TAG, "Creating BIP47Meta for the first time");
+            this.saveBip47MetaData();
+            loadBip47MetaData();
+            return;
         } catch (IOException e) {
             e.printStackTrace();
             return;
@@ -317,6 +327,15 @@ public class Wallet {
         }
     }
 
+    public void addOnTransactionBroadcastListener(OnTransactionBroadcastListener listener){
+        PeerGroup pg = (PeerGroup)vWallet.getvTransactionBroadcaster();
+
+        if (pg != null) {
+            log.info("*** Adding on transaction broadcast listener");
+            pg.addOnTransactionBroadcastListener(listener);
+        }
+    }
+
     public void addTransactionEventListener(TransactionEventListener coinsReceivedEventListener) {
         if (mTransactionEventListener != null) {
             vWallet.removeCoinsReceivedEventListener(mTransactionEventListener);
@@ -330,13 +349,28 @@ public class Wallet {
 
         vWallet.addCoinsReceivedEventListener(coinsReceivedEventListener);
         vWallet.addTransactionConfidenceEventListener(coinsReceivedEventListener);
+        PeerGroup pg = (PeerGroup)vWallet.getvTransactionBroadcaster();
 
+        if (pg != null)
+            pg.addOnTransactionBroadcastListener(new OnTransactionBroadcastListener() {
+                @Override
+                public void onTransaction(Peer peer, Transaction t) {
+                    log.info("*** SUCCESS ...");
+                    coinsReceivedEventListener.onCoinsReceived(vWallet, t, null, null);
+                }
+            });
         mTransactionEventListener = coinsReceivedEventListener;
     }
 
+    public TransactionEventListener getTransactionEventListeners(){
+        return this.mTransactionEventListener;
+    }
     public boolean isNotificationTransaction(Transaction tx) {
+        log.debug("Checking if tx " + tx.getHashAsString() + " is bip47 notification ...");
         Address address = getAddressOfReceived(tx);
         Address myNotificationAddress = mAccounts.get(0).getNotificationAddress();
+        log.debug("Checking if tx " + tx.getHashAsString() + " is bip47 notification ..." + (address != null && address.toString().equals(myNotificationAddress.toString())));
+
 
         return address != null && address.toString().equals(myNotificationAddress.toString());
     }
@@ -360,6 +394,7 @@ public class Wallet {
         for (final TransactionOutput output : tx.getOutputs()) {
             try {
                 if (output.isMineOrWatched(vWallet)) {
+                    log.debug("Checking isMineOrWatched from getAddressOfReceived()");
                     final Script script = output.getScriptPubKey();
                     return script.getToAddress(blockchain.getNetworkParameters(), true);
                 }
@@ -375,6 +410,7 @@ public class Wallet {
         for (final TransactionOutput output : tx.getOutputs()) {
             try {
                 if (!output.isMineOrWatched(vWallet)) {
+                    log.debug("Checking isMineOrWatched from getAddressOfSent()");
                     final Script script = output.getScriptPubKey();
                     return script.getToAddress(blockchain.getNetworkParameters(), true);
                 }
@@ -393,6 +429,7 @@ public class Wallet {
     }
 
     public boolean savePaymentCode(PaymentCode paymentCode) {
+        System.out.println("SAVING PAYMENT CODE ...");
         if (bip47MetaData.containsKey(paymentCode.toString())) {
             Bip47Meta bip47Meta = bip47MetaData.get(paymentCode.toString());
             if (bip47Meta.getIncomingAddresses().size() != 0) {

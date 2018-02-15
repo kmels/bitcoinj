@@ -615,6 +615,7 @@ public abstract class AbstractBlockChain {
                                             @Nullable final List<Sha256Hash> filteredTxHashList,
                                             @Nullable final Map<Sha256Hash, Transaction> filteredTxn,
                                             final StoredBlock newStoredBlock) throws VerificationException {
+        log.info("*** Informing listeners about new block ... ");
         // Notify the listeners of the new block, so the depth and workDone of stored transactions can be updated
         // (in the case of the listener being a wallet). Wallets need to know how deep each transaction is so
         // coinbases aren't used before maturity.
@@ -895,6 +896,8 @@ public abstract class AbstractBlockChain {
                 falsePositives.remove(tx.getHash());
                 if (clone)
                     tx = tx.params.getDefaultSerializer().makeTransaction(tx.bitcoinSerialize());
+
+                System.out.println("** INVOKING LISTENER: RECEIVE TX FROM BLOCK ... ");
                 listener.receiveFromBlock(tx, block, blockType, relativityOffset++);
             } catch (ScriptException e) {
                 // We don't want scripts we don't understand to break the block chain so just note that this tx was

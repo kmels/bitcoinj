@@ -421,6 +421,7 @@ public class BasicKeyChain implements EncryptableKeyChain {
             registration.executor.execute(new Runnable() {
                 @Override
                 public void run() {
+                    System.out.println("ON KEY ADDED, CALLING REGISTRATION LISTENER ...");
                     registration.listener.onKeysAdded(keys);
                 }
             });
