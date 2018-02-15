@@ -156,6 +156,7 @@ public class SPVBlockStore implements BlockStore {
 
     @Override
     public void put(StoredBlock block) throws BlockStoreException {
+        log.info("*** Storing another block ... ");
         final MappedByteBuffer buffer = this.buffer;
         if (buffer == null) throw new BlockStoreException("Store closed");
 

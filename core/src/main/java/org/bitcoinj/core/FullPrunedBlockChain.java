@@ -123,7 +123,7 @@ public class FullPrunedBlockChain extends AbstractBlockChain {
     }
 
     @Override
-    protected void rollbackBlockStore(int height) throws BlockStoreException {
+    public void rollbackBlockStore(int height) throws BlockStoreException {
         throw new BlockStoreException("Unsupported");
     }
 

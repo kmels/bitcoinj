@@ -318,7 +318,7 @@ public abstract class AbstractBlockChain {
      * @throws BlockStoreException
      *             if the operation fails or is unsupported.
      */
-    protected abstract void rollbackBlockStore(int height) throws BlockStoreException;
+    public abstract void rollbackBlockStore(int height) throws BlockStoreException;
 
     /**
      * Called before setting chain head in memory.

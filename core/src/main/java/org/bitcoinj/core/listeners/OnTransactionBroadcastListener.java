@@ -15,6 +15,7 @@
 package org.bitcoinj.core.listeners;
 
 import org.bitcoinj.core.*;
+import org.bitcoinj.store.BlockStoreException;
 
 /**
  * Called when a new transaction is broadcast over the network.
@@ -23,5 +24,5 @@ public interface OnTransactionBroadcastListener {
     /**
      * Called when a new transaction is broadcast over the network.
      */
-    void onTransaction(Peer peer, Transaction t);
+    void onTransaction(Peer peer, Transaction t) ;
 }

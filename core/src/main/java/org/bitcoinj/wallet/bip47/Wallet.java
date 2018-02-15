@@ -218,6 +218,22 @@ public class Wallet {
             vChain = new BlockChain(blockchain.getNetworkParameters(), vStore);
             vPeerGroup = new PeerGroup(blockchain.getNetworkParameters(), vChain);
 
+            vPeerGroup.addOnTransactionBroadcastListener(new OnTransactionBroadcastListener() {
+                @Override
+                public void onTransaction(Peer peer, Transaction t) {
+                    log.info("*** Sucesss at intercepting peergroup tx.. ");
+
+                    if (isNotificationTransaction(t)) {
+                        log.debug("*** Rolling blockstore back ...");
+                        try {
+                            vChain.rollbackBlockStore(vWallet.getLastBlockSeenHeight() - 3);
+                        } catch(BlockStoreException e){
+                            log.error(" Could not rollback ... " );
+                        }
+                    }
+                }
+            });
+
             if (blockchain.getCoin().equals("BCH")) {
                 vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("158.69.119.35"), 8333));
                 vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("144.217.73.86"), 8333));

@@ -473,12 +473,12 @@ public class Peer extends PeerSocketHandler {
         // and we receive something that's not a transaction, then we're done.
         if (currentFilteredBlock != null && !(m instanceof Transaction)) {
 
-            if (listenersAreDone) {
+            //if (listenersAreDone) {
                 log.info("*** We are ending current filter (NOT Transaction) - " + m.getClass());
                 log.info("Current filtered block: " + currentFilteredBlock.getBlockHeader().getHashAsString());
                 endFilteredBlock(currentFilteredBlock);
                 currentFilteredBlock = null;
-            }
+            //}
         }
 
         // No further communication is possible until version handshake is complete.
