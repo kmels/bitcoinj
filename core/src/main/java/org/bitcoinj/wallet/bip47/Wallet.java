@@ -103,6 +103,8 @@ public class Wallet {
     private BlockchainDownloadProgressTracker mBlockchainDownloadProgressTracker;
     private TransactionEventListener mTransactionEventListener = null;
 
+    private boolean mBlockchainDownloadStarted = false;
+
     private ConcurrentHashMap<String, Bip47Meta> bip47MetaData = new ConcurrentHashMap<>();
     private static final Logger log = LoggerFactory.getLogger(Wallet.class);
 
@@ -240,9 +242,10 @@ public class Wallet {
     }
 
     public void startBlockchainDownload() {
-        if (isStarted()) {
+        if (isStarted() && !mBlockchainDownloadStarted) {
             log.debug("Starting blockchain download.");
             vPeerGroup.startBlockChainDownload(mBlockchainDownloadProgressTracker);
+            mBlockchainDownloadStarted = true;
         }
     }
 
@@ -267,6 +270,8 @@ public class Wallet {
         }
 
         vStore = null;
+
+        mBlockchainDownloadStarted = false;
 
         log.debug("stopWallet: Done");
     }
