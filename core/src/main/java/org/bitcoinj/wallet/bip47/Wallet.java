@@ -231,8 +231,7 @@ public class Wallet {
 
             vPeerGroup.start();
             if (startBlockchainDownload) {
-                log.debug("Starting blockchain download.");
-                vPeerGroup.startBlockChainDownload(mBlockchainDownloadProgressTracker);
+                startBlockchainDownload();
             }
         } catch (BlockStoreException e) {
             log.warn("start: ", e);
