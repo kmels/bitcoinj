@@ -224,6 +224,11 @@ public class Wallet {
                 @Override
                 public void onTransaction(Peer peer, Transaction t) {
                     if (isNotificationTransaction(t) && peer.getCurrentFilteredBlock() != null){
+
+                        if (vWallet.getTransaction(t.getHash()) != null) {
+                            log.debug("Already seen this notification transaction. ");
+                            return;
+                        }
                         log.debug("Valid notification transaction found. Replaying a block back .. ");
                         try {
                             vChain.rollbackBlockStore(vWallet.getLastBlockSeenHeight() - 1);
