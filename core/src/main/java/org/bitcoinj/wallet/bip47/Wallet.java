@@ -297,19 +297,7 @@ public class Wallet {
 
         log.debug("loadBip47MetaData: "+jsonString);
 
-        Gson gson = new Gson();
-        Type collectionType = new TypeToken<Collection<Bip47Meta>>(){}.getType();
-        try {
-            List<Bip47Meta> bip47MetaList = gson.fromJson(jsonString, collectionType);
-            if (bip47MetaList != null) {
-                for (Bip47Meta bip47Meta: bip47MetaList) {
-                    bip47MetaData.put(bip47Meta.getPaymentCode(), bip47Meta);
-                }
-            }
-        } catch (JsonSyntaxException e) {
-            return true;
-        }
-        return false;
+        return importBip47MetaData(jsonString);
     }
 
     public String readBip47MetaDataFile() {
