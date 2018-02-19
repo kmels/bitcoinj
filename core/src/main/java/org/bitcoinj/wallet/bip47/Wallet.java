@@ -198,7 +198,7 @@ public class Wallet {
         mAccounts.add(account);
     }
 
-    public void start() {
+    public void start(boolean startBlockchainDownload) {
         Context.propagate(new Context(blockchain.getNetworkParameters()));
         File chainFile = new File(directory, blockchain.getCoin() + ".spvchain");
         boolean chainFileExists = chainFile.exists();
@@ -230,12 +230,19 @@ public class Wallet {
             vPeerGroup.addWallet(vWallet);
 
             vPeerGroup.start();
-            log.debug("Starting blockchain download.");
-            vPeerGroup.startBlockChainDownload(mBlockchainDownloadProgressTracker);
-
+            if (startBlockchainDownload) {
+                startBlockchainDownload();
+            }
         } catch (BlockStoreException e) {
             log.warn("start: ", e);
 
+        }
+    }
+
+    public void startBlockchainDownload() {
+        if (isStarted()) {
+            log.debug("Starting blockchain download.");
+            vPeerGroup.startBlockChainDownload(mBlockchainDownloadProgressTracker);
         }
     }
 
