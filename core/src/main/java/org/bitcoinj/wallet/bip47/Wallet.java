@@ -255,7 +255,7 @@ public class Wallet {
 
     public void stop() {
         log.debug("Stopping peergroup");
-        vPeerGroup.stopAsync();
+        if (vPeerGroup.isRunning()) vPeerGroup.stopAsync();
         try {
             log.debug("Saving wallet");
             vWallet.saveToFile(vWalletFile);
