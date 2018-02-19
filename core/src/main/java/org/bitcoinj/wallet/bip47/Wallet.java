@@ -231,7 +231,6 @@ public class Wallet {
             vChain.addWallet(vWallet);
             vPeerGroup.addWallet(vWallet);
 
-            vPeerGroup.start();
             if (startBlockchainDownload) {
                 startBlockchainDownload();
             }
@@ -244,6 +243,7 @@ public class Wallet {
     public void startBlockchainDownload() {
         if (isStarted() && !mBlockchainDownloadStarted) {
             log.debug("Starting blockchain download.");
+            vPeerGroup.start();
             vPeerGroup.startBlockChainDownload(mBlockchainDownloadProgressTracker);
             mBlockchainDownloadStarted = true;
         }
