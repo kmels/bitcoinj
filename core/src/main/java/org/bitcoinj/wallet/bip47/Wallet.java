@@ -255,6 +255,10 @@ public class Wallet {
     }
 
     public void stop() {
+        if (vPeerGroup == null || !isStarted()) {
+            return;
+        }
+
         log.debug("Stopping peergroup");
         if (vPeerGroup.isRunning()) vPeerGroup.stopAsync();
         try {
