@@ -11,6 +11,7 @@ import com.google.common.net.InetAddresses;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.bitcoinj.core.listeners.OnTransactionBroadcastListener;
@@ -103,6 +104,8 @@ public class Wallet {
 
     private BlockchainDownloadProgressTracker mBlockchainDownloadProgressTracker;
     private TransactionEventListener mTransactionEventListener = null;
+
+    private boolean mBlockchainDownloadStarted = false;
 
     private ConcurrentHashMap<String, Bip47Meta> bip47MetaData = new ConcurrentHashMap<>();
     private static final Logger log = LoggerFactory.getLogger(Wallet.class);
@@ -199,7 +202,7 @@ public class Wallet {
         mAccounts.add(account);
     }
 
-    public void start() {
+    public void start(boolean startBlockchainDownload) {
         Context.propagate(new Context(blockchain.getNetworkParameters()));
         File chainFile = new File(directory, blockchain.getCoin() + ".spvchain");
         boolean chainFileExists = chainFile.exists();
@@ -253,13 +256,21 @@ public class Wallet {
             vChain.addWallet(vWallet);
             vPeerGroup.addWallet(vWallet);
 
-            vPeerGroup.start();
-            log.debug("Starting blockchain download.");
-            vPeerGroup.startBlockChainDownload(mBlockchainDownloadProgressTracker);
-
+            if (startBlockchainDownload) {
+                startBlockchainDownload();
+            }
         } catch (BlockStoreException e) {
             log.warn("start: ", e);
 
+        }
+    }
+
+    public void startBlockchainDownload() {
+        if (isStarted() && !mBlockchainDownloadStarted) {
+            log.debug("Starting blockchain download.");
+            vPeerGroup.start();
+            vPeerGroup.startBlockChainDownload(mBlockchainDownloadProgressTracker);
+            mBlockchainDownloadStarted = true;
         }
     }
 
@@ -268,8 +279,12 @@ public class Wallet {
     }
 
     public void stop() {
+        if (vPeerGroup == null || !isStarted()) {
+            return;
+        }
+
         log.debug("Stopping peergroup");
-        vPeerGroup.stopAsync();
+        if (vPeerGroup.isRunning()) vPeerGroup.stopAsync();
         try {
             log.debug("Saving wallet");
             vWallet.saveToFile(vWalletFile);
@@ -285,6 +300,8 @@ public class Wallet {
 
         vStore = null;
 
+        mBlockchainDownloadStarted = false;
+
         log.debug("stopWallet: Done");
     }
 
@@ -299,7 +316,19 @@ public class Wallet {
     /**
      *
      */
-    public void loadBip47MetaData() {
+    public boolean loadBip47MetaData() {
+        String jsonString = readBip47MetaDataFile();
+
+        if (StringUtils.isEmpty(jsonString)) {
+            return false;
+        }
+
+        log.debug("loadBip47MetaData: "+jsonString);
+
+        return importBip47MetaData(jsonString);
+    }
+
+    public String readBip47MetaDataFile() {
         File file = new File(directory, getCoin().concat(".bip47"));
         String jsonString;
         try {
@@ -308,24 +337,28 @@ public class Wallet {
             log.debug("Creating BIP47 wallet file at " + file.getAbsolutePath() + "  ...");
             saveBip47MetaData();
             loadBip47MetaData();
-            return;
+            return null;
         }
 
-        if (StringUtils.isEmpty(jsonString)) {
-            return;
-        }
+        return jsonString;
+    }
 
+    public boolean importBip47MetaData(String jsonString) {
         log.debug("loadBip47MetaData: "+jsonString);
 
         Gson gson = new Gson();
         Type collectionType = new TypeToken<Collection<Bip47Meta>>(){}.getType();
-        List<Bip47Meta> bip47MetaList = gson.fromJson(jsonString, collectionType);
-
-        if (bip47MetaList != null) {
-            for (Bip47Meta bip47Meta: bip47MetaList) {
-                bip47MetaData.put(bip47Meta.getPaymentCode(), bip47Meta);
+        try {
+            List<Bip47Meta> bip47MetaList = gson.fromJson(jsonString, collectionType);
+            if (bip47MetaList != null) {
+                for (Bip47Meta bip47Meta: bip47MetaList) {
+                    bip47MetaData.put(bip47Meta.getPaymentCode(), bip47Meta);
+                }
             }
+        } catch (JsonSyntaxException e) {
+            return true;
         }
+        return false;
     }
 
     public synchronized void saveBip47MetaData() {
