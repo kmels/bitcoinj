@@ -126,14 +126,20 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
         boolean chainFileExists = getChainFile().exists();
         boolean shouldReplayWallet = (walletFile.exists() && !chainFileExists) || deterministicSeed != null;
 
+        Context.propagate(new Context(getNetworkParameters()));
+
         org.bitcoinj.wallet.Wallet coreWallet;
+
         if (getWalletFile().exists()) {
             coreWallet = loadWallet(getNetworkParameters(), shouldReplayWallet, walletFile);
         } else {
             coreWallet = createWallet(getNetworkParameters());
             coreWallet.freshReceiveKey();
+            coreWallet.saveToFile(walletFile);
             coreWallet = loadWallet(getNetworkParameters(), false, walletFile);
         }
+
+        checkNotNull(coreWallet);
         autosaveToFile(walletFile, 5, TimeUnit.SECONDS, null);
 
         addWatchedScripts(coreWallet.getWatchedScripts());
@@ -157,7 +163,8 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
             while(iter.hasNext())
                 addWalletTransaction(iter.next());
 
-            setKeyRotationTime(coreWallet.getKeyRotationTime());
+            if (coreWallet.getKeyRotationTime() != null)
+                setKeyRotationTime(coreWallet.getKeyRotationTime());
         }
 
         //loadExtensions(wallet, extensions != null ? extensions : new WalletExtension[0], walletProto);
@@ -219,7 +226,7 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
     }
 
     public String getCoin() {
-        return this.getCoin();
+        return this.coin;
     }
 
     public void setAccount(NetworkParameters networkParameters) {
