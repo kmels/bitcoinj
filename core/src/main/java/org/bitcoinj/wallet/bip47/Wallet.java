@@ -111,6 +111,7 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
 
     public Wallet(NetworkParameters params, File directory, String coin, @Nullable StashDeterministicSeed deterministicSeed) throws Exception {
         super(params);
+        Context.propagate(new Context(getNetworkParameters()));
         this.directory = directory;
 
         if (!directory.exists()) {
@@ -188,6 +189,54 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
 
         allowSpendingUnconfirmedTransactions();
 
+
+        // init
+        File chainFile = getChainFile();
+
+        // Initiate Bitcoin network objects (block store, blockchain and peer group)
+        vStore = new SPVBlockStore(getNetworkParameters(), chainFile);
+        if (restoreFromSeed != null && chainFileExists) {
+            log.info( "Deleting the chain file in preparation from restore.");
+            vStore.close();
+            if (!chainFile.delete())
+                log.warn("start: ", new IOException("Failed to delete chain file in preparation for restore."));
+            vStore = new SPVBlockStore(getNetworkParameters(), chainFile);
+        }
+        vChain = new BlockChain(getNetworkParameters(), vStore);
+        vPeerGroup = new PeerGroup(getNetworkParameters(), vChain);
+
+        // Fixes a bug created by a race condition between a filteredBlock and a notification transaction
+        // (transaction dependencies are asynchronous (See issue 1029))
+        // By rolling the blockstore one block, we will be sure that the generated keys were imported to the wallet.
+        vPeerGroup.addOnTransactionBroadcastListener(new OnTransactionBroadcastListener() {
+            @Override
+            public void onTransaction(Peer peer, Transaction t) {
+                if (isNotificationTransaction(t) && getTransaction(t.getHash()) == null){
+
+                    log.debug("Valid notification transaction found for the first time. Replaying a block back .. ");
+                    try {
+                        vChain.rollbackBlockStore(getLastBlockSeenHeight() - 1);
+                    } catch(BlockStoreException e){
+                        log.error("Could not rollback ... " );
+                    }
+                }
+            }
+        });
+
+        if (getCoin().equals("BCH")) {
+            vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("158.69.119.35"), 8333));
+            vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("144.217.73.86"), 8333));
+        } else if (getCoin().equals("tBCH")) {
+            vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("158.69.119.35"), 8333));
+            vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("144.217.73.86"), 18333));
+        }
+
+        vPeerGroup.setUseLocalhostPeerWhenPossible(true);
+        vPeerGroup.addPeerDiscovery(new DnsDiscovery(getNetworkParameters()));
+
+        vChain.addWallet(this);
+        vPeerGroup.addWallet(this);
+
         log.debug(toString());
     }
 
@@ -244,65 +293,12 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
     }
 
     public void start(boolean startBlockchainDownload) {
-        Context.propagate(new Context(getNetworkParameters()));
-        File chainFile = getChainFile();
-        boolean chainFileExists = chainFile.exists();
-
-        try {
-            // Initiate Bitcoin network objects (block store, blockchain and peer group)
-            vStore = new SPVBlockStore(getNetworkParameters(), chainFile);
-            if (restoreFromSeed != null && chainFileExists) {
-                log.info( "Deleting the chain file in preparation from restore.");
-                vStore.close();
-                if (!chainFile.delete())
-                    log.warn("start: ", new IOException("Failed to delete chain file in preparation for restore."));
-                vStore = new SPVBlockStore(getNetworkParameters(), chainFile);
-            }
-            vChain = new BlockChain(getNetworkParameters(), vStore);
-            vPeerGroup = new PeerGroup(getNetworkParameters(), vChain);
-
-            // Fixes a bug created by a race condition between a filteredBlock and a notification transaction
-            // (transaction dependencies are asynchronous (See issue 1029))
-            // By rolling the blockstore one block, we will be sure that the generated keys were imported to the wallet.
-            vPeerGroup.addOnTransactionBroadcastListener(new OnTransactionBroadcastListener() {
-                @Override
-                public void onTransaction(Peer peer, Transaction t) {
-                    if (isNotificationTransaction(t) && getTransaction(t.getHash()) == null){
-
-                        log.debug("Valid notification transaction found for the first time. Replaying a block back .. ");
-                        try {
-                            vChain.rollbackBlockStore(getLastBlockSeenHeight() - 1);
-                        } catch(BlockStoreException e){
-                            log.error("Could not rollback ... " );
-                        }
-                    }
-                }
-            });
-
-            if (getCoin().equals("BCH")) {
-                vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("158.69.119.35"), 8333));
-                vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("144.217.73.86"), 8333));
-            } else if (getCoin().equals("tBCH")) {
-                vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("158.69.119.35"), 8333));
-                vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("144.217.73.86"), 18333));
-            }
-
-            vPeerGroup.setUseLocalhostPeerWhenPossible(true);
-            vPeerGroup.addPeerDiscovery(new DnsDiscovery(getNetworkParameters()));
-
-            vChain.addWallet(this);
-            vPeerGroup.addWallet(this);
-
-            if (startBlockchainDownload) {
-                startBlockchainDownload();
-            }
-        } catch (BlockStoreException e) {
-            log.warn("start: ", e);
-
+        if (startBlockchainDownload) {
+            startBlockchainDownload();
         }
     }
 
-    public void startBlockchainDownload() {
+    private void startBlockchainDownload() {
         if (isStarted() && !mBlockchainDownloadStarted) {
             log.debug("Starting blockchain download.");
             vPeerGroup.start();
