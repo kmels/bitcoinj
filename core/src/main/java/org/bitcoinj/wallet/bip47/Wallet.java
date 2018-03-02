@@ -14,6 +14,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.bitcoinj.core.listeners.OnTransactionBroadcastListener;
 import org.bitcoinj.wallet.bip47.BIP47Util;
 import org.bitcoinj.wallet.bip47.Bip47Address;
 import org.bitcoinj.wallet.bip47.Bip47Meta;
@@ -142,6 +143,57 @@ public class Wallet {
         vWallet.allowSpendingUnconfirmedTransactions();
 
         log.debug(vWallet.toString());
+
+        // Initiate Bitcoin network objects (block store, blockchain and peer group)
+        vStore = new SPVBlockStore(blockchain.getNetworkParameters(), chainFile);
+        if (restoreFromSeed != null && chainFileExists) {
+            log.info( "Deleting the chain file in preparation from restore.");
+            vStore.close();
+            if (!chainFile.delete())
+                log.warn("start: ", new IOException("Failed to delete chain file in preparation for restore."));
+            vStore = new SPVBlockStore(blockchain.getNetworkParameters(), chainFile);
+        }
+        vChain = new BlockChain(blockchain.getNetworkParameters(), vStore);
+        vPeerGroup = new PeerGroup(blockchain.getNetworkParameters(), vChain);
+
+        // Fixes a bug created by a race condition between a filteredBlock and a notification transaction
+        // (transaction dependencies are asynchronous (See issue 1029))
+        // By rolling the blockstore one block, we will be sure that the generated keys were imported to the wallet.
+        vPeerGroup.addOnTransactionBroadcastListener(new OnTransactionBroadcastListener() {
+            @Override
+            public void onTransaction(Peer peer, Transaction t) {
+                if (isNotificationTransaction(t)){
+
+                    // if this transaction was seen in the wallet, we may see it again
+                    if (vWallet.getTransaction(t.getHash())!=null)
+                        return;
+
+                    //if (peer.getCurrentFilteredBlock() == null && vWallet.getTransaction(t.getHash())!=null)
+                    //    return;
+
+                    log.debug("Valid notification transaction found. Replaying a block back .. ");
+                    try {
+                        vChain.rollbackBlockStore(vWallet.getLastBlockSeenHeight() - 1);
+                    } catch(BlockStoreException e){
+                        log.error("Could not rollback ... " );
+                    }
+                }
+            }
+        });
+
+        if (blockchain.getCoin().equals("BCH")) {
+            vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("158.69.119.35"), 8333));
+            vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("144.217.73.86"), 8333));
+        } else if (blockchain.getCoin().equals("tBCH")) {
+            vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("158.69.119.35"), 8333));
+            vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("144.217.73.86"), 18333));
+        }
+
+        vPeerGroup.setUseLocalhostPeerWhenPossible(true);
+        vPeerGroup.addPeerDiscovery(new DnsDiscovery(blockchain.getNetworkParameters()));
+
+        vChain.addWallet(vWallet);
+        vPeerGroup.addWallet(vWallet);
     }
 
     private org.bitcoinj.wallet.Wallet createOrLoadWallet(boolean shouldReplayWallet) throws Exception {
@@ -202,42 +254,12 @@ public class Wallet {
     }
 
     public void start(boolean startBlockchainDownload) {
-        Context.propagate(new Context(blockchain.getNetworkParameters()));
-        File chainFile = new File(directory, blockchain.getCoin() + ".spvchain");
-        boolean chainFileExists = chainFile.exists();
+        //Context.propagate(new Context(blockchain.getNetworkParameters()));
+        //File chainFile = new File(directory, blockchain.getCoin() + ".spvchain");
+        //boolean chainFileExists = chainFile.exists();
 
-        try {
-            // Initiate Bitcoin network objects (block store, blockchain and peer group)
-            vStore = new SPVBlockStore(blockchain.getNetworkParameters(), chainFile);
-            if (restoreFromSeed != null && chainFileExists) {
-                log.info( "Deleting the chain file in preparation from restore.");
-                vStore.close();
-                if (!chainFile.delete())
-                    log.warn("start: ", new IOException("Failed to delete chain file in preparation for restore."));
-                vStore = new SPVBlockStore(blockchain.getNetworkParameters(), chainFile);
-            }
-            vChain = new BlockChain(blockchain.getNetworkParameters(), vStore);
-            vPeerGroup = new PeerGroup(blockchain.getNetworkParameters(), vChain);
-
-            if (blockchain.getCoin().equals("BCH")) {
-                vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("158.69.119.35"), 8333));
-                vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("144.217.73.86"), 8333));
-            } else if (blockchain.getCoin().equals("tBCH")) {
-                vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("158.69.119.35"), 8333));
-                vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("144.217.73.86"), 18333));
-            }
-
-            vPeerGroup.addPeerDiscovery(new DnsDiscovery(blockchain.getNetworkParameters()));
-
-            vChain.addWallet(vWallet);
-            vPeerGroup.addWallet(vWallet);
-
-            if (startBlockchainDownload) {
-                startBlockchainDownload();
-            }
-        } catch (BlockStoreException e) {
-            log.warn("start: ", e);
-
+        if (startBlockchainDownload) {
+            startBlockchainDownload();
         }
     }
 
