@@ -189,7 +189,6 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
 
         allowSpendingUnconfirmedTransactions();
 
-
         // init
         File chainFile = getChainFile();
 
@@ -211,9 +210,16 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
         vPeerGroup.addOnTransactionBroadcastListener(new OnTransactionBroadcastListener() {
             @Override
             public void onTransaction(Peer peer, Transaction t) {
-                if (isNotificationTransaction(t) && getTransaction(t.getHash()) == null){
+                if (isNotificationTransaction(t)){
 
-                    log.debug("Valid notification transaction found for the first time. Replaying a block back .. ");
+                    // if this transaction was seen in the wallet, we may see it again
+                    if (getTransaction(t.getHash())!=null)
+                        return;
+
+                    //if (peer.getCurrentFilteredBlock() == null && vWallet.getTransaction(t.getHash())!=null)
+                    //    return;
+
+                    log.debug("Valid notification transaction found. Replaying a block back .. ");
                     try {
                         vChain.rollbackBlockStore(getLastBlockSeenHeight() - 1);
                     } catch(BlockStoreException e){
