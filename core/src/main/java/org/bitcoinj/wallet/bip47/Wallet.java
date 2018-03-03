@@ -112,7 +112,7 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
     public Wallet(NetworkParameters params, File directory, String coin, @Nullable StashDeterministicSeed deterministicSeed) throws Exception {
         super(params);
         Context.propagate(new Context(getNetworkParameters()));
-        this.directory = directory;
+        this.directory = new File(directory, coin);
 
         if (!directory.exists()) {
             if (!directory.mkdirs()) {
