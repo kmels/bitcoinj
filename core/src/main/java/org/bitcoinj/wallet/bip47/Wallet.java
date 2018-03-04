@@ -109,13 +109,13 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
     private ConcurrentHashMap<String, Bip47Meta> bip47MetaData = new ConcurrentHashMap<>();
     private static final Logger log = LoggerFactory.getLogger(Wallet.class);
 
-    public Wallet(NetworkParameters params, File directory, String coin, @Nullable StashDeterministicSeed deterministicSeed) throws Exception {
+    public Wallet(NetworkParameters params, File workingDir, String coin, @Nullable StashDeterministicSeed deterministicSeed) throws Exception {
         super(params);
         Context.propagate(new Context(getNetworkParameters()));
-        this.directory = new File(directory, coin);
+        this.directory = new File(workingDir, coin);
 
-        if (!directory.exists()) {
-            if (!directory.mkdirs()) {
+        if (!this.directory.exists()) {
+            if (!this.directory.mkdirs()) {
                 throw new IOException("Could not create directory " + directory.getAbsolutePath());
             }
         }
