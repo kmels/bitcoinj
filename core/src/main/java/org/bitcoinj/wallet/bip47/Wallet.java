@@ -809,4 +809,9 @@ public class Wallet {
         CoinSelection bestCoinSelection;
         TransactionOutput bestChangeOutput;
     }
+
+    public void rescanTxBlock(Transaction tx) throws BlockStoreException {
+        int blockHeight = tx.getConfidence().getAppearedAtChainHeight() - 2;
+        this.vChain.rollbackBlockStore(blockHeight);
+    }
 }

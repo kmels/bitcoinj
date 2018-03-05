@@ -1858,4 +1858,8 @@ public class Peer extends PeerSocketHandler {
     public FilteredBlock getCurrentFilteredBlock() {
         return this.currentFilteredBlock;
     }
+
+    public List<Wallet> getWallets() {
+        return java.util.Collections.unmodifiableList(this.wallets);
+    }
 }
