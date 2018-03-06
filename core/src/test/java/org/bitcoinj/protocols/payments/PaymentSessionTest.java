@@ -125,10 +125,18 @@ public class PaymentSessionTest {
     public void testPkiVerification() throws Exception {
         InputStream in = getClass().getResourceAsStream("pki_test.bitcoinpaymentrequest");
         Protos.PaymentRequest paymentRequest = Protos.PaymentRequest.newBuilder().mergeFrom(in).build();
-        PaymentProtocol.PkiVerificationData pkiData = PaymentProtocol.verifyPaymentRequestPki(paymentRequest,
-                new TrustStoreLoader.DefaultTrustStoreLoader().getKeyStore());
-        assertEquals("www.bitcoincore.org", pkiData.displayName);
-        assertEquals("The USERTRUST Network, Salt Lake City, US", pkiData.rootAuthorityName);
+        try {
+            PaymentProtocol.PkiVerificationData pkiData = PaymentProtocol.verifyPaymentRequestPki(paymentRequest,
+                    new TrustStoreLoader.DefaultTrustStoreLoader().getKeyStore());
+
+            assertEquals("www.bitcoincore.org", pkiData.displayName);
+            assertEquals("The USERTRUST Network, Salt Lake City, US", pkiData.rootAuthorityName);
+        } catch (PaymentProtocolException.PkiVerificationException e){
+            assertEquals(3, e.certificates.size());
+            assertTrue(e.certificates.get(0).getSubjectAlternativeNames().toString().contains("bitcoincore.org"));
+            e.certificates.get(1).checkValidity();
+            e.certificates.get(2).checkValidity();
+        }
     }
 
     @Test(expected = PaymentProtocolException.InvalidNetwork.class)
