@@ -19,12 +19,11 @@ import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Bip47Meta {
-    private static final String TAG = "Bip47Meta";
+public class Bip47PaymentChannel {
+    private static final String TAG = "Bip47PaymentChannel";
 
     private static final int STATUS_NOT_SENT = -1;
     private static final int STATUS_SENT_CFM = 1;
-
     private static final int LOOKAHEAD = 10;
 
     private String paymentCode;
@@ -35,14 +34,14 @@ public class Bip47Meta {
     private int currentOutgoingIndex = 0;
     private int currentIncomingIndex = -1;
 
-    private static final Logger log = LoggerFactory.getLogger(Bip47Meta.class);
-    public Bip47Meta() {}
+    private static final Logger log = LoggerFactory.getLogger(Bip47PaymentChannel.class);
+    public Bip47PaymentChannel() {}
 
-    public Bip47Meta(String paymentCode) {
+    public Bip47PaymentChannel(String paymentCode) {
         this.paymentCode = paymentCode;
     }
 
-    public Bip47Meta(String paymentCode, String label) {
+    public Bip47PaymentChannel(String paymentCode, String label) {
         this(paymentCode);
         this.label = label;
     }
