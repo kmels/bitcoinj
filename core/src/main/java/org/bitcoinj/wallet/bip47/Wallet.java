@@ -140,12 +140,12 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
 
         // if the coin is existent, we should load it as a core Wallet and then we will manually set each of the Wallet's properties
         if (walletFile.exists()) {
-            coreWallet = loadFromFile(getNetworkParameters(), shouldReplayWallet, walletFile);
+            coreWallet = load(getNetworkParameters(), shouldReplayWallet, walletFile);
         } else {
             coreWallet = create(getNetworkParameters());
             coreWallet.freshReceiveKey();
             coreWallet.saveToFile(walletFile);
-            coreWallet = loadFromFile(getNetworkParameters(), false, walletFile);
+            coreWallet = load(getNetworkParameters(), false, walletFile);
         }
 
         checkNotNull(coreWallet);
@@ -292,7 +292,9 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
         return new File(directory, getCoin() + ".spvchain");
     }
 
-    private static org.bitcoinj.wallet.Wallet loadFromFile(NetworkParameters networkParameters, boolean shouldReplayWallet, File vWalletFile) throws Exception {
+    // Load an offline wallet from a file and return a @{link org.bitcoinj.wallet.Wallet}.
+    // If shouldReplayWallet is false, the wallet last block is reset to -1
+    private static org.bitcoinj.wallet.Wallet load(NetworkParameters networkParameters, boolean shouldReplayWallet, File vWalletFile) throws Exception {
         try (FileInputStream walletStream = new FileInputStream(vWalletFile)) {
             Protos.Wallet proto = WalletProtobufSerializer.parseToProto(walletStream);
             final WalletProtobufSerializer serializer = new WalletProtobufSerializer();
@@ -322,7 +324,8 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
         byte[] hd_seed = this.getKeyChainSeed().getSeedBytes();
 
         //
-        DeterministicKey mKey = HDKeyDerivation.createMasterPrivateKey(hd_seed);
+        byte[] hd_seed2 = restoreFromSeed.getSeedBytes();
+        DeterministicKey mKey = HDKeyDerivation.createMasterPrivateKey(hd_seed2);
         DeterministicKey purposeKey = HDKeyDerivation.deriveChildKey(mKey, 47 | ChildNumber.HARDENED_BIT);
         DeterministicKey coinKey = HDKeyDerivation.deriveChildKey(purposeKey, ChildNumber.HARDENED_BIT);
         Account account = new Account(networkParameters, coinKey, 0);
@@ -861,4 +864,5 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
         CoinSelection bestCoinSelection;
         TransactionOutput bestChangeOutput;
     }
+
 }
