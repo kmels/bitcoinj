@@ -13,18 +13,8 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
-import com.subgraph.orchid.data.exitpolicy.Network;
-import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.bitcoinj.core.listeners.OnTransactionBroadcastListener;
-import org.bitcoinj.core.listeners.TransactionConfidenceEventListener;
 import org.bitcoinj.signers.TransactionSigner;
 import org.bitcoinj.wallet.*;
-import org.bitcoinj.wallet.bip47.BIP47Util;
-import org.bitcoinj.wallet.bip47.Bip47Address;
-import org.bitcoinj.wallet.bip47.Bip47PaymentChannel;
-import org.bitcoinj.wallet.bip47.NotSecp256k1Exception;
-import org.bitcoinj.wallet.bip47.PaymentCode;
-import org.bitcoinj.wallet.bip47.SecretPoint;
 import org.bitcoinj.wallet.bip47.listeners.BlockchainDownloadProgressTracker;
 import org.bitcoinj.wallet.bip47.listeners.TransactionEventListener;
 import org.bitcoinj.crypto.bip47.Account;
@@ -57,7 +47,6 @@ import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.SPVBlockStore;
-import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,7 +63,6 @@ import java.security.spec.InvalidKeySpecException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -105,6 +93,7 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
     private volatile PeerGroup vPeerGroup;
     // the directory will have the spvchain and the wallet files
     private volatile File directory;
+    private volatile File walletFile;
     // the coin name that this wallet supports. Can be: BTC, tBTC, BCH, tBCH
     private String coin;
 
@@ -141,7 +130,7 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
         this.coin = coin;
         this.restoreFromSeed = deterministicSeed;
 
-        File walletFile = getWalletFile();
+        File walletFile = new File(directory, coin + ".wallet");
         boolean chainFileExists = getChainFile().exists();
         boolean shouldReplayWallet = (walletFile.exists() && !chainFileExists) || deterministicSeed != null;
 
@@ -149,18 +138,21 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
 
         org.bitcoinj.wallet.Wallet coreWallet;
 
-        if (getWalletFile().exists()) {
-            coreWallet = loadWallet(getNetworkParameters(), shouldReplayWallet, walletFile);
+        // if the coin is existent, we should load it as a core Wallet and then we will manually set each of the Wallet's properties
+        if (walletFile.exists()) {
+            coreWallet = loadFromFile(getNetworkParameters(), shouldReplayWallet, walletFile);
         } else {
-            coreWallet = createWallet(getNetworkParameters());
+            coreWallet = create(getNetworkParameters());
             coreWallet.freshReceiveKey();
             coreWallet.saveToFile(walletFile);
-            coreWallet = loadWallet(getNetworkParameters(), false, walletFile);
+            coreWallet = loadFromFile(getNetworkParameters(), false, walletFile);
         }
 
         checkNotNull(coreWallet);
         autosaveToFile(walletFile, 5, TimeUnit.SECONDS, null);
 
+        // add to this wallet all the core Wallet's properties
+        //  - watched scripts
         addWatchedScripts(coreWallet.getWatchedScripts());
         if (coreWallet.getDescription() != null) {
             setDescription(coreWallet.getDescription());
@@ -172,31 +164,35 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
             setLastBlockSeenHeight(-1);
             setLastBlockSeenTimeSecs(0);
         } else {
-            // Update the lastBlockSeenHash.
+            //  - last block state
             setLastBlockSeenHash(coreWallet.getLastBlockSeenHash());
             setLastBlockSeenHeight(coreWallet.getLastBlockSeenHeight());
             setLastBlockSeenTimeSecs(coreWallet.getLastBlockSeenTimeSecs());
 
-            // Update transaction outputs to point to inputs that spend them
+            //  - transaction outputs to point to inputs that spend them
             Iterator<WalletTransaction> iter = coreWallet.getWalletTransactions().iterator();
             while(iter.hasNext())
                 addWalletTransaction(iter.next());
 
+            //  -  timestamp to use as a starting point to possibly invalidate keys created before this time
             if (coreWallet.getKeyRotationTime() != null)
                 setKeyRotationTime(coreWallet.getKeyRotationTime());
         }
 
+        //todo: load bip47meta wallet extension
         //loadExtensions(wallet, extensions != null ? extensions : new WalletExtension[0], walletProto);
 
         this.tags = coreWallet.getTags();
 
+        //  - add the saved input signers for future output spends
         for (TransactionSigner signer : coreWallet.getTransactionSigners()) {
             addTransactionSigner(signer);
         }
 
         setVersion(coreWallet.getVersion());
 
-        setAccount(params);
+        //  - create the bip47 account
+        createAccount(params);
 
         Address notificationAddress = mAccounts.get(0).getNotificationAddress();
         log.debug("Wallet notification address: "+notificationAddress.toString());
@@ -222,6 +218,7 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
         vChain = new BlockChain(getNetworkParameters(), vStore);
         vPeerGroup = new PeerGroup(getNetworkParameters(), vChain);
 
+        // add Stash-Crypto nodes
         if (getCoin().equals("BCH")) {
             vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("158.69.119.35"), 8333));
             vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("144.217.73.86"), 8333));
@@ -230,21 +227,33 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
             vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("144.217.73.86"), 18333));
         }
 
+        // connect to peer running in localhost
         vPeerGroup.setUseLocalhostPeerWhenPossible(true);
+        // connect to peers in the coin network
         vPeerGroup.addPeerDiscovery(new DnsDiscovery(getNetworkParameters()));
 
+        // add the wallet so that syncing and rolling the chain can affect this wallet
         vChain.addWallet(this);
+        // add the wallet to the peers so that every peer listener can find this wallet
         vPeerGroup.addWallet(this);
+
+        // Bip47-specific listener
+        // When a new *notification* transaction is received:
+        //  - new keys are generated and imported for incoming payments in the bip47 account/contact payment channel
+        //  - the chain is rolled back 2 blocks so that payment transactions are not missed if in the same block as the notification transaction.
+        //
+        // When a new *payment* transaction is received:
+        //  - a new key is generated and imported to the wallet
 
         this.addOnReceiveTransactionListener(new TransactionEventListener() {
             @Override
             public void onTransactionReceived(Wallet wallet, Transaction transaction) {
 
                 if (isNotificationTransaction(transaction)) {
-                    log.debug("Valid Notification Transaction Received");
+                    log.debug("Valid notification transaction received");
                     PaymentCode paymentCode = getPaymentCodeInNotificationTransaction(transaction);
                     if (paymentCode == null) {
-                        log.warn("Error decoding payment code");
+                        log.warn("Error decoding payment code in tx {}", transaction);
                     } else {
                         log.debug("Payment Code: " + paymentCode);
                         boolean needsSaving = savePaymentCode(paymentCode);
@@ -278,17 +287,12 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
         super(params, kcg);
     }
 
-    // Return the corresponding file for the wallet's coin
-    protected File getWalletFile(){
-        return new File(directory, getCoin() + ".wallet");
-    }
-
     // Return the wallet's SPVChain
     protected File getChainFile(){
         return new File(directory, getCoin() + ".spvchain");
     }
 
-    private static org.bitcoinj.wallet.Wallet loadWallet(NetworkParameters networkParameters, boolean shouldReplayWallet, File vWalletFile) throws Exception {
+    private static org.bitcoinj.wallet.Wallet loadFromFile(NetworkParameters networkParameters, boolean shouldReplayWallet, File vWalletFile) throws Exception {
         try (FileInputStream walletStream = new FileInputStream(vWalletFile)) {
             Protos.Wallet proto = WalletProtobufSerializer.parseToProto(walletStream);
             final WalletProtobufSerializer serializer = new WalletProtobufSerializer();
@@ -299,7 +303,7 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
         }
     }
 
-    private Wallet createWallet(NetworkParameters networkParameters) throws IOException {
+    private Wallet create(NetworkParameters networkParameters) throws IOException {
         KeyChainGroup kcg;
         if (restoreFromSeed != null)
             kcg = new KeyChainGroup(networkParameters, restoreFromSeed);
@@ -312,11 +316,12 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
         return this.coin;
     }
 
-    public void setAccount(NetworkParameters networkParameters) {
+    protected void createAccount(NetworkParameters networkParameters) {
         log.debug("Seed: "+this.getKeyChainSeed());
 
         byte[] hd_seed = this.getKeyChainSeed().getSeedBytes();
 
+        //
         DeterministicKey mKey = HDKeyDerivation.createMasterPrivateKey(hd_seed);
         DeterministicKey purposeKey = HDKeyDerivation.deriveChildKey(mKey, 47 | ChildNumber.HARDENED_BIT);
         DeterministicKey coinKey = HDKeyDerivation.deriveChildKey(purposeKey, ChildNumber.HARDENED_BIT);
@@ -354,7 +359,7 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
         if (vPeerGroup.isRunning()) vPeerGroup.stopAsync();
         try {
             log.debug("Saving wallet");
-            saveToFile(getWalletFile());
+            saveToFile(walletFile);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -418,8 +423,8 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
         try {
             List<Bip47PaymentChannel> Bip47PaymentChannelList = gson.fromJson(jsonString, collectionType);
             if (Bip47PaymentChannelList != null) {
-                for (Bip47PaymentChannel Bip47PaymentChannel: Bip47PaymentChannelList) {
-                    Bip47PaymentChannelData.put(Bip47PaymentChannel.getPaymentCode(), Bip47PaymentChannel);
+                for (Bip47PaymentChannel paymentChannel: Bip47PaymentChannelList) {
+                    Bip47PaymentChannelData.put(paymentChannel.getPaymentCode(), paymentChannel);
                 }
             }
         } catch (JsonSyntaxException e) {
@@ -430,7 +435,7 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
 
     public synchronized void saveBip47PaymentChannelData() {
         try {
-            saveToFile(getWalletFile());
+            saveToFile(walletFile);
         } catch (IOException io){
             log.error("Failed to save wallet file",io);
         }
@@ -528,14 +533,15 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
         return BIP47Util.getPaymentCodeInNotificationTransaction(privKeyBytes, tx);
     }
 
+    // <p> Receives a payment code and returns true iff there is already an incoming address generated for the channel</p>
     public boolean savePaymentCode(PaymentCode paymentCode) {
         if (Bip47PaymentChannelData.containsKey(paymentCode.toString())) {
-            Bip47PaymentChannel Bip47PaymentChannel = Bip47PaymentChannelData.get(paymentCode.toString());
-            if (Bip47PaymentChannel.getIncomingAddresses().size() != 0) {
+            Bip47PaymentChannel paymentChannel = Bip47PaymentChannelData.get(paymentCode.toString());
+            if (paymentChannel.getIncomingAddresses().size() != 0) {
                 return false;
             } else {
                 try {
-                    Bip47PaymentChannel.generateKeys(this);
+                    paymentChannel.generateKeys(this);
                     return true;
                 } catch (NotSecp256k1Exception | InvalidKeyException | InvalidKeySpecException | NoSuchAlgorithmException | NoSuchProviderException e) {
                     e.printStackTrace();
@@ -544,11 +550,11 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
             }
         }
 
-        Bip47PaymentChannel Bip47PaymentChannel = new Bip47PaymentChannel(paymentCode.toString());
+        Bip47PaymentChannel paymentChannel  = new Bip47PaymentChannel(paymentCode.toString());
 
         try {
-            Bip47PaymentChannel.generateKeys(this);
-            Bip47PaymentChannelData.put(paymentCode.toString(), Bip47PaymentChannel);
+            paymentChannel.generateKeys(this);
+            Bip47PaymentChannelData.put(paymentCode.toString(), paymentChannel);
         } catch (Exception e) {
             e.printStackTrace();
             return false;
@@ -566,8 +572,8 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
     }
 
     public boolean generateNewBip47IncomingAddress(String address) {
-        for (Bip47PaymentChannel Bip47PaymentChannel : Bip47PaymentChannelData.values()) {
-            for (Bip47Address bip47Address : Bip47PaymentChannel.getIncomingAddresses()) {
+        for (Bip47PaymentChannel paymentChannel  : Bip47PaymentChannelData.values()) {
+            for (Bip47Address bip47Address : paymentChannel.getIncomingAddresses()) {
                 if (!bip47Address.getAddress().equals(address)) {
                     continue;
                 }
@@ -575,12 +581,12 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
                     return false;
                 }
 
-                int nextIndex = Bip47PaymentChannel.getCurrentIncomingIndex() + 1;
+                int nextIndex = paymentChannel.getCurrentIncomingIndex() + 1;
                 try {
-                    ECKey key = BIP47Util.getReceiveAddress(this, Bip47PaymentChannel.getPaymentCode(), nextIndex).getReceiveECKey();
+                    ECKey key = BIP47Util.getReceiveAddress(this, paymentChannel.getPaymentCode(), nextIndex).getReceiveECKey();
                     importKey(key);
                     Address newAddress = getAddressOfKey(key);
-                    Bip47PaymentChannel.addNewIncomingAddress(newAddress.toString(), nextIndex);
+                    paymentChannel.addNewIncomingAddress(newAddress.toString(), nextIndex);
                     bip47Address.setSeen(true);
                     return true;
                 } catch (Exception e) {
@@ -593,10 +599,10 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
     }
 
     public Bip47PaymentChannel getBip47PaymentChannelForAddress(String address) {
-        for (Bip47PaymentChannel Bip47PaymentChannel : Bip47PaymentChannelData.values()) {
-            for (Bip47Address bip47Address : Bip47PaymentChannel.getIncomingAddresses()) {
+        for (Bip47PaymentChannel paymentChannel  : Bip47PaymentChannelData.values()) {
+            for (Bip47Address bip47Address : paymentChannel.getIncomingAddresses()) {
                 if (bip47Address.getAddress().equals(address)) {
-                    return Bip47PaymentChannel;
+                    return paymentChannel;
                 }
             }
         }
@@ -604,10 +610,10 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
     }
 
     public String getPaymentCodeForAddress(String address) {
-        for (Bip47PaymentChannel Bip47PaymentChannel : Bip47PaymentChannelData.values()) {
-            for (Bip47Address bip47Address : Bip47PaymentChannel.getIncomingAddresses()) {
+        for (Bip47PaymentChannel paymentChannel  : Bip47PaymentChannelData.values()) {
+            for (Bip47Address bip47Address : paymentChannel.getIncomingAddresses()) {
                 if (bip47Address.getAddress().equals(address)) {
-                    return Bip47PaymentChannel.getPaymentCode();
+                    return paymentChannel.getPaymentCode();
                 }
             }
         }
@@ -615,10 +621,10 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
     }
 
     public Bip47PaymentChannel getBip47PaymentChannelForOutgoingAddress(String address) {
-        for (Bip47PaymentChannel Bip47PaymentChannel : Bip47PaymentChannelData.values()) {
-            for (String outgoingAddress : Bip47PaymentChannel.getOutgoingAddresses()) {
+        for (Bip47PaymentChannel paymentChannel  : Bip47PaymentChannelData.values()) {
+            for (String outgoingAddress : paymentChannel.getOutgoingAddresses()) {
                 if (outgoingAddress.equals(address)) {
-                    return Bip47PaymentChannel;
+                    return paymentChannel;
                 }
             }
         }
@@ -626,9 +632,9 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
     }
 
     public Bip47PaymentChannel getBip47PaymentChannelForPaymentCode(String paymentCode) {
-        for (Bip47PaymentChannel Bip47PaymentChannel : Bip47PaymentChannelData.values()) {
-            if (Bip47PaymentChannel.getPaymentCode().equals(paymentCode)) {
-                return Bip47PaymentChannel;
+        for (Bip47PaymentChannel paymentChannel  : Bip47PaymentChannelData.values()) {
+            if (paymentChannel.getPaymentCode().equals(paymentCode)) {
+                return paymentChannel;
             }
         }
         return null;
@@ -819,9 +825,9 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
 
     public boolean putBip47PaymentChannel(String profileId, String name) {
         if (Bip47PaymentChannelData.containsKey(profileId)) {
-            Bip47PaymentChannel Bip47PaymentChannel = Bip47PaymentChannelData.get(profileId);
-            if (!name.equals(Bip47PaymentChannel.getLabel())) {
-                Bip47PaymentChannel.setLabel(name);
+            Bip47PaymentChannel paymentChannel  = Bip47PaymentChannelData.get(profileId);
+            if (!name.equals(paymentChannel.getLabel())) {
+                paymentChannel.setLabel(name);
                 return true;
             }
         } else {
@@ -833,17 +839,17 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
 
     public void putPaymenCodeStatusSent(String paymentCode) {
         if (Bip47PaymentChannelData.containsKey(paymentCode)) {
-            Bip47PaymentChannel Bip47PaymentChannel = Bip47PaymentChannelData.get(paymentCode);
-            Bip47PaymentChannel.setStatusSent();
+            Bip47PaymentChannel paymentChannel  = Bip47PaymentChannelData.get(paymentCode);
+            paymentChannel.setStatusSent();
         } else {
             putBip47PaymentChannel(paymentCode, paymentCode);
             putPaymenCodeStatusSent(paymentCode);
         }
     }
 
-    public String getCurrentOutgoingAddress(Bip47PaymentChannel Bip47PaymentChannel) {
+    public String getCurrentOutgoingAddress(Bip47PaymentChannel paymentChannel) {
         try {
-            ECKey key = BIP47Util.getSendAddress(this, new PaymentCode(Bip47PaymentChannel.getPaymentCode()), Bip47PaymentChannel.getCurrentOutgoingIndex()).getSendECKey();
+            ECKey key = BIP47Util.getSendAddress(this, new PaymentCode(paymentChannel.getPaymentCode()), paymentChannel.getCurrentOutgoingIndex()).getSendECKey();
             return key.toAddress(getNetworkParameters()).toString();
         } catch (InvalidKeyException | InvalidKeySpecException | NotSecp256k1Exception | NoSuchProviderException | NoSuchAlgorithmException e) {
             e.printStackTrace();
