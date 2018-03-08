@@ -97,7 +97,6 @@ public class Wallet {
 
     private final File directory;
     private volatile File vWalletFile;
-
     private StashDeterministicSeed restoreFromSeed;
 
     private List<Account> mAccounts = new ArrayList<>(1);
@@ -814,5 +813,13 @@ public class Wallet {
     public void rescanTxBlock(Transaction tx) throws BlockStoreException {
         int blockHeight = tx.getConfidence().getAppearedAtChainHeight() - 2;
         this.vChain.rollbackBlockStore(blockHeight);
+    }
+
+    public File getDirectory() {
+        return directory;
+    }
+
+    public File getvWalletFile(){
+        return this.vWalletFile;
     }
 }
