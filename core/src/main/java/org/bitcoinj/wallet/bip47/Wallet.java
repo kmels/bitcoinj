@@ -153,9 +153,22 @@ public class Wallet {
                 log.warn("start: ", new IOException("Failed to delete chain file in preparation for restore."));
             vStore = new SPVBlockStore(blockchain.getNetworkParameters(), chainFile);
         }
-        vChain = new BlockChain(blockchain.getNetworkParameters(), vStore);
-        vPeerGroup = new PeerGroup(blockchain.getNetworkParameters(), vChain);
 
+        try {
+            vChain = new BlockChain(blockchain.getNetworkParameters(), vStore);
+        } catch (BlockStoreException e){
+
+            //  - we can create a new blockstore in case it is corrupted, the wallet should have a last height
+            if (chainFile.exists()) {
+                log.debug("deleteSpvFile: exits");
+                chainFile.delete();
+            }
+
+            vStore = new SPVBlockStore(blockchain.getNetworkParameters(), chainFile);
+            vChain = new BlockChain(blockchain.getNetworkParameters(), vStore);
+        }
+
+        vPeerGroup = new PeerGroup(blockchain.getNetworkParameters(), vChain);
         // Fixes a bug created by a race condition between a filteredBlock and a notification transaction
         // (transaction dependencies are asynchronous (See issue 1029))
         // By rolling the blockstore one block, we will be sure that the generated keys were imported to the wallet.
