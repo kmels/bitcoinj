@@ -389,6 +389,7 @@
             <groupId>com.madgag.spongycastle</groupId>
             <artifactId>core</artifactId>
             <version>1.56.0.0</version>
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>com.google.protobuf</groupId>
@@ -461,6 +462,7 @@
             <groupId>com.madgag.spongycastle</groupId>
             <artifactId>prov</artifactId>
             <version>1.56.0.0</version>
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>com.google.code.gson</groupId>

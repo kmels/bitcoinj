@@ -683,7 +683,7 @@ public class Wallet {
         return sendRequest.tx;
     }
 
-    public SendRequest makeNotificationTransaction(String paymentCode, boolean complete) throws InsufficientMoneyException {
+    public SendRequest makeNotificationTransaction(String paymentCode) throws InsufficientMoneyException {
         Account toAccount = new Account(getNetworkParameters(), paymentCode);
         Coin ntValue =  getNetworkParameters().getMinNonDustOutput();
         Address ntAddress = toAccount.getNotificationAddress();
@@ -735,8 +735,7 @@ public class Wallet {
             sendRequest.tx.addOutput(Coin.ZERO, ScriptBuilder.createOpReturnScript(op_return));
         }
 
-        if (complete)
-            vWallet.completeTx(sendRequest);
+        vWallet.completeTx(sendRequest);
 
         log.debug("Completed SendRequest");
         log.debug(sendRequest.toString());
@@ -821,5 +820,9 @@ public class Wallet {
 
     public File getvWalletFile(){
         return this.vWalletFile;
+    }
+
+    public org.bitcoinj.wallet.Wallet getvWallet(){
+        return vWallet;
     }
 }
