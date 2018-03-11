@@ -38,6 +38,12 @@ public class Bip47WalletTest extends TestWithBip47Wallet {
     private final String BOB_PAYMENT_CODE_V1 = "PM8TJS2JxQ5ztXUpBBRnpTbcUXbUHy2T1abfrb3KkAAtMEGNbey4oumH7Hc578WgQJhPjBxteQ5GHHToTYHE3A1w6p7tU6KSoFmWBVbFGjKPisZDbP97";
     private final String BOB_NOTIFICATION_ADDRESS = "1ChvUUvht2hUQufHBXF8NgLhW8SwE2ecGV";
 
+    //  - keypairs M'/47'/0'/0'/0' .. M'/47'/0'/0'/2147483647'\
+
+    //  - parameters to generate keys in ECDH.
+    private String ALICE_;
+
+
     private final String CHANNEL_NTX = "010000000186f411ab1c8e70ae8a0795ab7a6757aea6e4d5ae1826fc7b8f00c597d500609c010000"
             + "006b483045022100ac8c6dbc482c79e86c18928a8b364923c774bfdbd852059f6b3778f2319b59a7022029d7cc5724e2f41ab1fcf"
             + "c0ba5a0d4f57ca76f72f19530ba97c860c70a6bf0a801210272d83d8a1fa323feab1c085157a0791b46eba34afb8bfbfaeb3a3fcc3"
@@ -47,7 +53,6 @@ public class Bip47WalletTest extends TestWithBip47Wallet {
 
     private final String CARLOS_BIP39_MNEMONIC = "fetch genuine seek want smile sea orient elbow basic where arrange display mask country walnut shuffle usage airport juice price grant scan wild alone";
     private final String CARLOS_PAYMENT_CODE = "PM8TJaWSfZYLLuJnXctJ8npNYrUr5UCeT6KGmayJ4ENDSqj7VZr7uyX9exCo5JA8mFLkeXPaHoCBKuMDpYFs3tdxP2UxNiHSsZtb1KkKSVQyiwFhdLTZ";
-
 
     private final Address OTHER_ADDRESS = new ECKey().toAddress(PARAMS);
 
@@ -176,8 +181,24 @@ public class Bip47WalletTest extends TestWithBip47Wallet {
         //assertTrue(needsSaving);
 
         SendRequest ntxRequest = Alice.makeNotificationTransaction(Bob.getPaymentCode());
+        //assertEquals("9414f1681fb1255bd168a806254321a837008dd4480c02226063183deb100204", ntxRequest.tx.getHash());
 
-        assertEquals("9414f1681fb1255bd168a806254321a837008dd4480c02226063183deb100204", ntxRequest.tx.getHash());
+        // Bob receives a NTX with Alice's payment code. Bob's wallet generates keys for Alice to use.
+        Bob.savePaymentCode(Alice.getAccount(0).getPaymentCode()); // bob saves alice
+        Bip47Meta channel = Bob.getBip47MetaForPaymentCode(Alice.getPaymentCode());
+        assertEquals(10, channel.getIncomingAddresses().size()); // bob's # of incoming addresses
+
+        //  - addresses used by Alice for sending to Bob
+        assertEquals("141fi7TY3h936vRUKh1qfUZr8rSBuYbVBK", channel.getIncomingAddresses().get(0).getAddress());
+        assertEquals("12u3Uued2fuko2nY4SoSFGCoGLCBUGPkk6", channel.getIncomingAddresses().get(1).getAddress());
+        assertEquals("1FsBVhT5dQutGwaPePTYMe5qvYqqjxyftc", channel.getIncomingAddresses().get(2).getAddress());
+        assertEquals("1CZAmrbKL6fJ7wUxb99aETwXhcGeG3CpeA", channel.getIncomingAddresses().get(3).getAddress());
+        assertEquals("1KQvRShk6NqPfpr4Ehd53XUhpemBXtJPTL", channel.getIncomingAddresses().get(4).getAddress());
+        assertEquals("1KsLV2F47JAe6f8RtwzfqhjVa8mZEnTM7t", channel.getIncomingAddresses().get(5).getAddress());
+        assertEquals("1DdK9TknVwvBrJe7urqFmaxEtGF2TMWxzD", channel.getIncomingAddresses().get(6).getAddress());
+        assertEquals("16DpovNuhQJH7JUSZQFLBQgQYS4QB9Wy8e", channel.getIncomingAddresses().get(7).getAddress());
+        assertEquals("17qK2RPGZMDcci2BLQ6Ry2PDGJErrNojT5", channel.getIncomingAddresses().get(8).getAddress());
+        assertEquals("1GxfdfP286uE24qLZ9YRP3EWk2urqXgC4s", channel.getIncomingAddresses().get(9).getAddress());
 
         //assertEquals("tpubDCyvczNnKRM37QUHTCG1d6dFbXXkPUNfoay6XjVRhBKaGy47i1nFJQEmusyybMjaHBgpBbPFJRvwsWjtqQ8GTNiDw62ngm18w3QqyV6eHrY", w.getAccount(0).getXPub());
 
