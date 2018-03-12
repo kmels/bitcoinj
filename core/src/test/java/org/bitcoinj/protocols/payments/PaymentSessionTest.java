@@ -19,6 +19,7 @@ package org.bitcoinj.protocols.payments;
 
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.TrustStoreLoader;
+import org.bitcoinj.crypto.X509Utils;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -125,10 +126,18 @@ public class PaymentSessionTest {
     public void testPkiVerification() throws Exception {
         InputStream in = getClass().getResourceAsStream("pki_test.bitcoinpaymentrequest");
         Protos.PaymentRequest paymentRequest = Protos.PaymentRequest.newBuilder().mergeFrom(in).build();
-        PaymentProtocol.PkiVerificationData pkiData = PaymentProtocol.verifyPaymentRequestPki(paymentRequest,
-                new TrustStoreLoader.DefaultTrustStoreLoader().getKeyStore());
-        assertEquals("www.bitcoincore.org", pkiData.displayName);
-        assertEquals("The USERTRUST Network, Salt Lake City, US", pkiData.rootAuthorityName);
+        try {
+            PaymentProtocol.PkiVerificationData pkiData = PaymentProtocol.verifyPaymentRequestPki(paymentRequest,
+                    new TrustStoreLoader.DefaultTrustStoreLoader().getKeyStore());
+
+            assertEquals("www.bitcoincore.org", pkiData.displayName);
+            assertEquals("The USERTRUST Network, Salt Lake City, US", pkiData.rootAuthorityName);
+        } catch (PaymentProtocolException.PkiVerificationException e){
+            assertEquals(3, e.certificates.size());
+            assertEquals( "www.bitcoincore.org", X509Utils.getDisplayNameFromCertificate(e.certificates.get(0), true));
+            e.certificates.get(1).checkValidity();
+            e.certificates.get(2).checkValidity();
+        }
     }
 
     @Test(expected = PaymentProtocolException.InvalidNetwork.class)

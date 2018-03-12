@@ -97,7 +97,6 @@ public class Wallet {
 
     private final File directory;
     private volatile File vWalletFile;
-
     private StashDeterministicSeed restoreFromSeed;
 
     private List<Account> mAccounts = new ArrayList<>(1);
@@ -255,8 +254,9 @@ public class Wallet {
         log.debug("Seed: "+vWallet.getKeyChainSeed());
 
         byte[] hd_seed = vWallet.getKeyChainSeed().getSeedBytes();
+        byte[] hd_seed2 = this.restoreFromSeed.getSeedBytes();
 
-        DeterministicKey mKey = HDKeyDerivation.createMasterPrivateKey(hd_seed);
+        DeterministicKey mKey = HDKeyDerivation.createMasterPrivateKey(hd_seed2);
         DeterministicKey purposeKey = HDKeyDerivation.deriveChildKey(mKey, 47 | ChildNumber.HARDENED_BIT);
         DeterministicKey coinKey = HDKeyDerivation.deriveChildKey(purposeKey, ChildNumber.HARDENED_BIT);
 
@@ -696,7 +696,7 @@ public class Wallet {
         return sendRequest.tx;
     }
 
-    public SendRequest makeNotificationTransaction(String paymentCode, boolean complete) throws InsufficientMoneyException {
+    public SendRequest makeNotificationTransaction(String paymentCode) throws InsufficientMoneyException {
         Account toAccount = new Account(getNetworkParameters(), paymentCode);
         Coin ntValue =  getNetworkParameters().getMinNonDustOutput();
         Address ntAddress = toAccount.getNotificationAddress();
@@ -748,8 +748,7 @@ public class Wallet {
             sendRequest.tx.addOutput(Coin.ZERO, ScriptBuilder.createOpReturnScript(op_return));
         }
 
-        if (complete)
-            vWallet.completeTx(sendRequest);
+        vWallet.completeTx(sendRequest);
 
         log.debug("Completed SendRequest");
         log.debug(sendRequest.toString());
@@ -826,5 +825,17 @@ public class Wallet {
     public void rescanTxBlock(Transaction tx) throws BlockStoreException {
         int blockHeight = tx.getConfidence().getAppearedAtChainHeight() - 2;
         this.vChain.rollbackBlockStore(blockHeight);
+    }
+
+    public File getDirectory() {
+        return directory;
+    }
+
+    public File getvWalletFile(){
+        return this.vWalletFile;
+    }
+
+    public org.bitcoinj.wallet.Wallet getvWallet(){
+        return vWallet;
     }
 }
