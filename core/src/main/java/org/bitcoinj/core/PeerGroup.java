@@ -1701,6 +1701,12 @@ public class PeerGroup implements TransactionBroadcaster {
                 downloadPeer.setDownloadData(false);
             }
             downloadPeer = peer;
+            for(Wallet w : wallets) {
+                if (downloadPeer != null && !downloadPeer.getWallets().contains(w))
+                    downloadPeer.addWallet(w);
+                checkState(downloadPeer == null || downloadPeer.getWallets().contains(w));
+            }
+
             if (downloadPeer != null) {
                 log.info("Setting download peer: {}", downloadPeer);
                 if (downloadListener != null) {
@@ -1951,7 +1957,8 @@ public class PeerGroup implements TransactionBroadcaster {
                             } else {
                                 Peer peer = getDownloadPeer();
                                 log.warn(String.format(Locale.US, "Chain download stalled: received %.2f KB/sec for %d seconds, require average of %.2f KB/sec, disconnecting %s", average / 1024.0, samples.length, minSpeedBytesPerSec / 1024.0, peer));
-                                peer.close();
+                                if (peer != null)
+                                    peer.close();
                                 // Reset the sample buffer and give the next peer time to get going.
                                 samples = null;
                                 warmupSeconds = period;
@@ -1977,6 +1984,7 @@ public class PeerGroup implements TransactionBroadcaster {
         lock.lock();
         try {
             setDownloadPeer(peer);
+
 
             if (chainDownloadSpeedCalculator == null) {
                 // Every second, run the calculator which will log how fast we are downloading the chain.

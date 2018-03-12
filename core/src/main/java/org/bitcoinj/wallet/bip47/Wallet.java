@@ -96,7 +96,6 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
     private volatile File walletFile;
     // the coin name that this wallet supports. Can be: BTC, tBTC, BCH, tBCH
     private String coin;
-
     // Wether this wallet is restored from a BIP39 seed and will need to replay the complete blockchain
     // Will be null if it's not a restored wallet.
     private DeterministicSeed restoreFromSeed;
@@ -206,8 +205,9 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
         // init
         File chainFile = getChainFile();
 
-        // Initiate Bitcoin network objects (block store, blockchain and peer group)
+        // open the blockstore file
         vStore = new SPVBlockStore(getNetworkParameters(), chainFile);
+        // create a fresh blockstore file before restoring a wallet
         if (restoreFromSeed != null && chainFileExists) {
             log.info( "Deleting the chain file in preparation from restore.");
             vStore.close();
@@ -215,10 +215,24 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
                 log.warn("start: ", new IOException("Failed to delete chain file in preparation for restore."));
             vStore = new SPVBlockStore(getNetworkParameters(), chainFile);
         }
-        vChain = new BlockChain(getNetworkParameters(), vStore);
+
+        try {
+            // create the blockchain object using the file-backed blockstore
+            vChain = new BlockChain(getNetworkParameters(), vStore);
+        } catch (BlockStoreException e){
+            // we can create a new blockstore in case the file is corrupted, the wallet should have a last height
+            if (chainFile.exists()) {
+                log.warn("deleteSpvFile: exists but it is corrupted");
+                chainFile.delete();
+            }
+            vStore = new SPVBlockStore(getNetworkParameters(), chainFile);
+            vChain = new BlockChain(getNetworkParameters(), vStore);
+        }
+
+        // create peergroup for the blockchain
         vPeerGroup = new PeerGroup(getNetworkParameters(), vChain);
 
-        // add Stash-Crypto nodes
+        // add Stash-Crypto dedicated nodes for bitcoincash
         if (getCoin().equals("BCH")) {
             vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("158.69.119.35"), 8333));
             vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("144.217.73.86"), 8333));
@@ -320,11 +334,8 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
 
     protected void createAccount(NetworkParameters networkParameters) {
         log.debug("Seed: "+this.getKeyChainSeed());
-
-        byte[] hd_seed = this.getKeyChainSeed().getSeedBytes();
-
-        //
-        byte[] hd_seed2 = restoreFromSeed.getSeedBytes();
+        byte[] hd_seed = getKeyChainSeed().getSeedBytes();
+        byte[] hd_seed2 = this.restoreFromSeed.getSeedBytes();
         DeterministicKey mKey = HDKeyDerivation.createMasterPrivateKey(hd_seed2);
         DeterministicKey purposeKey = HDKeyDerivation.deriveChildKey(mKey, 47 | ChildNumber.HARDENED_BIT);
         DeterministicKey coinKey = HDKeyDerivation.deriveChildKey(purposeKey, ChildNumber.HARDENED_BIT);
@@ -752,7 +763,7 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
         return sendRequest.tx;
     }
 
-    public SendRequest makeNotificationTransaction(String paymentCode, boolean complete) throws InsufficientMoneyException {
+    public SendRequest makeNotificationTransaction(String paymentCode) throws InsufficientMoneyException {
         Account toAccount = new Account(getNetworkParameters(), paymentCode);
         Coin ntValue =  getNetworkParameters().getMinNonDustOutput();
         Address ntAddress = toAccount.getNotificationAddress();
@@ -804,9 +815,7 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
             sendRequest.tx.addOutput(Coin.ZERO, ScriptBuilder.createOpReturnScript(op_return));
         }
 
-        if (complete)
-            completeTx(sendRequest);
-
+        completeTx(sendRequest);
         log.debug("Completed SendRequest");
         log.debug(sendRequest.toString());
         log.debug(sendRequest.tx.toString());
@@ -865,4 +874,20 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
         TransactionOutput bestChangeOutput;
     }
 
+    /*public void rescanTxBlock(Transaction tx) throws BlockStoreException {
+        int blockHeight = tx.getConfidence().getAppearedAtChainHeight() - 2;
+        this.vChain.rollbackBlockStore(blockHeight);
+    }
+
+    public File getDirectory() {
+        return directory;
+    }
+
+    public File getvWalletFile(){
+        return this.vWalletFile;
+    }
+
+    public org.bitcoinj.wallet.Wallet getvWallet(){
+        return vWallet;
+    }*/
 }

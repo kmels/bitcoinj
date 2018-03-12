@@ -19,6 +19,7 @@ package org.bitcoinj.protocols.payments;
 
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.TrustStoreLoader;
+import org.bitcoinj.crypto.X509Utils;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -133,7 +134,7 @@ public class PaymentSessionTest {
             assertEquals("The USERTRUST Network, Salt Lake City, US", pkiData.rootAuthorityName);
         } catch (PaymentProtocolException.PkiVerificationException e){
             assertEquals(3, e.certificates.size());
-            assertTrue(e.certificates.get(0).getSubjectAlternativeNames().toString().contains("bitcoincore.org"));
+            assertEquals( "www.bitcoincore.org", X509Utils.getDisplayNameFromCertificate(e.certificates.get(0), true));
             e.certificates.get(1).checkValidity();
             e.certificates.get(2).checkValidity();
         }
