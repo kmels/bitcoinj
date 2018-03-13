@@ -251,12 +251,11 @@ public class Wallet {
     }
 
     public void setAccount() {
-        log.debug("Seed: "+vWallet.getKeyChainSeed());
+        byte[] hd_seed = this.restoreFromSeed != null ?
+                this.restoreFromSeed.getSeedBytes() :
+                vWallet.getKeyChainSeed().getSeedBytes();
 
-        byte[] hd_seed = vWallet.getKeyChainSeed().getSeedBytes();
-        byte[] hd_seed2 = this.restoreFromSeed.getSeedBytes();
-
-        DeterministicKey mKey = HDKeyDerivation.createMasterPrivateKey(hd_seed2);
+        DeterministicKey mKey = HDKeyDerivation.createMasterPrivateKey(hd_seed);
         DeterministicKey purposeKey = HDKeyDerivation.deriveChildKey(mKey, 47 | ChildNumber.HARDENED_BIT);
         DeterministicKey coinKey = HDKeyDerivation.deriveChildKey(purposeKey, ChildNumber.HARDENED_BIT);
 
