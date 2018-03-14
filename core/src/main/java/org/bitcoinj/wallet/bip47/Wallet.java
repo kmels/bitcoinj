@@ -117,7 +117,7 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
 
     public Wallet(NetworkParameters params, File workingDir, String coin, @Nullable DeterministicSeed deterministicSeed) throws Exception {
         super(params);
-        Context.propagate(new Context(getNetworkParameters()));
+
         this.directory = new File(workingDir, coin);
 
         if (!this.directory.exists()) {
@@ -191,7 +191,7 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
         setVersion(coreWallet.getVersion());
 
         //  - create the bip47 account
-        createAccount(params);
+        setAccount();
 
         Address notificationAddress = mAccounts.get(0).getNotificationAddress();
         log.debug("Wallet notification address: "+notificationAddress.toString());
@@ -332,14 +332,16 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
         return this.coin;
     }
 
-    protected void createAccount(NetworkParameters networkParameters) {
-        log.debug("Seed: "+this.getKeyChainSeed());
-        byte[] hd_seed = getKeyChainSeed().getSeedBytes();
-        byte[] hd_seed2 = this.restoreFromSeed.getSeedBytes();
-        DeterministicKey mKey = HDKeyDerivation.createMasterPrivateKey(hd_seed2);
+    public void setAccount() {
+
+        byte[] hd_seed = this.restoreFromSeed != null ?
+                this.restoreFromSeed.getSeedBytes() :
+                getKeyChainSeed().getSeedBytes();
+
+        DeterministicKey mKey = HDKeyDerivation.createMasterPrivateKey(this.restoreFromSeed.getSeedBytes());
         DeterministicKey purposeKey = HDKeyDerivation.deriveChildKey(mKey, 47 | ChildNumber.HARDENED_BIT);
         DeterministicKey coinKey = HDKeyDerivation.deriveChildKey(purposeKey, ChildNumber.HARDENED_BIT);
-        Account account = new Account(networkParameters, coinKey, 0);
+        Account account = new Account(this.params, coinKey, 0);
 
         mAccounts.clear();
         mAccounts.add(account);
@@ -873,21 +875,4 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
         CoinSelection bestCoinSelection;
         TransactionOutput bestChangeOutput;
     }
-
-    /*public void rescanTxBlock(Transaction tx) throws BlockStoreException {
-        int blockHeight = tx.getConfidence().getAppearedAtChainHeight() - 2;
-        this.vChain.rollbackBlockStore(blockHeight);
-    }
-
-    public File getDirectory() {
-        return directory;
-    }
-
-    public File getvWalletFile(){
-        return this.vWalletFile;
-    }
-
-    public org.bitcoinj.wallet.Wallet getvWallet(){
-        return vWallet;
-    }*/
 }
