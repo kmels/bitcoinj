@@ -13,11 +13,11 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
+import org.bitcoinj.crypto.bip47.Bip47Account;
 import org.bitcoinj.signers.TransactionSigner;
 import org.bitcoinj.wallet.*;
 import org.bitcoinj.wallet.bip47.listeners.BlockchainDownloadProgressTracker;
 import org.bitcoinj.wallet.bip47.listeners.TransactionEventListener;
-import org.bitcoinj.crypto.bip47.Account;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -101,7 +101,7 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
     private DeterministicSeed restoreFromSeed;
 
     // Support for BIP47-type accounts. Only 1 account supported by this wallet initially
-    private List<Account> mAccounts = new ArrayList<>(1);
+    private List<Bip47Account> mBip47Accounts = new ArrayList<>(1);
 
     // The progress tracker will callback the listener with a porcetage of the blockchain that it has downloaded, while downloading..
     private BlockchainDownloadProgressTracker mBlockchainDownloadProgressTracker = null;
@@ -193,7 +193,7 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
         //  - create the bip47 account
         setAccount();
 
-        Address notificationAddress = mAccounts.get(0).getNotificationAddress();
+        Address notificationAddress = mBip47Accounts.get(0).getNotificationAddress();
         log.debug("Wallet notification address: "+notificationAddress.toString());
 
         if (!coreWallet.isAddressWatched(notificationAddress)) {
@@ -341,10 +341,10 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
         DeterministicKey mKey = HDKeyDerivation.createMasterPrivateKey(this.restoreFromSeed.getSeedBytes());
         DeterministicKey purposeKey = HDKeyDerivation.deriveChildKey(mKey, 47 | ChildNumber.HARDENED_BIT);
         DeterministicKey coinKey = HDKeyDerivation.deriveChildKey(purposeKey, ChildNumber.HARDENED_BIT);
-        Account account = new Account(this.params, coinKey, 0);
+        Bip47Account bip47Account = new Bip47Account(this.params, coinKey, 0);
 
-        mAccounts.clear();
-        mAccounts.add(account);
+        mBip47Accounts.clear();
+        mBip47Accounts.add(bip47Account);
     }
 
     public void start(boolean startBlockchainDownload) {
@@ -493,7 +493,7 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
 
     public boolean isNotificationTransaction(Transaction tx) {
         Address address = getAddressOfReceived(tx);
-        Address myNotificationAddress = mAccounts.get(0).getNotificationAddress();
+        Address myNotificationAddress = mBip47Accounts.get(0).getNotificationAddress();
 
         return address != null && address.toString().equals(myNotificationAddress.toString());
     }
@@ -544,7 +544,7 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
     }
 
     public PaymentCode getPaymentCodeInNotificationTransaction(Transaction tx) {
-        byte[] privKeyBytes = mAccounts.get(0).getNotificationKey().getPrivKeyBytes();
+        byte[] privKeyBytes = mBip47Accounts.get(0).getNotificationKey().getPrivKeyBytes();
 
         return BIP47Util.getPaymentCodeInNotificationTransaction(privKeyBytes, tx);
     }
@@ -579,8 +579,8 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
         return true;
     }
 
-    public Account getAccount(int i) {
-        return mAccounts.get(i);
+    public Bip47Account getAccount(int i) {
+        return mBip47Accounts.get(i);
     }
 
     public Address getAddressOfKey(ECKey key) {
@@ -766,9 +766,9 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
     }
 
     public SendRequest makeNotificationTransaction(String paymentCode) throws InsufficientMoneyException {
-        Account toAccount = new Account(getNetworkParameters(), paymentCode);
+        Bip47Account toBip47Account = new Bip47Account(getNetworkParameters(), paymentCode);
         Coin ntValue =  getNetworkParameters().getMinNonDustOutput();
-        Address ntAddress = toAccount.getNotificationAddress();
+        Address ntAddress = toBip47Account.getNotificationAddress();
 
 
         log.debug("Balance: " + getBalance());
@@ -797,7 +797,7 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
             log.debug("Private key 0?: "+redeemData.keys.get(0).hasPrivKey());
             byte[] privKey = redeemData.getFullKey().getPrivKeyBytes();
             log.debug("Private key: "+ Utils.HEX.encode(privKey));
-            byte[] pubKey = toAccount.getNotificationKey().getPubKey();
+            byte[] pubKey = toBip47Account.getNotificationKey().getPubKey();
             log.debug("Public Key: "+Utils.HEX.encode(pubKey));
             byte[] outpoint = txIn.getOutpoint().bitcoinSerialize();
 
@@ -810,9 +810,9 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
             } catch (InvalidKeyException | NoSuchAlgorithmException | InvalidKeySpecException | NoSuchProviderException e) {
                 e.printStackTrace();
             }
-            log.debug("My payment code: "+mAccounts.get(0).getPaymentCode().toString());
+            log.debug("My payment code: "+ mBip47Accounts.get(0).getPaymentCode().toString());
             log.debug("Mask: "+Utils.HEX.encode(mask));
-            byte[] op_return = PaymentCode.blind(mAccounts.get(0).getPaymentCode().getPayload(), mask);
+            byte[] op_return = PaymentCode.blind(mBip47Accounts.get(0).getPaymentCode().getPayload(), mask);
 
             sendRequest.tx.addOutput(Coin.ZERO, ScriptBuilder.createOpReturnScript(op_return));
         }

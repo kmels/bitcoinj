@@ -20,14 +20,14 @@ import static org.bitcoinj.wallet.bip47.PaymentCode.createMasterPubKeyFromPaymen
  * Created by jimmy on 8/4/17.
  */
 
-public class Account {
+public class Bip47Account {
     private NetworkParameters mNetworkParameters;
     private DeterministicKey mKey;
     private int mIndex;
     private PaymentCode mPaymentCode;
     private String mXPub;
 
-    public Account(NetworkParameters parameters, DeterministicKey deterministicKey, int index) {
+    public Bip47Account(NetworkParameters parameters, DeterministicKey deterministicKey, int index) {
         mNetworkParameters = parameters;
         mIndex = index;
         mKey = HDKeyDerivation.deriveChildKey(deterministicKey, mIndex | ChildNumber.HARDENED_BIT);
@@ -35,7 +35,7 @@ public class Account {
         mXPub = mKey.serializePubB58(parameters);
     }
 
-    public Account(NetworkParameters parameters, String strPaymentCode) {
+    public Bip47Account(NetworkParameters parameters, String strPaymentCode) {
         mNetworkParameters = parameters;
         mIndex = 0;
         mKey = createMasterPubKeyFromPaymentCode(strPaymentCode);
