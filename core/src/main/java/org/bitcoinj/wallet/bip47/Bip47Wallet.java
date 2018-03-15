@@ -71,7 +71,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 
 /**
- * <p>A {@link Wallet} that runs in SPV mode and supports BIP 47 payments for coins BTC, BCH, tBTC and tBCH. You will
+ * <p>A {@link Bip47Wallet} that runs in SPV mode and supports BIP 47 payments for coins BTC, BCH, tBTC and tBCH. You will
  * need to instantiate one wallet per supported coin.</p>
  *
  * <p>It produces two files in a designated directory. The directory name is the coin name. and is created in workingDirectory: </p>
@@ -80,12 +80,12 @@ import static com.google.common.base.Preconditions.checkNotNull;
  *     <il>The .wallet: stores the wallet with txs, can be encrypted, storing keys</il>
  * </ul>
  *
- * <p>By calling {@link Wallet.start()}, this wallet will automatically import payment addresses when a Bip 47
+ * <p>By calling {@link Bip47Wallet.start()}, this wallet will automatically import payment addresses when a Bip 47
  * notification transaction is received.</p>
  *
  */
 
-public class Wallet extends org.bitcoinj.wallet.Wallet {
+public class Bip47Wallet extends org.bitcoinj.wallet.Wallet {
     // the blokstore is used by a blockchain as a memory data structure
     private volatile BlockChain vChain;
     private volatile BlockStore vStore;
@@ -113,9 +113,9 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
 
     private boolean mBlockchainDownloadStarted = false;
     private ConcurrentHashMap<String, Bip47PaymentChannel> Bip47PaymentChannelData = new ConcurrentHashMap<>();
-    private static final Logger log = LoggerFactory.getLogger(Wallet.class);
+    private static final Logger log = LoggerFactory.getLogger(Bip47Wallet.class);
 
-    public Wallet(NetworkParameters params, File workingDir, String coin, @Nullable DeterministicSeed deterministicSeed) throws Exception {
+    public Bip47Wallet(NetworkParameters params, File workingDir, String coin, @Nullable DeterministicSeed deterministicSeed) throws Exception {
         super(params);
 
         this.directory = new File(workingDir, coin);
@@ -261,7 +261,7 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
 
         this.addOnReceiveTransactionListener(new TransactionEventListener() {
             @Override
-            public void onTransactionReceived(Wallet wallet, Transaction transaction) {
+            public void onTransactionReceived(Bip47Wallet bip47Wallet, Transaction transaction) {
 
                 if (isNotificationTransaction(transaction)) {
                     log.debug("Valid notification transaction received");
@@ -290,14 +290,14 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
             }
 
             @Override
-            public void onTransactionConfidenceEvent(Wallet wallet, Transaction transaction) {
+            public void onTransactionConfidenceEvent(Bip47Wallet bip47Wallet, Transaction transaction) {
                 return;
             }
         });
         log.debug("Created wallet: " +toString());
     }
 
-    public Wallet(NetworkParameters params, KeyChainGroup kcg){
+    public Bip47Wallet(NetworkParameters params, KeyChainGroup kcg){
         super(params, kcg);
     }
 
@@ -319,13 +319,13 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
         }
     }
 
-    private Wallet create(NetworkParameters networkParameters) throws IOException {
+    private Bip47Wallet create(NetworkParameters networkParameters) throws IOException {
         KeyChainGroup kcg;
         if (restoreFromSeed != null)
             kcg = new KeyChainGroup(networkParameters, restoreFromSeed);
         else
             kcg = new KeyChainGroup(networkParameters);
-        return new Wallet(networkParameters, kcg);  // default
+        return new Bip47Wallet(networkParameters, kcg);  // default
     }
 
     public String getCoin() {
@@ -475,7 +475,7 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
         if (this.mCoinsReceivedEventListener != null)
             this.removeCoinsReceivedEventListener(mCoinsReceivedEventListener);
 
-        transactionEventListener.setWallet(this);
+        transactionEventListener.setBip47Wallet(this);
         this.addCoinsReceivedEventListener(transactionEventListener);
 
         mCoinsReceivedEventListener = transactionEventListener;
@@ -485,7 +485,7 @@ public class Wallet extends org.bitcoinj.wallet.Wallet {
         if (this.mTransactionConfidenceListener != null)
             this.removeTransactionConfidenceEventListener(mTransactionConfidenceListener);
 
-        transactionEventListener.setWallet(this);
+        transactionEventListener.setBip47Wallet(this);
         this.addTransactionConfidenceEventListener(transactionEventListener);
 
         mTransactionConfidenceListener = transactionEventListener;

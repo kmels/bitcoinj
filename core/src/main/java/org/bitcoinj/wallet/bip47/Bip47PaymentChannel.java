@@ -5,8 +5,6 @@
 
 package org.bitcoinj.wallet.bip47;
 
-import org.bitcoinj.wallet.bip47.Wallet;
-
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.ECKey;
 import org.slf4j.Logger;
@@ -62,14 +60,14 @@ public class Bip47PaymentChannel {
         return currentIncomingIndex;
     }
 
-    public void generateKeys(Wallet wallet) throws NotSecp256k1Exception, NoSuchProviderException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    public void generateKeys(Bip47Wallet bip47Wallet) throws NotSecp256k1Exception, NoSuchProviderException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
         for (int i = 0; i < LOOKAHEAD; i++) {
-            ECKey key = BIP47Util.getReceiveAddress(wallet, paymentCode, i).getReceiveECKey();
-            Address address = wallet.getAddressOfKey(key);
+            ECKey key = BIP47Util.getReceiveAddress(bip47Wallet, paymentCode, i).getReceiveECKey();
+            Address address = bip47Wallet.getAddressOfKey(key);
 
             log.debug("New address generated");
             log.debug(address.toString());
-            wallet.importKey(key);
+            bip47Wallet.importKey(key);
             incomingAddresses.add(i, new Bip47Address(address.toString(), i));
         }
 

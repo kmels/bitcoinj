@@ -60,7 +60,7 @@ public class Bip47WalletTest extends TestWithWallet {
     private final String DAVE_BTC_NOTIFICATION_ADDRESS = "133mLY3JXcakBVPUSVFFBcnmDYRuvex9N4";
     private final String DAVE_TBTC_NOTIFICATION_ADDRESS = "mhZidb8HLe1zxbs6A4Dd1Y165Y2cvPtrpu";
 
-    private Wallet bip47Wallet;
+    private Bip47Wallet bip47Bip47Wallet;
 
     //  - blockchains to test
     public static final String[] SUPPORTED_COINS = { "BCH", "BTC", "tBCH", "tBTC" };
@@ -73,11 +73,11 @@ public class Bip47WalletTest extends TestWithWallet {
         Security.addProvider(new BouncyCastleProvider());
     }
 
-    private Wallet createWallet(NetworkParameters params, File workingDir, String coin, String mnemonic) throws Exception {
+    private Bip47Wallet createWallet(NetworkParameters params, File workingDir, String coin, String mnemonic) throws Exception {
         this.PARAMS = params;
         Context.propagate(new Context(PARAMS));
         DeterministicSeed seed = new DeterministicSeed(mnemonic, null, "", Utils.currentTimeSeconds());
-        return new Wallet(params, workingDir, coin, seed);
+        return new Bip47Wallet(params, workingDir, coin, seed);
     };
 
     static void deleteFolder(File dir){
@@ -118,41 +118,41 @@ public class Bip47WalletTest extends TestWithWallet {
     private void setUp(String dirName, NetworkParameters params, String coinName, String mnemonic) throws Exception {
         File workingDir = new File(dirName);
         Context.propagate(new Context(params));
-        bip47Wallet = createWallet(params, workingDir, coinName, mnemonic);
-        this.PARAMS = bip47Wallet.getNetworkParameters();
+        bip47Bip47Wallet = createWallet(params, workingDir, coinName, mnemonic);
+        this.PARAMS = bip47Bip47Wallet.getNetworkParameters();
         super.setUp();
     }
 
     public void testAlicesWallet(NetworkParameters params, String coinName) throws Exception{
         this.setUp("alice", params, coinName, ALICE_BIP39_MNEMONIC);
-        assertEquals(ALICE_PAYMENT_CODE_V1, bip47Wallet.getPaymentCode());
+        assertEquals(ALICE_PAYMENT_CODE_V1, bip47Bip47Wallet.getPaymentCode());
         if (params.getId().contains("production"))
-            assertEquals(ALICE_NOTIFICATION_ADDRESS, bip47Wallet.getAccount(0).getNotificationAddress().toString());
+            assertEquals(ALICE_NOTIFICATION_ADDRESS, bip47Bip47Wallet.getAccount(0).getNotificationAddress().toString());
         if (params.getId().contains("test"))
-            assertEquals(ALICE_NOTIFICATION_TESTADDRESS, bip47Wallet.getAccount(0).getNotificationAddress().toString());
+            assertEquals(ALICE_NOTIFICATION_TESTADDRESS, bip47Bip47Wallet.getAccount(0).getNotificationAddress().toString());
     }
 
     public void testBobsWallet(NetworkParameters params, String coinName) throws Exception{
         this.setUp("bob", params, coinName, BOB_BIP39_MNEMONIC);
-        assertEquals(BOB_PAYMENT_CODE_V1, bip47Wallet.getPaymentCode());
+        assertEquals(BOB_PAYMENT_CODE_V1, bip47Bip47Wallet.getPaymentCode());
         if (params.getId().contains("production"))
-            assertEquals(BOB_NOTIFICATION_ADDRESS, bip47Wallet.getAccount(0).getNotificationAddress().toString());
+            assertEquals(BOB_NOTIFICATION_ADDRESS, bip47Bip47Wallet.getAccount(0).getNotificationAddress().toString());
         if (params.getId().contains("test"))
-            assertEquals(BOB_NOTIFICATION_TESTADDRESS, bip47Wallet.getAccount(0).getNotificationAddress().toString());
+            assertEquals(BOB_NOTIFICATION_TESTADDRESS, bip47Bip47Wallet.getAccount(0).getNotificationAddress().toString());
     }
 
     public void testCarlosWallet(NetworkParameters params, String coinName) throws Exception{
         this.setUp("carlos", params, coinName, CARLOS_BIP39_MNEMONIC);
-        assertEquals(CARLOS_PAYMENT_CODE, bip47Wallet.getPaymentCode());
+        assertEquals(CARLOS_PAYMENT_CODE, bip47Bip47Wallet.getPaymentCode());
     }
 
     public void testDavesWallet(NetworkParameters params, String coinName) throws Exception{
         this.setUp("dave", params, coinName, DAVE_BIP39_MNEMONIC);
-        assertEquals(DAVE_PAYMENT_CODE_V1, bip47Wallet.getPaymentCode());
+        assertEquals(DAVE_PAYMENT_CODE_V1, bip47Bip47Wallet.getPaymentCode());
         if (params.getId().contains("production"))
-            assertEquals(DAVE_BTC_NOTIFICATION_ADDRESS, bip47Wallet.getAccount(0).getNotificationAddress().toString());
+            assertEquals(DAVE_BTC_NOTIFICATION_ADDRESS, bip47Bip47Wallet.getAccount(0).getNotificationAddress().toString());
         if (params.getId().contains("test"))
-            assertEquals(DAVE_TBTC_NOTIFICATION_ADDRESS, bip47Wallet.getAccount(0).getNotificationAddress().toString());
+            assertEquals(DAVE_TBTC_NOTIFICATION_ADDRESS, bip47Bip47Wallet.getAccount(0).getNotificationAddress().toString());
 
     }
 
@@ -196,8 +196,8 @@ public class Bip47WalletTest extends TestWithWallet {
         File aliceDir = new File("alice2");
         File bobDir = new File("bob2");
 
-        Wallet Alice = createWallet(MainNetParams.get(), aliceDir, "BTC", ALICE_BIP39_MNEMONIC);
-        Wallet Bob = createWallet(MainNetParams.get(), bobDir, "BTC", BOB_BIP39_MNEMONIC);
+        Bip47Wallet Alice = createWallet(MainNetParams.get(), aliceDir, "BTC", ALICE_BIP39_MNEMONIC);
+        Bip47Wallet Bob = createWallet(MainNetParams.get(), bobDir, "BTC", BOB_BIP39_MNEMONIC);
 
         // Bob receives a NTX with Alice's payment code. Bob's wallet generates keys for Alice to use.
         Bob.savePaymentCode(Alice.getAccount(0).getPaymentCode()); // bob saves alice

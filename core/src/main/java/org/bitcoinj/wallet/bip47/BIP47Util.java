@@ -5,8 +5,6 @@
 
 package org.bitcoinj.wallet.bip47;
 
-import org.bitcoinj.wallet.bip47.Wallet;
-
 import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
@@ -21,7 +19,6 @@ import javax.annotation.Nullable;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -104,14 +101,14 @@ public class BIP47Util {
         return null;
     }
 
-    public static PaymentAddress getReceiveAddress(Wallet wallet, String pcode, int idx) throws AddressFormatException, NotSecp256k1Exception {
-        ECKey accountKey = wallet.getAccount(0).keyAt(idx);
-        return getPaymentAddress(wallet.getNetworkParameters(), new PaymentCode(pcode), 0, accountKey);
+    public static PaymentAddress getReceiveAddress(Bip47Wallet bip47Wallet, String pcode, int idx) throws AddressFormatException, NotSecp256k1Exception {
+        ECKey accountKey = bip47Wallet.getAccount(0).keyAt(idx);
+        return getPaymentAddress(bip47Wallet.getNetworkParameters(), new PaymentCode(pcode), 0, accountKey);
     }
 
-    public static PaymentAddress getSendAddress(Wallet bip47Wallet, PaymentCode pcode, int idx) throws AddressFormatException, NotSecp256k1Exception {
-        ECKey key = bip47Wallet.getAccount(0).keyAt(0);
-        return getPaymentAddress(bip47Wallet.getNetworkParameters(), pcode, idx, key);
+    public static PaymentAddress getSendAddress(Bip47Wallet bip47Bip47Wallet, PaymentCode pcode, int idx) throws AddressFormatException, NotSecp256k1Exception {
+        ECKey key = bip47Bip47Wallet.getAccount(0).keyAt(0);
+        return getPaymentAddress(bip47Bip47Wallet.getNetworkParameters(), pcode, idx, key);
     }
 
     private static PaymentAddress getPaymentAddress(NetworkParameters networkParameters, PaymentCode pcode, int idx, ECKey key) throws AddressFormatException, NotSecp256k1Exception {

@@ -5,9 +5,6 @@
 
 package org.bitcoinj.wallet.bip47;
 
-import org.bitcoinj.wallet.bip47.PaymentCode;
-import org.bitcoinj.wallet.bip47.SecretPoint;
-
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
@@ -49,7 +46,7 @@ public class WalletUtil {
     private static final String TAG = "WalletUtil";
     private static final Logger log = LoggerFactory.getLogger(WalletUtil.class);
 
-    static Wallet.FeeCalculation calculateFee(org.bitcoinj.wallet.Wallet vWallet, SendRequest req, Coin value, List<TransactionOutput> candidates) throws InsufficientMoneyException {
+    static Bip47Wallet.FeeCalculation calculateFee(org.bitcoinj.wallet.Wallet vWallet, SendRequest req, Coin value, List<TransactionOutput> candidates) throws InsufficientMoneyException {
         CoinSelector selector = vWallet.getCoinSelector();
         // There are 3 possibilities for what adding change might do:
         // 1) No effect
@@ -197,7 +194,7 @@ public class WalletUtil {
         }
 
         Coin lowestFee = null;
-        Wallet.FeeCalculation result = new Wallet.FeeCalculation();
+        Bip47Wallet.FeeCalculation result = new Bip47Wallet.FeeCalculation();
         if (selection1 != null) {
             if (selection1Change != null)
                 lowestFee = selection1.valueGathered.subtract(selection1Change.getValue());

@@ -66,20 +66,4 @@ public class Bip47ChannelAddress {
     public String getPath() {
         return this.strPath;
     }
-
-    /*STASH:FIXME*/
-    /*public JSONObject toJSON() {
-        try {
-            JSONObject ex = new JSONObject();
-            ex.put("address", this.getAddressString());
-            if(this.ecKey.hasPrivKey()) {
-                ex.put("key", this.getPrivateKeyString());
-            }
-
-            ex.put("path", this.getPath());
-            return ex;
-        } catch (JSONException var2) {
-            throw new RuntimeException(var2);
-        }
-    }*/
 }
