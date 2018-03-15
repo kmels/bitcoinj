@@ -368,7 +368,7 @@ public class Bip47Wallet extends org.bitcoinj.wallet.Wallet {
                 this.restoreFromSeed.getSeedBytes() :
                 getKeyChainSeed().getSeedBytes();
 
-        DeterministicKey mKey = HDKeyDerivation.createMasterPrivateKey(this.restoreFromSeed.getSeedBytes());
+        DeterministicKey mKey = HDKeyDerivation.createMasterPrivateKey(hd_seed);
         DeterministicKey purposeKey = HDKeyDerivation.deriveChildKey(mKey, 47 | ChildNumber.HARDENED_BIT);
         DeterministicKey coinKey = HDKeyDerivation.deriveChildKey(purposeKey, ChildNumber.HARDENED_BIT);
         Bip47Account bip47Account = new Bip47Account(this.params, coinKey, 0);
@@ -916,5 +916,10 @@ public class Bip47Wallet extends org.bitcoinj.wallet.Wallet {
     static class FeeCalculation {
         CoinSelection bestCoinSelection;
         TransactionOutput bestChangeOutput;
+    }
+
+    public void rescanTxBlock(Transaction tx) throws BlockStoreException {
+       int blockHeight = tx.getConfidence().getAppearedAtChainHeight() - 2;
+       this.vChain.rollbackBlockStore(blockHeight);
     }
 }
