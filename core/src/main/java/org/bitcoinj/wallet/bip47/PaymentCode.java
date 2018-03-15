@@ -5,7 +5,7 @@
 
 package org.bitcoinj.wallet.bip47;
 
-import org.bitcoinj.crypto.bip47.Address;
+import org.bitcoinj.crypto.bip47.Bip47ChannelAddress;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.security.InvalidKeyException;
@@ -61,13 +61,13 @@ public class PaymentCode {
         this.strPaymentCode = this.makeV1();
     }
 
-    public Address notificationAddress(NetworkParameters networkParameters) throws AddressFormatException {
+    public Bip47ChannelAddress notificationAddress(NetworkParameters networkParameters) throws AddressFormatException {
         return this.addressAt(networkParameters, 0);
     }
 
-    public Address addressAt(NetworkParameters networkParameters, int idx) throws AddressFormatException {
+    public Bip47ChannelAddress addressAt(NetworkParameters networkParameters, int idx) throws AddressFormatException {
         DeterministicKey key = createMasterPubKeyFromPaymentCode(this.strPaymentCode);
-        return new Address(networkParameters, key, idx);
+        return new Bip47ChannelAddress(networkParameters, key, idx);
     }
 
     public byte[] getPayload() throws AddressFormatException {

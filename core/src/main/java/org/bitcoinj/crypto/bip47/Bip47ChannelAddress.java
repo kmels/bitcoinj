@@ -14,7 +14,7 @@ import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.HDKeyDerivation;
 
-public class Address {
+public class Bip47ChannelAddress {
     private int childNum;
     private String strPath = null;
     private ECKey ecKey = null;
@@ -22,10 +22,10 @@ public class Address {
     private byte[] pubKeyHash = null;
     private NetworkParameters params = null;
 
-    private Address() {
+    private Bip47ChannelAddress() {
     }
 
-    public Address(NetworkParameters params, DeterministicKey cKey, int child) {
+    public Bip47ChannelAddress(NetworkParameters params, DeterministicKey cKey, int child) {
         this.params = params;
         this.childNum = child;
         DeterministicKey dk = HDKeyDerivation.deriveChildKey(cKey, new ChildNumber(this.childNum, false));

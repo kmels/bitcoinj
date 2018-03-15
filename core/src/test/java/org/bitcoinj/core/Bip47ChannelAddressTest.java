@@ -34,7 +34,7 @@ import java.util.List;
 import static org.bitcoinj.core.Utils.HEX;
 import static org.junit.Assert.*;
 
-public class AddressTest {
+public class Bip47ChannelAddressTest {
     static final NetworkParameters testParams = TestNet3Params.get();
     static final NetworkParameters mainParams = MainNetParams.get();
 

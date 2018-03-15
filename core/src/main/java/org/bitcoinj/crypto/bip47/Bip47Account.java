@@ -63,8 +63,8 @@ public class Bip47Account {
         return mPaymentCode;
     }
 
-    public org.bitcoinj.crypto.bip47.Address addressAt(int idx) {
-        return new org.bitcoinj.crypto.bip47.Address(mNetworkParameters, mKey, idx);
+    public Bip47ChannelAddress addressAt(int idx) {
+        return new Bip47ChannelAddress(mNetworkParameters, mKey, idx);
     }
 
     public ECKey keyAt(int idx) {
