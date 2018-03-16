@@ -228,4 +228,19 @@ public class Bip47WalletTest extends TestWithWallet {
         assertEquals(SHARED_SECRET_9, HEX.encode(BIP47Util.getReceiveAddress(Bob, ALICE_PAYMENT_CODE_V1, 9).getSharedSecret().ECDHSecretAsBytes()));
     }
 
+    @Test
+    public void loadAliceV1Wallet() throws Exception{
+        File dir = new File("src/test/resources/org/bitcoinj/wallet/alice-bip47");
+        assertTrue(dir.exists());
+
+        File btc = new File(dir,"BTC");
+        assertTrue(btc.exists());
+
+        File walletFile = new File(btc,"BTC.wallet");
+        assertTrue(walletFile.exists());
+
+        Bip47Wallet AliceBTC = new Bip47Wallet(MainNetParams.get(), dir, "BTC", null);
+        assertEquals(AliceBTC.getMnemonicCode(), ALICE_BIP39_MNEMONIC);
+        assertEquals(AliceBTC.getAccount(0).getPaymentCode(), ALICE_PAYMENT_CODE_V1);
+    }
 }
