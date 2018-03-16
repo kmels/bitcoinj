@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.security.SecureRandom;
 import java.security.Security;
 import java.util.List;
 
@@ -297,5 +298,46 @@ public class Bip47WalletTest extends TestWithBip47Wallet {
         assertEquals(ChuckLoadedBip47.getMnemonicCode(), chuckFreshMnemonic);
         assertEquals(ChuckLoadedBip47.getPaymentCode(), chuckFreshPaymentCode);
         assertEquals(HEX.encode(ChuckLoadedCore.getKeyChainSeed().getSeedBytes()), chuckFreshSeedBytes);
+    }
+
+    /* Test that a wallet restored from seed is persistent */
+    @Test
+    public void testMnemonicWordsPersistence() throws Exception{
+        // create a fresh new wallet
+        File davesDir = new File("src/test/resources/org/bitcoinj/wallet/dave-bip47");
+        deleteFolder(davesDir);
+        StashDeterministicSeed davesSeed = new StashDeterministicSeed(new SecureRandom(), 256, "", System.currentTimeMillis() / 1000);
+        assertFalse(davesDir.exists()); //delete previous wallets created by this test
+        Blockchain b = new Blockchain(0, MainNetParams.get(), SUPPORTED_COINS[1], "Bitcoin Core");
+        //create Dave's wallet and save it
+        Wallet Dave = new Wallet(b, davesDir, davesSeed);
+        String davesMnemonic = Dave.getMnemonicCode();
+        String davesPaymentCode = Dave.getPaymentCode();
+        assertTrue(davesDir.exists());
+        Dave.stop();
+        // the same directory/coin will have the same seed as saved before.
+        Wallet DaveReload = new Wallet(b, davesDir, null);
+        assertEquals(DaveReload.getMnemonicCode(), davesMnemonic);
+        assertEquals(DaveReload.getPaymentCode(), davesPaymentCode);
+        deleteFolder(davesDir);
+    }
+
+    @Test
+    public void loadAliceV1Wallet() throws Exception{
+        // load a v1 wallet for Alice
+        File dir = new File("src/test/resources/org/bitcoinj/wallet/bip47/alice-bip47wallet-v1");
+        File walletFile = new File(dir,"BTC/BTC.wallet");
+        assertTrue(walletFile.exists());
+        // check that the version 1 payment for BTC is loaded correctly
+        Blockchain b = new Blockchain(0, MainNetParams.get(), SUPPORTED_COINS[1], "Bitcoin Core");
+        Wallet AliceBTC = new Wallet(b, dir,  null);
+        assertEquals(AliceBTC.getMnemonicCode(), ALICE_BIP39_MNEMONIC);
+        assertEquals(AliceBTC.getAccount(0).getStringPaymentCode(), ALICE_PAYMENT_CODE_V1);
+
+        // check that the version 1 payment for tBTC is loaded correctly
+        b = new Blockchain(1, TestNet3Params.get(), SUPPORTED_COINS[3], "Test Bitcoin Core");
+        Wallet AliceTBTC = new Wallet(b, dir,  null);
+        assertEquals(AliceBTC.getMnemonicCode(), ALICE_BIP39_MNEMONIC);
+        assertEquals(AliceBTC.getAccount(0).getStringPaymentCode(), ALICE_PAYMENT_CODE_V1);
     }
 }
