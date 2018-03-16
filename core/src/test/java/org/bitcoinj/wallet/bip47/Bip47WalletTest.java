@@ -13,11 +13,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.RandomAccessFile;
 import java.security.Security;
 import java.util.List;
 
 import static org.bitcoinj.core.Utils.HEX;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import org.bitcoinj.crypto.MnemonicCodeTest;
@@ -81,7 +83,9 @@ public class Bip47WalletTest extends TestWithWallet {
     };
 
     static void deleteFolder(File dir){
-        String[]entries = dir.list();
+        if (!dir.exists())
+            return;
+        String[] entries = dir.list();
         for(String s: entries){
             File currentFile = new File(dir.getPath(),s);
             if (currentFile.isDirectory())
@@ -226,6 +230,37 @@ public class Bip47WalletTest extends TestWithWallet {
         assertEquals(SHARED_SECRET_7, HEX.encode(BIP47Util.getReceiveAddress(Bob, ALICE_PAYMENT_CODE_V1, 7).getSharedSecret().ECDHSecretAsBytes()));
         assertEquals(SHARED_SECRET_8, HEX.encode(BIP47Util.getReceiveAddress(Bob, ALICE_PAYMENT_CODE_V1, 8).getSharedSecret().ECDHSecretAsBytes()));
         assertEquals(SHARED_SECRET_9, HEX.encode(BIP47Util.getReceiveAddress(Bob, ALICE_PAYMENT_CODE_V1, 9).getSharedSecret().ECDHSecretAsBytes()));
+    }
+
+    @Test
+    public void createAndLoadWallet() throws Exception{
+        File dir = new File("src/test/resources/org/bitcoinj/wallet/chuck-bip47");
+        deleteFolder(dir);
+        assertFalse(dir.exists());
+
+        Bip47Wallet ChuckBTC = new Bip47Wallet(MainNetParams.get(), dir, "BTC", null);
+        assertTrue(dir.exists());
+
+        File btc = new File(dir,"BTC");
+        assertTrue(btc.exists());
+
+        File walletFile = new File(btc,"BTC.wallet");
+        assertTrue(walletFile.exists());
+
+        String chuckFreshPaymentCode = ChuckBTC.getPaymentCode();
+        String chuckFreshSeedBytes = HEX.encode(ChuckBTC.getKeyChainSeed().getSeedBytes());
+
+        Wallet ChuckBTC2 = Bip47Wallet.load(MainNetParams.get(), false, walletFile );
+        assertEquals(HEX.encode(ChuckBTC2.getKeyChainSeed().getSeedBytes()), chuckFreshSeedBytes);
+
+        File spvFile = new File(btc,"BTC.spvchain");
+        ChuckBTC.getBlockStore().close();
+        //assertTrue(spvFile.delete());
+        assertEquals(HEX.encode(ChuckBTC2.getKeyChainSeed().getSeedBytes()), chuckFreshSeedBytes);
+        Bip47Wallet ChuckBTC3 =  new Bip47Wallet(MainNetParams.get(), dir, "BTC", null);
+
+        //assertEquals(ChuckBTC2.getMnemonicCode(), ALICE_BIP39_MNEMONIC);
+        assertEquals(ChuckBTC3.getPaymentCode(), chuckFreshPaymentCode);
     }
 
     @Test

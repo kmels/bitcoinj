@@ -65,6 +65,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static org.bitcoinj.core.Utils.HEX;
+import static org.bitcoinj.core.Utils.join;
 
 /**
  * Created by jimmy on 9/28/17.
@@ -152,7 +154,7 @@ public class Bip47Wallet extends org.bitcoinj.wallet.Wallet {
         // replay the wallet if deterministicSeed is defined or the chain file is deleted
         // as a trigger of the wallet user to replay it
         boolean shouldReplayWallet = (walletFile.exists() && !chainFileExists) || deterministicSeed != null;
-        Context.propagate(new Context(getNetworkParameters()));
+        //Context.propagate(new Context(params));
 
         // use a Wallet reader
         // TODO: We should use WalletExtension's serialization to read, write and import this wallet's properties
@@ -160,17 +162,20 @@ public class Bip47Wallet extends org.bitcoinj.wallet.Wallet {
 
         // if coinName/coinName.wallet exists, we load it as a core Wallet and then manually set each of the bip47 properties
         if (walletFile.exists()) {
-            coreWallet = load(getNetworkParameters(), shouldReplayWallet, walletFile);
+            coreWallet = load(params, shouldReplayWallet, walletFile);
         } else {
             // create an empty wallet
-            coreWallet = create(getNetworkParameters());
+            coreWallet = create(params);
             // with a seed
             coreWallet.freshReceiveKey();
             // reload the wallet
             coreWallet.saveToFile(walletFile);
-            coreWallet = load(getNetworkParameters(), false, walletFile);
+            String mnemonic = join(coreWallet.getKeyChainSeed().getMnemonicCode());
+            coreWallet = load(params, false, walletFile);
+            String mnemonic2 = join(coreWallet.getKeyChainSeed().getMnemonicCode());
         }
 
+        String seedb = HEX.encode(coreWallet.getKeyChainSeed().getSeedBytes());
         // every 5 seconds let's persist the transactions, keys, last block height, watched scripts, etc.
         // does not persist channels recurrently, instead payment channels are currently saved in a separete file (.bip47 extension).
         autosaveToFile(walletFile, 5, TimeUnit.SECONDS, null);
@@ -216,7 +221,12 @@ public class Bip47Wallet extends org.bitcoinj.wallet.Wallet {
         setVersion(coreWallet.getVersion());
 
         // create a bip47 account, i.e. derive the key M/47'/0'/0'
-        deriveAccount();
+        String seed = HEX.encode(getKeyChainSeed().getSeedBytes());
+        byte[] hd_seed = this.restoreFromSeed != null ?
+                this.restoreFromSeed.getSeedBytes() :
+                coreWallet.getKeyChainSeed().getSeedBytes();
+
+        deriveAccount(hd_seed);
 
         Address notificationAddress = mBip47Accounts.get(0).getNotificationAddress();
         log.debug("Wallet notification address: "+notificationAddress.toString());
@@ -231,31 +241,31 @@ public class Bip47Wallet extends org.bitcoinj.wallet.Wallet {
         File chainFile = getChainFile();
 
         // open the blockstore file
-        vStore = new SPVBlockStore(getNetworkParameters(), chainFile);
+        vStore = new SPVBlockStore(params, chainFile);
         // create a fresh blockstore file before restoring a wallet
         if (restoreFromSeed != null && chainFileExists) {
             log.info( "Deleting the chain file in preparation from restore.");
             vStore.close();
             if (!chainFile.delete())
                 log.warn("start: ", new IOException("Failed to delete chain file in preparation for restore."));
-            vStore = new SPVBlockStore(getNetworkParameters(), chainFile);
+            vStore = new SPVBlockStore(params, chainFile);
         }
 
         try {
             // create the blockchain object using the file-backed blockstore
-            vChain = new BlockChain(getNetworkParameters(), vStore);
+            vChain = new BlockChain(params, vStore);
         } catch (BlockStoreException e){
             // we can create a new blockstore in case the file is corrupted, the wallet should have a last height
             if (chainFile.exists()) {
                 log.warn("deleteSpvFile: exists but it is corrupted");
                 chainFile.delete();
             }
-            vStore = new SPVBlockStore(getNetworkParameters(), chainFile);
-            vChain = new BlockChain(getNetworkParameters(), vStore);
+            vStore = new SPVBlockStore(params, chainFile);
+            vChain = new BlockChain(params, vStore);
         }
 
         // create peergroup for the blockchain
-        vPeerGroup = new PeerGroup(getNetworkParameters(), vChain);
+        vPeerGroup = new PeerGroup(params, vChain);
 
         // add Stash-Crypto dedicated nodes for bitcoincash
         if (getCoinName().equals("BCH")) {
@@ -269,7 +279,7 @@ public class Bip47Wallet extends org.bitcoinj.wallet.Wallet {
         // connect to peer running in localhost
         vPeerGroup.setUseLocalhostPeerWhenPossible(true);
         // connect to peers in the coinName network
-        vPeerGroup.addPeerDiscovery(new DnsDiscovery(getNetworkParameters()));
+        vPeerGroup.addPeerDiscovery(new DnsDiscovery(params));
 
         // add the wallet so that syncing and rolling the chain can affect this wallet
         vChain.addWallet(this);
@@ -333,11 +343,13 @@ public class Bip47Wallet extends org.bitcoinj.wallet.Wallet {
 
     // Load an offline wallet from a file and return a @{link org.bitcoinj.wallet.Wallet}.
     // If shouldReplayWallet is false, the wallet last block is reset to -1
-    private static org.bitcoinj.wallet.Wallet load(NetworkParameters networkParameters, boolean shouldReplayWallet, File vWalletFile) throws Exception {
+    public static org.bitcoinj.wallet.Wallet load(NetworkParameters networkParameters, boolean shouldReplayWallet, File vWalletFile) throws Exception {
         try (FileInputStream walletStream = new FileInputStream(vWalletFile)) {
             Protos.Wallet proto = WalletProtobufSerializer.parseToProto(walletStream);
             final WalletProtobufSerializer serializer = new WalletProtobufSerializer();
             org.bitcoinj.wallet.Wallet wallet = serializer.readWallet(networkParameters, null, proto);
+            String walletSeed = HEX.encode(wallet.getKeyChainSeed().getSeedBytes());
+            String walletMnemonic = join(wallet.getKeyChainSeed().getMnemonicCode());
             if (shouldReplayWallet)
                 wallet.reset();
             return wallet;
@@ -362,12 +374,8 @@ public class Bip47Wallet extends org.bitcoinj.wallet.Wallet {
      *
      * <p>After deriving, this wallet's payment code is available in @{link Bip47Wallet.getPaymentCode()}</p>
      */
-    public void deriveAccount() {
-
-        byte[] hd_seed = this.restoreFromSeed != null ?
-                this.restoreFromSeed.getSeedBytes() :
-                getKeyChainSeed().getSeedBytes();
-
+    public void deriveAccount(byte[] hd_seed) {
+        String seed = HEX.encode(hd_seed);
         DeterministicKey mKey = HDKeyDerivation.createMasterPrivateKey(hd_seed);
         DeterministicKey purposeKey = HDKeyDerivation.deriveChildKey(mKey, 47 | ChildNumber.HARDENED_BIT);
         DeterministicKey coinKey = HDKeyDerivation.deriveChildKey(purposeKey, ChildNumber.HARDENED_BIT);
@@ -838,22 +846,22 @@ public class Bip47Wallet extends org.bitcoinj.wallet.Wallet {
             log.debug("Keys: "+redeemData.keys.size());
             log.debug("Private key 0?: "+redeemData.keys.get(0).hasPrivKey());
             byte[] privKey = redeemData.getFullKey().getPrivKeyBytes();
-            log.debug("Private key: "+ Utils.HEX.encode(privKey));
+            log.debug("Private key: "+ HEX.encode(privKey));
             byte[] pubKey = toBip47Account.getNotificationKey().getPubKey();
-            log.debug("Public Key: "+Utils.HEX.encode(pubKey));
+            log.debug("Public Key: "+ HEX.encode(pubKey));
             byte[] outpoint = txIn.getOutpoint().bitcoinSerialize();
 
             byte[] mask = null;
             try {
                 SecretPoint secretPoint = new SecretPoint(privKey, pubKey);
-                log.debug("Secret Point: "+Utils.HEX.encode(secretPoint.ECDHSecretAsBytes()));
-                log.debug("Outpoint: "+Utils.HEX.encode(outpoint));
+                log.debug("Secret Point: "+ HEX.encode(secretPoint.ECDHSecretAsBytes()));
+                log.debug("Outpoint: "+ HEX.encode(outpoint));
                 mask = PaymentCode.getMask(secretPoint.ECDHSecretAsBytes(), outpoint);
             } catch (InvalidKeyException | NoSuchAlgorithmException | InvalidKeySpecException | NoSuchProviderException e) {
                 e.printStackTrace();
             }
             log.debug("My payment code: "+ mBip47Accounts.get(0).getPaymentCode().toString());
-            log.debug("Mask: "+Utils.HEX.encode(mask));
+            log.debug("Mask: "+ HEX.encode(mask));
             byte[] op_return = PaymentCode.blind(mBip47Accounts.get(0).getPaymentCode().getPayload(), mask);
 
             sendRequest.tx.addOutput(Coin.ZERO, ScriptBuilder.createOpReturnScript(op_return));
@@ -921,5 +929,9 @@ public class Bip47Wallet extends org.bitcoinj.wallet.Wallet {
     public void rescanTxBlock(Transaction tx) throws BlockStoreException {
        int blockHeight = tx.getConfidence().getAppearedAtChainHeight() - 2;
        this.vChain.rollbackBlockStore(blockHeight);
+    }
+
+    public BlockStore getBlockStore(){
+        return vStore;
     }
 }
