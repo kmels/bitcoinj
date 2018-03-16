@@ -242,6 +242,7 @@ public class Bip47Wallet extends org.bitcoinj.wallet.Wallet {
 
         // open the blockstore file
         vStore = new SPVBlockStore(params, chainFile);
+
         // create a fresh blockstore file before restoring a wallet
         if (restoreFromSeed != null && chainFileExists) {
             log.info( "Deleting the chain file in preparation from restore.");

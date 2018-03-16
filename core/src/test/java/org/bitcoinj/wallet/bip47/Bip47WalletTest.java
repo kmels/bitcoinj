@@ -234,6 +234,44 @@ public class Bip47WalletTest extends TestWithWallet {
 
     @Test
     public void createAndLoadWallet() throws Exception{
+        // create a fresh new wallet for Chuck
+        File dir = new File("src/test/resources/org/bitcoinj/wallet/chuck-bip47");
+        deleteFolder(dir);
+        assertFalse(dir.exists()); //delete previous wallets created by this test
+        Bip47Wallet ChuckBTC = new Bip47Wallet(MainNetParams.get(), dir, "BTC", null);
+        assertTrue(dir.exists());
+
+        // new files should have been created
+        File btc = new File(dir,"BTC");
+        File walletFile = new File(btc,"BTC.wallet");
+        assertTrue(btc.exists());
+        assertTrue(walletFile.exists());
+        File spvFile = new File(btc,"BTC.spvchain");
+
+        // Save the wallet's seed
+        String chuckFreshPaymentCode = ChuckBTC.getPaymentCode();
+        String chuckFreshMnemonic = ChuckBTC.getMnemonicCode();
+        String chuckFreshSeedBytes = HEX.encode(ChuckBTC.getKeyChainSeed().getSeedBytes());
+
+        // Load the core wallet, check if the seed is the same as when created
+        org.bitcoinj.wallet.Wallet ChuckLoadedCore = Bip47Wallet.load(MainNetParams.get(), false, walletFile );
+        assertEquals(HEX.encode(ChuckLoadedCore.getKeyChainSeed().getSeedBytes()), chuckFreshSeedBytes);
+
+        // Close the store file, so that we can recreate a wallet from chuck without getting a file lock exception
+        ChuckBTC.stop();
+        assertTrue(walletFile.exists());
+
+        ChuckBTC.getBlockStore().close();
+        // Check that a creating a new Bip47 Wallet in the same directory/coin will have the same seed.
+        Bip47Wallet ChuckLoadedBip47 = new Bip47Wallet(MainNetParams.get(), dir, "BTC", null);
+        assertEquals(ChuckLoadedBip47.getMnemonicCode(), chuckFreshMnemonic);
+        assertEquals(ChuckLoadedBip47.getPaymentCode(), chuckFreshPaymentCode);
+        assertEquals(HEX.encode(ChuckLoadedCore.getKeyChainSeed().getSeedBytes()), chuckFreshSeedBytes);
+    }
+
+    /*
+    @Test
+    public void createAndLoadWallet() throws Exception{
         File dir = new File("src/test/resources/org/bitcoinj/wallet/chuck-bip47");
         deleteFolder(dir);
         assertFalse(dir.exists());
@@ -262,7 +300,7 @@ public class Bip47WalletTest extends TestWithWallet {
         //assertEquals(ChuckBTC2.getMnemonicCode(), ALICE_BIP39_MNEMONIC);
         assertEquals(ChuckBTC3.getPaymentCode(), chuckFreshPaymentCode);
     }
-
+*/
     @Test
     public void loadAliceV1Wallet() throws Exception{
         File dir = new File("src/test/resources/org/bitcoinj/wallet/alice-bip47");
