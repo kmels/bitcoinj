@@ -212,13 +212,13 @@ public class Wallet {
         org.bitcoinj.wallet.Wallet wallet;
 
         if (vWalletFile.exists()) {
-            wallet = loadWallet(shouldReplayWallet);
+            wallet = loadWallet(blockchain, shouldReplayWallet, vWalletFile);
         } else {
             wallet = createWallet();
             wallet.freshReceiveKey();
 
             wallet.saveToFile(vWalletFile);
-            wallet = loadWallet(false);
+            wallet = loadWallet(blockchain, false, vWalletFile);
         }
 
         wallet.autosaveToFile(vWalletFile, 5, TimeUnit.SECONDS, null);
@@ -226,7 +226,7 @@ public class Wallet {
         return wallet;
     }
 
-    private org.bitcoinj.wallet.Wallet loadWallet(boolean shouldReplayWallet) throws Exception {
+    public static org.bitcoinj.wallet.Wallet loadWallet(Blockchain blockchain, boolean shouldReplayWallet, File vWalletFile) throws Exception {
         try (FileInputStream walletStream = new FileInputStream(vWalletFile)) {
             Protos.Wallet proto = WalletProtobufSerializer.parseToProto(walletStream);
             final WalletProtobufSerializer serializer = new WalletProtobufSerializer();

@@ -19,6 +19,9 @@ import java.util.List;
 
 import static org.bitcoinj.core.Utils.HEX;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import org.bitcoinj.crypto.MnemonicCodeTest;
 import org.spongycastle.jce.provider.BouncyCastleProvider;
 
@@ -243,5 +246,56 @@ public class Bip47WalletTest extends TestWithBip47Wallet {
         w = createWallet(b,workingDir,CARLOS_BIP39_MNEMONIC);
         //assertEquals("tpubDDX2RK6EL7nuqjxFuZZTKsyMDx7PvPnbXmAtwuZaL9QorhjtussQTW5ReBF3G8G3wAY3RyusFkW2AuWz8YsiNXtkHZn2DmJRXA6m3rRwH8A", w.getAccount(0).getXPub());
 
+    }
+
+    static void deleteFolder(File dir){
+        if (!dir.exists())
+            return;
+        String[] entries = dir.list();
+        for(String s: entries){
+            File currentFile = new File(dir.getPath(),s);
+            if (currentFile.isDirectory())
+                deleteFolder((currentFile));
+            else
+                currentFile.delete();
+        }
+        dir.delete();
+    }
+
+    @Test
+    public void createAndLoadWallet() throws Exception{
+        // create a fresh new wallet for Chuck
+        File dir = new File("src/test/resources/org/bitcoinj/wallet/chuck-bip47");
+        deleteFolder(dir);
+        assertFalse(dir.exists()); //delete previous wallets created by this test
+        Blockchain b = new Blockchain(0, MainNetParams.get(), SUPPORTED_COINS[1], "Bitcoin Core");
+        Wallet ChuckBTC = new Wallet(b, dir, null);
+        assertTrue(dir.exists());
+
+        // new files should have been created
+        File btc = new File(dir,"BTC");
+        File walletFile = new File(btc,"BTC.wallet");
+        assertTrue(btc.exists());
+        assertTrue(walletFile.exists());
+        File spvFile = new File(btc,"BTC.spvchain");
+
+        // Save the wallet's seed
+        String chuckFreshPaymentCode = ChuckBTC.getPaymentCode();
+        String chuckFreshMnemonic = ChuckBTC.getMnemonicCode();
+        String chuckFreshSeedBytes = HEX.encode(ChuckBTC.getvWallet().getKeyChainSeed().getSeedBytes());
+
+        // Load the core wallet, check if the seed is the same as when created
+        org.bitcoinj.wallet.Wallet ChuckLoadedCore = Wallet.loadWallet(b, false, walletFile );
+        assertEquals(HEX.encode(ChuckLoadedCore.getKeyChainSeed().getSeedBytes()), chuckFreshSeedBytes);
+
+        // Close the store file, so that we can recreate a wallet from chuck without getting a file lock exception
+        ChuckBTC.stop();
+        assertTrue(walletFile.exists());
+
+        // Check that a creating a new Bip47 Wallet in the same directory/coin will have the same seed.
+        Wallet ChuckLoadedBip47 = new Wallet(b, dir, null);
+        assertEquals(ChuckLoadedBip47.getMnemonicCode(), chuckFreshMnemonic);
+        assertEquals(ChuckLoadedBip47.getPaymentCode(), chuckFreshPaymentCode);
+        assertEquals(HEX.encode(ChuckLoadedCore.getKeyChainSeed().getSeedBytes()), chuckFreshSeedBytes);
     }
 }
