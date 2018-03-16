@@ -127,7 +127,7 @@ public class Bip47Wallet extends org.bitcoinj.wallet.Wallet {
 
 
     /**
-     * Creates a new wallet for a coinName, the .spvchain and .wallet files in workingDir/coinName.
+     * <p>Creates a new wallet for a coinName, the .spvchain and .wallet files in workingDir/coinName.</p>
      *
      * Any keys will be derived from deterministicSeed.
      */
@@ -154,7 +154,7 @@ public class Bip47Wallet extends org.bitcoinj.wallet.Wallet {
         // replay the wallet if deterministicSeed is defined or the chain file is deleted
         // as a trigger of the wallet user to replay it
         boolean shouldReplayWallet = (walletFile.exists() && !chainFileExists) || deterministicSeed != null;
-        //Context.propagate(new Context(params));
+        Context.propagate(new Context(params));
 
         // use a Wallet reader
         // TODO: We should use WalletExtension's serialization to read, write and import this wallet's properties
@@ -220,11 +220,16 @@ public class Bip47Wallet extends org.bitcoinj.wallet.Wallet {
 
         setVersion(coreWallet.getVersion());
 
-        // create a bip47 account, i.e. derive the key M/47'/0'/0'
         String seed = HEX.encode(getKeyChainSeed().getSeedBytes());
+
+        String seedc = "";
+        if (this.restoreFromSeed != null)
+            seedc = HEX.encode(restoreFromSeed.getSeedBytes());
+
+        // create the bip47 payment code from seed
         byte[] hd_seed = this.restoreFromSeed != null ?
                 this.restoreFromSeed.getSeedBytes() :
-                coreWallet.getKeyChainSeed().getSeedBytes();
+                getKeyChainSeed().getSeedBytes();
 
         deriveAccount(hd_seed);
 
