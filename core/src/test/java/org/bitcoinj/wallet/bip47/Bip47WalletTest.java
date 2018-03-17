@@ -242,11 +242,13 @@ public class Bip47WalletTest extends TestWithWallet {
     @Test
     public void createAndLoadWallet() throws Exception{
         // create a fresh new wallet for Chuck
-        File dir = new File("src/test/resources/org/bitcoinj/wallet/chuck-bip47");
+        String dirName = "chuck";
+        File dir = new File(dirName);
         deleteFolder(dir);
         assertFalse(dir.exists()); //delete previous wallets created by this test
-        Bip47Wallet ChuckBTC = new Bip47Wallet(MainNetParams.get(), dir, "BTC", null);
+        this.setUp(dirName, MainNetParams.get(), "BTC", null);
         assertTrue(dir.exists());
+
         // new files should be created
         File btc = new File(dir,"BTC");
         File walletFile = new File(btc,"BTC.wallet");
@@ -255,55 +257,21 @@ public class Bip47WalletTest extends TestWithWallet {
         File spvFile = new File(btc,"BTC.spvchain");
 
         // Save the wallet's seed
-        String chuckFreshPaymentCode = ChuckBTC.getPaymentCode();
-        String chuckFreshMnemonic = ChuckBTC.getMnemonicCode();
-        String chuckFreshSeedBytes = HEX.encode(ChuckBTC.getKeyChainSeed().getSeedBytes());
+        String chuckFreshPaymentCode = bip47Wallet.getPaymentCode();
+        String chuckFreshMnemonic = bip47Wallet.getMnemonicCode();
+        String chuckFreshSeedBytes = HEX.encode(bip47Wallet.getKeyChainSeed().getSeedBytes());
 
         // Load the core wallet, check if the seed is the same as before created
         org.bitcoinj.wallet.Wallet ChuckLoadedCore = Bip47Wallet.load(MainNetParams.get(), false, walletFile );
         assertEquals(HEX.encode(ChuckLoadedCore.getKeyChainSeed().getSeedBytes()), chuckFreshSeedBytes);
 
         // Close the store file, so that we can recreate a wallet from chuck without getting a file lock exception
-        ChuckBTC.stop();
-        assertTrue(walletFile.exists());
-        ChuckBTC.getBlockStore().close(); //close before reloading
+        bip47Wallet.getBlockStore().close(); //close before reloading
         // Check that a creating a new Bip47 Wallet in the same directory/coin will have the same seed.
         Bip47Wallet ChuckLoadedBip47 = new Bip47Wallet(MainNetParams.get(), dir, "BTC", null);
         assertEquals(ChuckLoadedBip47.getMnemonicCode(), chuckFreshMnemonic);
         assertEquals(ChuckLoadedBip47.getPaymentCode(), chuckFreshPaymentCode);
         assertEquals(HEX.encode(ChuckLoadedCore.getKeyChainSeed().getSeedBytes()), chuckFreshSeedBytes);
-    }
-
-    /*
-    @Test
-    public void createAndLoadWallet() throws Exception{
-        File dir = new File("src/test/resources/org/bitcoinj/wallet/chuck-bip47");
-        deleteFolder(dir);
-        assertFalse(dir.exists());
-
-        Bip47Wallet ChuckBTC = new Bip47Wallet(MainNetParams.get(), dir, "BTC", null);
-        assertTrue(dir.exists());
-
-        File btc = new File(dir,"BTC");
-        assertTrue(btc.exists());
-
-        File walletFile = new File(btc,"BTC.wallet");
-        assertTrue(walletFile.exists());
-
-        String chuckFreshPaymentCode = ChuckBTC.getPaymentCode();
-        String chuckFreshSeedBytes = HEX.encode(ChuckBTC.getKeyChainSeed().getSeedBytes());
-
-        Wallet ChuckBTC2 = Bip47Wallet.load(MainNetParams.get(), false, walletFile );
-        assertEquals(HEX.encode(ChuckBTC2.getKeyChainSeed().getSeedBytes()), chuckFreshSeedBytes);
-
-        File spvFile = new File(btc,"BTC.spvchain");
-        ChuckBTC.getBlockStore().close();
-        //assertTrue(spvFile.delete());
-        assertEquals(HEX.encode(ChuckBTC2.getKeyChainSeed().getSeedBytes()), chuckFreshSeedBytes);
-        Bip47Wallet ChuckBTC3 =  new Bip47Wallet(MainNetParams.get(), dir, "BTC", null);
-
-        //assertEquals(ChuckBTC2.getMnemonicCode(), ALICE_BIP39_MNEMONIC);
-        assertEquals(ChuckBTC3.getPaymentCode(), chuckFreshPaymentCode);
     }
 
     /* Test that a wallet restored from seed is persistent */
@@ -347,14 +315,15 @@ public class Bip47WalletTest extends TestWithWallet {
         File dir = new File(dirName);
         File walletFile = new File(dir,"BTC/BTC.wallet");
         assertTrue(walletFile.exists());
-        // check that the version 1 payment for BTC is loaded correctly
-        Bip47Wallet AliceBTC = new Bip47Wallet(MainNetParams.get(), dir, "BTC", null);
-        assertEquals(ALICE_BIP39_MNEMONIC, AliceBTC.getMnemonicCode());
-        assertEquals(ALICE_PAYMENT_CODE_V1, AliceBTC.getAccount(0).getStringPaymentCode());
+
+        // check that the version 1 payment is loaded correctly (BTC)
+        this.setUp(dirName, MainNetParams.get(), "BTC", null);
+        assertEquals(ALICE_BIP39_MNEMONIC, bip47Wallet.getMnemonicCode());
+        assertEquals(ALICE_PAYMENT_CODE_V1, bip47Wallet.getAccount(0).getStringPaymentCode());
 
         // check that the version 1 payment for tBTC is loaded correctly
-        Wallet AliceTBTC = new Bip47Wallet(TestNet3Params.get(), dir, "tBTC", null);
-        assertEquals(ALICE_BIP39_MNEMONIC, AliceBTC.getMnemonicCode());
-        assertEquals(ALICE_PAYMENT_CODE_V1, AliceBTC.getAccount(0).getStringPaymentCode());
+        this.setUp(dirName, TestNet3Params.get(), "tBTC", null);
+        assertEquals(ALICE_BIP39_MNEMONIC, bip47Wallet.getMnemonicCode());
+        assertEquals(ALICE_PAYMENT_CODE_V1, bip47Wallet.getAccount(0).getStringPaymentCode());
     }
 }
