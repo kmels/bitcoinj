@@ -125,6 +125,8 @@ public class Bip47Wallet extends org.bitcoinj.wallet.Wallet {
     // create a logger
     private static final Logger log = LoggerFactory.getLogger(Bip47Wallet.class);
 
+    // TODO: We should use WalletExtension's serialization to read, write and import this wallet's properties
+    org.bitcoinj.wallet.Wallet coreWallet;
 
     /**
      * <p>Creates a new wallet for a coinName, the .spvchain and .wallet files in workingDir/coinName.</p>
@@ -156,10 +158,6 @@ public class Bip47Wallet extends org.bitcoinj.wallet.Wallet {
         boolean shouldReplayWallet = (walletFile.exists() && !chainFileExists) || deterministicSeed != null;
         Context.propagate(new Context(params));
 
-        // use a Wallet reader
-        // TODO: We should use WalletExtension's serialization to read, write and import this wallet's properties
-        org.bitcoinj.wallet.Wallet coreWallet;
-
         // if coinName/coinName.wallet exists, we load it as a core Wallet and then manually set each of the bip47 properties
         if (walletFile.exists()) {
             coreWallet = load(params, shouldReplayWallet, walletFile);
@@ -170,10 +168,14 @@ public class Bip47Wallet extends org.bitcoinj.wallet.Wallet {
             coreWallet.freshReceiveKey();
             // reload the wallet
             coreWallet.saveToFile(walletFile);
-            String mnemonic = join(coreWallet.getKeyChainSeed().getMnemonicCode());
             coreWallet = load(params, false, walletFile);
-            String mnemonic2 = join(coreWallet.getKeyChainSeed().getMnemonicCode());
         }
+
+        // set the seed properly, wether it is a new restored wallet or an existent wallet.
+        DeterministicSeed walletSeed = this.restoreFromSeed != null ?
+                this.restoreFromSeed :
+                coreWallet.getKeyChainSeed();
+        this.keyChainGroup = new KeyChainGroup(params, walletSeed);
 
         String seedb = HEX.encode(coreWallet.getKeyChainSeed().getSeedBytes());
         // every 5 seconds let's persist the transactions, keys, last block height, watched scripts, etc.
@@ -772,7 +774,9 @@ public class Bip47Wallet extends org.bitcoinj.wallet.Wallet {
     }
 
     public String getMnemonicCode() {
-        return Joiner.on(" ").join(getKeyChainSeed().getMnemonicCode());
+        return join(this.restoreFromSeed != null ?
+                this.restoreFromSeed.getMnemonicCode() :
+                coreWallet.getKeyChainSeed().getMnemonicCode());
     }
 
     public Address getCurrentAddress() {

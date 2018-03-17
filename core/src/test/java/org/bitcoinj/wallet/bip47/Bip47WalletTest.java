@@ -18,6 +18,7 @@ import java.security.Security;
 import java.util.List;
 
 import static org.bitcoinj.core.Utils.HEX;
+import static org.bitcoinj.core.Utils.join;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -110,7 +111,7 @@ public class Bip47WalletTest extends TestWithWallet {
         byte[] entropy = mc.toEntropy(MnemonicCodeTest.split(rawMnemonic));
 
         assertEquals(rawEntropy, HEX.encode(entropy));
-        assertEquals(rawMnemonic, Utils.join(code));
+        assertEquals(rawMnemonic, join(code));
         assertEquals(rawSeed, HEX.encode(seed));
     }
 
@@ -309,50 +310,33 @@ public class Bip47WalletTest extends TestWithWallet {
     @Test
     public void testMnemonicWordsPersistence() throws Exception{
         // create a fresh new wallet
-        //File evesDir = new File("src/test/resources/org/bitcoinj/wallet/eve-bip47");
-        File evesDir = new File("eve");
-        File walletFile = new File(evesDir, "BTC/BTC.wallet");
-        deleteFolder(evesDir); assertFalse(evesDir.exists());  assertFalse(walletFile.exists()); //delete previous wallets created by this test
-
-
-        //DeterministicSeed evesSeed = new DeterministicSeed(new SecureRandom(), 256, "", System.currentTimeMillis() / 1000);
-        // create Dave's wallet and save it
+        String dirName = "eve"; File evesDir = new File(dirName); File walletFile = new File(evesDir, "BTC/BTC.wallet");
+        deleteFolder(evesDir); //delete previous wallets created by this test
 
         final String EVE_MNEMONIC = ALICE_BIP39_MNEMONIC;
+        final String EVE_PAYMENT_CODE = ALICE_PAYMENT_CODE_V1;
         DeterministicSeed evesSeed = new DeterministicSeed(EVE_MNEMONIC, null, "", Utils.currentTimeSeconds());
-        final String EVE_SEED_HEX = HEX.encode(evesSeed.getSeedBytes());
-        final String createdMnemonic = Utils.join(evesSeed.getMnemonicCode());
-
-        Context.propagate(new Context(MainNetParams.get()));
-
-        assertEquals(EVE_MNEMONIC, createdMnemonic);
-
-        Bip47Wallet Eve = new Bip47Wallet(MainNetParams.get(), evesDir, "BTC", evesSeed);
-        String eveSeedBytes = HEX.encode(Eve.getKeyChainSeed().getSeedBytes());
-        String evesMnemonic = Eve.getMnemonicCode();
-        String evePaymentCode = Eve.getPaymentCode();
-
-        assertEquals(createdMnemonic, evesMnemonic);
-        assertEquals(EVE_SEED_HEX, eveSeedBytes);
-
-        assertEquals(EVE_SEED_HEX, eveSeedBytes);
-        assertTrue(evesDir.exists());
-
-        // Read the core wallet and ensure that the seed is saved
+        // test that the seed's mnemonic matches.
+        assertEquals(EVE_MNEMONIC, join(evesSeed.getMnemonicCode()));
+        // setup a new wallet and have it saved to disk
+        assertFalse(walletFile.exists());
+        this.setUp("eve", MainNetParams.get(), "BTC", EVE_MNEMONIC);
+        assertEquals(EVE_MNEMONIC, bip47Wallet.getMnemonicCode()); //check that setup is sound
+        // ensure that the wallet is saved
         assertTrue(walletFile.exists());
-        Wallet wallet = Bip47Wallet.load(MainNetParams.get(), false, walletFile);
 
-        String savedSeed = HEX.encode(wallet.getKeyChainSeed().getSeedBytes());
-        assertEquals(eveSeedBytes, savedSeed);
+        // load the wallet from disk with the same seed, the mnemonic should be restored.
+        bip47Wallet.getBlockStore().close();
+        Bip47Wallet Eve = new Bip47Wallet(MainNetParams.get(), evesDir, "BTC", evesSeed);
+        // test that the loaded wallet matches
+        assertEquals(EVE_MNEMONIC, Eve.getMnemonicCode());
+        assertEquals(EVE_PAYMENT_CODE, Eve.getPaymentCode());
 
-        // Read the same directory/coin as Bip47Wallet
-        Eve.stop();
+        // Read the same directory/coin as Bip47Wallet, the mnemonic should be restored
         Eve.getBlockStore().close();;
-        Bip47Wallet DaveReload = new Bip47Wallet(MainNetParams.get(), evesDir, "BTC", null);
-        savedSeed = HEX.encode(DaveReload.getKeyChainSeed().getSeedBytes());
-        assertEquals(eveSeedBytes, savedSeed);
-        assertEquals(DaveReload.getMnemonicCode(), evesMnemonic);
-        assertEquals(DaveReload.getPaymentCode(), evePaymentCode);
+        Bip47Wallet EvesReload = new Bip47Wallet(MainNetParams.get(), evesDir, "BTC", null);
+        assertEquals(EVE_PAYMENT_CODE, EvesReload.getPaymentCode());
+        assertEquals(EVE_MNEMONIC, EvesReload.getMnemonicCode());
         deleteFolder(evesDir);
     }
 
