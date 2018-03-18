@@ -2,8 +2,8 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>org.bitcoincashj</groupId>
-  <artifactId>bitcoincashj-parent</artifactId>
+  <groupId>org.bitcoinj</groupId>
+  <artifactId>bitcoinj-parent</artifactId>
   <version>0.14.5-bip47</version>
   <packaging>pom</packaging>
 
@@ -20,12 +20,12 @@
   </parent>
 
   <scm>
-    <connection>scm:git:https://github.com/bitcoincash-wallet/bitcoincashj</connection>
-    <developerConnection>scm:git:https://github.com/bitcoincash-wallet/bitcoincashj</developerConnection>
-    <url>scm:git:https://github.com/bitcoinj/bitcoincashj</url>
+    <connection>scm:git:https://github.com/bitcoincash-wallet/bitcoinj</connection>
+    <developerConnection>scm:git:https://github.com/bitcoincash-wallet/bitcoinj</developerConnection>
+    <url>scm:git:https://github.com/bitcoinj/bitcoinj</url>
   </scm>
 
-  <name>bitcoincashj Parent</name>
+  <name>bitcoinj Parent</name>
   <description>Provides the common configuration for the BitCoinJ modules</description>
   <url>http://www.bitcoinj.org/</url>
 
@@ -40,7 +40,7 @@
 
   <issueManagement>
     <system>GitHub</system>
-    <url>https://github.com/bitcoinj/bitcoincashj/issues</url>
+    <url>https://github.com/bitcoinj/bitcoinj/issues</url>
   </issueManagement>
 
   <mailingLists>
