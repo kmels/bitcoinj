@@ -837,4 +837,10 @@ public class Wallet {
     public org.bitcoinj.wallet.Wallet getvWallet(){
         return vWallet;
     }
+
+    public void closeBlockStore() throws BlockStoreException {
+        if (vStore != null) {
+            vStore.close();
+        }
+    }
 }
