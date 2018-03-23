@@ -15,6 +15,7 @@ import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.bitcoinj.core.listeners.OnTransactionBroadcastListener;
+import org.bitcoinj.core.listeners.TransactionConfidenceEventListener;
 import org.bitcoinj.wallet.bip47.BIP47Util;
 import org.bitcoinj.wallet.bip47.Bip47Address;
 import org.bitcoinj.wallet.bip47.Bip47Meta;
@@ -81,6 +82,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * Created by jimmy on 9/28/17.
@@ -775,7 +777,8 @@ public class Wallet {
         return sendRequest.tx;
     }
 
-    public ListenableFuture<Transaction> broadcastTransaction(Transaction transactionToSend) {
+    public ListenableFuture<Transaction> broadcastTransaction(Transaction transactionToSend) throws Exception {
+        checkState(isStarted());
         vWallet.commitTx(transactionToSend);
         return vPeerGroup.broadcastTransaction(transactionToSend).future();
     }

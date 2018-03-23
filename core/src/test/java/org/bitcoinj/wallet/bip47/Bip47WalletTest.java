@@ -263,4 +263,13 @@ public class Bip47WalletTest extends TestWithBip47Wallet {
         w.startBlockchainDownload();
         assertTrue(w.isStarted());
     }
+
+    @Test(expected = IllegalStateException.class)
+    public void testBroadcastTransactionException() throws Exception{
+        Blockchain b = new Blockchain(0, TestNet3Params.get(), "tBTC","Bitcoin Core Test");
+        Wallet w = new Wallet(b, new File("peerGroup"), null);
+        assertFalse(w.isStarted());
+        w.broadcastTransaction(new Transaction(TestNet3Params.get()));
+    }
+
 }
