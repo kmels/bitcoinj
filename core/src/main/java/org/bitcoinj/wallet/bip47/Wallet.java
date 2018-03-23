@@ -15,6 +15,7 @@ import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.bitcoinj.core.listeners.OnTransactionBroadcastListener;
+import org.bitcoinj.core.listeners.TransactionConfidenceEventListener;
 import org.bitcoinj.wallet.bip47.BIP47Util;
 import org.bitcoinj.wallet.bip47.Bip47Address;
 import org.bitcoinj.wallet.bip47.Bip47Meta;
@@ -81,6 +82,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * Created by jimmy on 9/28/17.
@@ -102,7 +104,11 @@ public class Wallet {
     private List<Account> mAccounts = new ArrayList<>(1);
 
     private BlockchainDownloadProgressTracker mBlockchainDownloadProgressTracker;
-    private TransactionEventListener mTransactionEventListener = null;
+
+    // This wallet allows one listener to be invoked when there are coins received and
+    private TransactionEventListener mCoinsReceivedEventListener = null;
+    // one listener when the transaction confidence changes
+    private TransactionEventListener mTransactionConfidenceListener = null;
 
     private boolean mBlockchainDownloadStarted = false;
 
@@ -167,31 +173,14 @@ public class Wallet {
             vChain = new BlockChain(blockchain.getNetworkParameters(), vStore);
         }
 
-        vPeerGroup = new PeerGroup(blockchain.getNetworkParameters(), vChain);
-        // Fixes a bug created by a race condition between a filteredBlock and a notification transaction
-        // (transaction dependencies are asynchronous (See issue 1029))
-        // By rolling the blockstore one block, we will be sure that the generated keys were imported to the wallet.
-        vPeerGroup.addOnTransactionBroadcastListener(new OnTransactionBroadcastListener() {
-            @Override
-            public void onTransaction(Peer peer, Transaction t) {
-                if (isNotificationTransaction(t)){
+        vChain.addWallet(vWallet);
+        derivePeerGroup();
+        addBip47Listener();
+    }
 
-                    // if this transaction was seen in the wallet, we may see it again
-                    if (vWallet.getTransaction(t.getHash())!=null)
-                        return;
-
-                    //if (peer.getCurrentFilteredBlock() == null && vWallet.getTransaction(t.getHash())!=null)
-                    //    return;
-
-                    log.debug("Valid notification transaction found. Replaying a block back .. ");
-                    try {
-                        vChain.rollbackBlockStore(vWallet.getLastBlockSeenHeight() - 1);
-                    } catch(BlockStoreException e){
-                        log.error("Could not rollback ... " );
-                    }
-                }
-            }
-        });
+    private void derivePeerGroup(){
+        if (vPeerGroup == null)
+            vPeerGroup = new PeerGroup(blockchain.getNetworkParameters(), vChain);
 
         if (blockchain.getCoin().equals("BCH")) {
             vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("158.69.119.35"), 8333));
@@ -204,8 +193,45 @@ public class Wallet {
         vPeerGroup.setUseLocalhostPeerWhenPossible(true);
         vPeerGroup.addPeerDiscovery(new DnsDiscovery(blockchain.getNetworkParameters()));
 
-        vChain.addWallet(vWallet);
         vPeerGroup.addWallet(vWallet);
+    }
+
+    private void addBip47Listener(){
+        this.addOnReceiveTransactionListener(new TransactionEventListener() {
+            @Override
+            public void onTransactionReceived(Wallet bip47Wallet, Transaction transaction) {
+
+                if (isNotificationTransaction(transaction)) {
+                    log.debug("Valid notification transaction received");
+                    PaymentCode paymentCode = getPaymentCodeInNotificationTransaction(transaction);
+                    if (paymentCode == null) {
+                        log.warn("Error decoding payment code in tx {}", transaction);
+                    } else {
+                        log.debug("Payment Code: " + paymentCode);
+                        boolean needsSaving = savePaymentCode(paymentCode);
+                        if (needsSaving) {
+                            saveBip47MetaData();
+                        }
+                    }
+                } else if (isToBIP47Address(transaction)) {
+                    log.debug("New BIP47 payment received to address: "+getAddressOfReceived(transaction));
+                    boolean needsSaving = generateNewBip47IncomingAddress(getAddressOfReceived(transaction).toString());
+                    if (needsSaving) {
+                        saveBip47MetaData();
+                    }
+                    String paymentCode = getPaymentCodeForAddress(getAddressOfReceived(transaction).toString());
+                    log.debug("Received tx for Payment Code: " + paymentCode);
+                } else {
+                    Coin valueSentToMe = getValueSentToMe(transaction);
+                    log.debug("Received tx for "+valueSentToMe.toFriendlyString() + ":" + transaction);
+                }
+            }
+
+            @Override
+            public void onTransactionConfidenceEvent(Wallet bip47Wallet, Transaction transaction) {
+                return;
+            }
+        });
     }
 
     private org.bitcoinj.wallet.Wallet createOrLoadWallet(boolean shouldReplayWallet) throws Exception {
@@ -276,11 +302,13 @@ public class Wallet {
     }
 
     public void startBlockchainDownload() {
-        if (isStarted() && !mBlockchainDownloadStarted) {
+        if (!isStarted() && !mBlockchainDownloadStarted) {
             log.debug("Starting blockchain download.");
             vPeerGroup.start();
             vPeerGroup.startBlockChainDownload(mBlockchainDownloadProgressTracker);
             mBlockchainDownloadStarted = true;
+        } else {
+            log.warn("Attempted to start blockchain download but it is already started.");
         }
     }
 
@@ -294,7 +322,8 @@ public class Wallet {
         }
 
         log.debug("Stopping peergroup");
-        if (vPeerGroup.isRunning()) vPeerGroup.stopAsync();
+        System.out.println("STOPPINGG");
+        vPeerGroup.stop();
         try {
             log.debug("Saving wallet");
             vWallet.saveToFile(vWalletFile);
@@ -309,6 +338,9 @@ public class Wallet {
         }
 
         vStore = null;
+        vPeerGroup = null;
+        mBlockchainDownloadStarted = false;
+        derivePeerGroup();
 
         mBlockchainDownloadStarted = false;
 
@@ -316,7 +348,7 @@ public class Wallet {
     }
 
     public boolean isStarted() {
-        return vStore != null;
+        return vPeerGroup == null || vPeerGroup.isRunning();
     }
 
     public void setBlockchainDownloadProgressTracker(BlockchainDownloadProgressTracker downloadProgressTracker) {
@@ -393,21 +425,26 @@ public class Wallet {
         }
     }
 
-    public void addTransactionEventListener(TransactionEventListener coinsReceivedEventListener) {
-        if (mTransactionEventListener != null) {
-            vWallet.removeCoinsReceivedEventListener(mTransactionEventListener);
-            vWallet.removeTransactionConfidenceEventListener(mTransactionEventListener);
-        }
+    /** <p>A listener is added to be invoked when the wallet sees an incoming transaction. </p> */
+    public void addOnReceiveTransactionListener(TransactionEventListener transactionEventListener){
+        if (this.mCoinsReceivedEventListener != null)
+            vWallet.removeCoinsReceivedEventListener(mCoinsReceivedEventListener);
 
-        vWallet.removeCoinsReceivedEventListener(coinsReceivedEventListener);
-        vWallet.removeTransactionConfidenceEventListener(coinsReceivedEventListener);
+        transactionEventListener.setWallet(this);
+        vWallet.addCoinsReceivedEventListener(transactionEventListener);
 
-        coinsReceivedEventListener.setWallet(this);
+        mCoinsReceivedEventListener = transactionEventListener;
+    }
 
-        vWallet.addCoinsReceivedEventListener(coinsReceivedEventListener);
-        vWallet.addTransactionConfidenceEventListener(coinsReceivedEventListener);
+    /** <p>A listener is added to be invoked when the wallet receives blocks and builds confidence on a transaction </p> */
+    public void addTransactionConfidenceEventListener(TransactionEventListener transactionEventListener){
+        if (this.mTransactionConfidenceListener != null)
+            vWallet.removeTransactionConfidenceEventListener(mTransactionConfidenceListener);
 
-        mTransactionEventListener = coinsReceivedEventListener;
+        transactionEventListener.setWallet(this);
+        vWallet.addTransactionConfidenceEventListener(transactionEventListener);
+
+        mTransactionConfidenceListener = transactionEventListener;
     }
 
     public boolean isNotificationTransaction(Transaction tx) {
@@ -769,7 +806,8 @@ public class Wallet {
         return sendRequest.tx;
     }
 
-    public ListenableFuture<Transaction> broadcastTransaction(Transaction transactionToSend) {
+    public ListenableFuture<Transaction> broadcastTransaction(Transaction transactionToSend) throws Exception {
+        checkState(isStarted());
         vWallet.commitTx(transactionToSend);
         return vPeerGroup.broadcastTransaction(transactionToSend).future();
     }
