@@ -169,32 +169,13 @@ public class Wallet {
             vChain = new BlockChain(blockchain.getNetworkParameters(), vStore);
         }
 
+        vChain.addWallet(vWallet);
         derivePeerGroup();
     }
 
     private void derivePeerGroup(){
         if (vPeerGroup == null)
             vPeerGroup = new PeerGroup(blockchain.getNetworkParameters(), vChain);
-
-        // By rolling the blockstore one block, we will be sure that the generated keys were imported to the wallet.
-        vPeerGroup.addOnTransactionBroadcastListener(new OnTransactionBroadcastListener() {
-            @Override
-            public void onTransaction(Peer peer, Transaction t) {
-                if (isNotificationTransaction(t)){
-
-                    // if this transaction was seen in the wallet, we may see it again
-                    if (vWallet.getTransaction(t.getHash())!=null)
-                        return;
-
-                    log.debug("Valid notification transaction found. Replaying a block back .. ");
-                    try {
-                        vChain.rollbackBlockStore(vWallet.getLastBlockSeenHeight() - 2);
-                    } catch(BlockStoreException e){
-                        log.error("Could not rollback ... " );
-                    }
-                }
-            }
-        });
 
         if (blockchain.getCoin().equals("BCH")) {
             vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("158.69.119.35"), 8333));
@@ -207,9 +188,9 @@ public class Wallet {
         vPeerGroup.setUseLocalhostPeerWhenPossible(true);
         vPeerGroup.addPeerDiscovery(new DnsDiscovery(blockchain.getNetworkParameters()));
 
-        vChain.addWallet(vWallet);
         vPeerGroup.addWallet(vWallet);
     }
+
     private org.bitcoinj.wallet.Wallet createOrLoadWallet(boolean shouldReplayWallet) throws Exception {
         org.bitcoinj.wallet.Wallet wallet;
 
