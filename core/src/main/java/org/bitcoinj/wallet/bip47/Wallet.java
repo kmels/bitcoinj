@@ -276,11 +276,13 @@ public class Wallet {
     }
 
     public void startBlockchainDownload() {
-        if (isStarted() && !mBlockchainDownloadStarted) {
+        if (!isStarted() && !mBlockchainDownloadStarted) {
             log.debug("Starting blockchain download.");
             vPeerGroup.start();
             vPeerGroup.startBlockChainDownload(mBlockchainDownloadProgressTracker);
             mBlockchainDownloadStarted = true;
+        } else {
+            log.warn("Attempted to start blockchain download but it is already started.");
         }
     }
 
@@ -316,7 +318,7 @@ public class Wallet {
     }
 
     public boolean isStarted() {
-        return vStore != null;
+        return vPeerGroup.isRunning();
     }
 
     public void setBlockchainDownloadProgressTracker(BlockchainDownloadProgressTracker downloadProgressTracker) {
