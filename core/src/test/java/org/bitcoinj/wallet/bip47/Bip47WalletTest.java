@@ -19,6 +19,9 @@ import java.util.List;
 
 import static org.bitcoinj.core.Utils.HEX;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import org.bitcoinj.crypto.MnemonicCodeTest;
 import org.spongycastle.jce.provider.BouncyCastleProvider;
 
@@ -242,6 +245,22 @@ public class Bip47WalletTest extends TestWithBip47Wallet {
         b = new Blockchain(0, MainNetParams.get(), SUPPORTED_COINS[1], "Bitcoin Core");
         w = createWallet(b,workingDir,CARLOS_BIP39_MNEMONIC);
         //assertEquals("tpubDDX2RK6EL7nuqjxFuZZTKsyMDx7PvPnbXmAtwuZaL9QorhjtussQTW5ReBF3G8G3wAY3RyusFkW2AuWz8YsiNXtkHZn2DmJRXA6m3rRwH8A", w.getAccount(0).getXPub());
+    }
 
+    @Test
+    public void testPeerGroupStart() throws Exception{
+        Blockchain b = new Blockchain(0, TestNet3Params.get(), "tBTC","Bitcoin Core Test");
+        Wallet w = new Wallet(b, new File("peerGroup"), null);
+        assertFalse(w.isStarted());
+        w.start(false);
+        assertFalse(w.isStarted());
+        w.start(true);
+        assertTrue(w.isStarted());
+        w.startBlockchainDownload();
+        assertTrue(w.isStarted());
+        w.stop();
+        assertFalse(w.isStarted());
+        w.startBlockchainDownload();
+        assertTrue(w.isStarted());
     }
 }

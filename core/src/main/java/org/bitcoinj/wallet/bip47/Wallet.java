@@ -167,9 +167,13 @@ public class Wallet {
             vChain = new BlockChain(blockchain.getNetworkParameters(), vStore);
         }
 
-        vPeerGroup = new PeerGroup(blockchain.getNetworkParameters(), vChain);
-        // Fixes a bug created by a race condition between a filteredBlock and a notification transaction
-        // (transaction dependencies are asynchronous (See issue 1029))
+        derivePeerGroup();
+    }
+
+    private void derivePeerGroup(){
+        if (vPeerGroup == null)
+            vPeerGroup = new PeerGroup(blockchain.getNetworkParameters(), vChain);
+
         // By rolling the blockstore one block, we will be sure that the generated keys were imported to the wallet.
         vPeerGroup.addOnTransactionBroadcastListener(new OnTransactionBroadcastListener() {
             @Override
@@ -180,12 +184,9 @@ public class Wallet {
                     if (vWallet.getTransaction(t.getHash())!=null)
                         return;
 
-                    //if (peer.getCurrentFilteredBlock() == null && vWallet.getTransaction(t.getHash())!=null)
-                    //    return;
-
                     log.debug("Valid notification transaction found. Replaying a block back .. ");
                     try {
-                        vChain.rollbackBlockStore(vWallet.getLastBlockSeenHeight() - 1);
+                        vChain.rollbackBlockStore(vWallet.getLastBlockSeenHeight() - 2);
                     } catch(BlockStoreException e){
                         log.error("Could not rollback ... " );
                     }
@@ -207,7 +208,6 @@ public class Wallet {
         vChain.addWallet(vWallet);
         vPeerGroup.addWallet(vWallet);
     }
-
     private org.bitcoinj.wallet.Wallet createOrLoadWallet(boolean shouldReplayWallet) throws Exception {
         org.bitcoinj.wallet.Wallet wallet;
 
@@ -296,7 +296,8 @@ public class Wallet {
         }
 
         log.debug("Stopping peergroup");
-        if (vPeerGroup.isRunning()) vPeerGroup.stopAsync();
+        System.out.println("STOPPINGG");
+        vPeerGroup.stop();
         try {
             log.debug("Saving wallet");
             vWallet.saveToFile(vWalletFile);
@@ -311,6 +312,9 @@ public class Wallet {
         }
 
         vStore = null;
+        vPeerGroup = null;
+        mBlockchainDownloadStarted = false;
+        derivePeerGroup();
 
         mBlockchainDownloadStarted = false;
 
@@ -318,7 +322,7 @@ public class Wallet {
     }
 
     public boolean isStarted() {
-        return vPeerGroup.isRunning();
+        return vPeerGroup == null || vPeerGroup.isRunning();
     }
 
     public void setBlockchainDownloadProgressTracker(BlockchainDownloadProgressTracker downloadProgressTracker) {
