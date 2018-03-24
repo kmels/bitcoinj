@@ -806,8 +806,7 @@ public class Wallet {
         return sendRequest.tx;
     }
 
-    public ListenableFuture<Transaction> broadcastTransaction(Transaction transactionToSend) throws Exception {
-        checkState(isStarted());
+    public ListenableFuture<Transaction> broadcastTransaction(Transaction transactionToSend) {
         vWallet.commitTx(transactionToSend);
         return vPeerGroup.broadcastTransaction(transactionToSend).future();
     }
