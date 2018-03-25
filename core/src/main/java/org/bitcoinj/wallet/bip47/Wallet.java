@@ -179,6 +179,7 @@ public class Wallet {
     }
 
     private void derivePeerGroup(){
+        Context.propagate(new Context(blockchain.getNetworkParameters()));
         if (vPeerGroup == null)
             vPeerGroup = new PeerGroup(blockchain.getNetworkParameters(), vChain);
 
@@ -317,12 +318,11 @@ public class Wallet {
     }
 
     public void stop() {
-        if (vPeerGroup == null || !isStarted()) {
+        if (!isStarted()) {
             return;
         }
 
         log.debug("Stopping peergroup");
-        System.out.println("STOPPINGG");
         vPeerGroup.stop();
         try {
             log.debug("Saving wallet");
@@ -348,7 +348,9 @@ public class Wallet {
     }
 
     public boolean isStarted() {
-        return vPeerGroup == null || vPeerGroup.isRunning();
+        if (vPeerGroup == null)
+            return false;
+        return vPeerGroup.isRunning();
     }
 
     public void setBlockchainDownloadProgressTracker(BlockchainDownloadProgressTracker downloadProgressTracker) {
@@ -875,7 +877,10 @@ public class Wallet {
         return vWallet;
     }
 
-    public void closeBlockStore() throws BlockStoreException {
+    public void closeBlockStore() throws BlockStoreException, IllegalAccessException {
+        if (isStarted())
+            throw new IllegalAccessException("Must call stop() before closing block store");
+
         if (vStore != null) {
             vStore.close();
         }
