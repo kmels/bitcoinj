@@ -186,9 +186,17 @@ public class Wallet {
         if (blockchain.getCoin().equals("BCH")) {
             vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("158.69.119.35"), 8333));
             vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("144.217.73.86"), 8333));
+            vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("106.14.105.56"), 8333));
+            vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("52.211.14.233"), 8333));
+            vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("50.39.245.26"), 8333));
+            vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("52.57.14.67"), 8333));
+            vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("192.168.0.33"), 8334));
         } else if (blockchain.getCoin().equals("tBCH")) {
-            vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("158.69.119.35"), 8333));
+            vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("158.69.119.35"), 18333));
             vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("144.217.73.86"), 18333));
+            vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("61.100.182.189"), 18333));
+            vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("47.74.186.127"), 18333));
+            vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("192.168.0.33"), 18334));
         }
 
         vPeerGroup.setUseLocalhostPeerWhenPossible(true);
@@ -884,5 +892,18 @@ public class Wallet {
         if (vStore != null) {
             vStore.close();
         }
+    }
+
+    public List<String> getAddresses(int size) {
+        List<DeterministicKey> deterministicKeys = vWallet.getActiveKeyChain().getLeafKeys();
+        List<String> addresses = new ArrayList<>(size);
+        for (int i = 0; i < size; i++) {
+            addresses.add(deterministicKeys.get(i).toAddress(getNetworkParameters()).toBase58());
+        }
+        return addresses;
+    }
+
+    public int getExternalAddressCount() {
+        return vWallet.getActiveKeyChain().getIssuedReceiveKeys().size();
     }
 }
