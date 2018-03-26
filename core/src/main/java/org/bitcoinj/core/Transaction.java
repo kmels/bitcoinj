@@ -118,8 +118,8 @@ public class Transaction extends ChildMessage {
      * This is calculated by assuming a standard output will be 34 bytes, and then using the formula used in
      * {@link TransactionOutput#getMinNonDustValue(Coin)}.
      */
-    public static final Coin MIN_NONDUST_OUTPUT = Coin.valueOf(2730); // satoshis
-    public static final Coin BCC_MIN_NONDUST_OUTPUT = Coin.valueOf(546); // satoshis
+    public static final Coin MIN_NONDUST_OUTPUT = Coin.valueOf(27); // satoshis
+    public static final Coin BCC_MIN_NONDUST_OUTPUT = Coin.valueOf(0); // satoshis
 
     public static final int CURRENT_VERSION = 2;
     public static final int MAX_STANDARD_VERSION = 2;
