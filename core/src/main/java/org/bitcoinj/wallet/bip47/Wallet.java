@@ -190,13 +190,11 @@ public class Wallet {
             vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("52.211.14.233"), 8333));
             vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("50.39.245.26"), 8333));
             vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("52.57.14.67"), 8333));
-            vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("192.168.0.33"), 8334));
         } else if (blockchain.getCoin().equals("tBCH")) {
             vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("158.69.119.35"), 18333));
             vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("144.217.73.86"), 18333));
             vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("61.100.182.189"), 18333));
             vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("47.74.186.127"), 18333));
-            vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("192.168.0.33"), 18334));
         }
 
         vPeerGroup.setUseLocalhostPeerWhenPossible(true);
@@ -338,10 +336,12 @@ public class Wallet {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
         log.debug("stopWallet: closing store");
         try {
-            vStore.close();
-        } catch (BlockStoreException e) {
+            if (vStore != null)
+                vStore.close();
+        } catch (Exception e) {
             e.printStackTrace();
         }
 
