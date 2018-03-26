@@ -184,17 +184,24 @@ public class Wallet {
             vPeerGroup = new PeerGroup(blockchain.getNetworkParameters(), vChain);
 
         if (blockchain.getCoin().equals("BCH")) {
+            // stash crypto
             vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("158.69.119.35"), 8333));
             vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("144.217.73.86"), 8333));
-            vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("106.14.105.56"), 8333));
-            vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("52.211.14.233"), 8333));
-            vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("50.39.245.26"), 8333));
-            vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("52.57.14.67"), 8333));
+            // bitcoin abc from shodan.io
+            //vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("106.14.105.56"), 8333));
+            //vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("52.211.14.233"), 8333));
+            //vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("50.39.245.26"), 8333));
+            //vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("52.57.14.67"), 8333));
+            // bucash
+            //vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("5.44.97.110"), 8333));
+            //vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("185.69.52.180"), 8333));
         } else if (blockchain.getCoin().equals("tBCH")) {
+            // stash crypto
             vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("158.69.119.35"), 18333));
             vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("144.217.73.86"), 18333));
-            vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("61.100.182.189"), 18333));
-            vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("47.74.186.127"), 18333));
+            // bitcoin abc from shodan.io
+            //vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("61.100.182.189"), 18333));
+            //vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("47.74.186.127"), 18333));
         }
 
         vPeerGroup.setUseLocalhostPeerWhenPossible(true);
