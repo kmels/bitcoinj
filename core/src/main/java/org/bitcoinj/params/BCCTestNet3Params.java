@@ -76,7 +76,6 @@ public class BCCTestNet3Params extends AbstractBitcoinNetParams {
         dnsSeeds = new String[] {
                 "testnet-seed.bitcoinabc.org",
                 "testnet-seed-abc.bitcoinforks.org",
-                "testnet-seed.bitcoinunlimited.info",
                 "testnet-seed.bitprim.org",
                 "testnet-seed.deadalnix.me",
                 "testnet-seeder.criptolayer.net"
@@ -215,6 +214,13 @@ public class BCCTestNet3Params extends AbstractBitcoinNetParams {
                 }
                 long mpt6blocks = 0;
                 try {
+                    //Check to see if there are enough blocks before cursor to correctly calculate the median time
+                    StoredBlock beforeCursor = cursor;
+                    for (int i = 0; i < 10; i++) {
+                        beforeCursor = blockStore.get(beforeCursor.getHeader().getPrevBlockHash());
+                        if (beforeCursor == null)
+                            return; //Not enough blocks to check difficulty.
+                    }
                     mpt6blocks = AbstractBlockChain.getMedianTimestampOfRecentBlocks(storedPrev, blockStore) - AbstractBlockChain.getMedianTimestampOfRecentBlocks(cursor, blockStore);
                 } catch (NullPointerException x) {
                     return;
