@@ -42,7 +42,7 @@ public class DirectoryDownloadTask implements Runnable {
 
 	private volatile boolean isStopped;
 	
-	DirectoryDownloadTask(TorConfig config, File directory, DirectoryDownloader downloader) {
+	DirectoryDownloadTask(TorConfig config, Directory directory, DirectoryDownloader downloader) {
 		this.config = config;
 		this.directory = directory;
 		this.downloader = downloader;
