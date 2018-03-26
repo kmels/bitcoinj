@@ -76,7 +76,6 @@ public class BCCTestNet3Params extends AbstractBitcoinNetParams {
         dnsSeeds = new String[] {
                 "testnet-seed.bitcoinabc.org",
                 "testnet-seed-abc.bitcoinforks.org",
-                "testnet-seed.bitcoinunlimited.info",
                 "testnet-seed.bitprim.org",
                 "testnet-seed.deadalnix.me",
                 "testnet-seeder.criptolayer.net"
