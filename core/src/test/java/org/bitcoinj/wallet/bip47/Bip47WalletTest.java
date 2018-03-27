@@ -25,6 +25,8 @@ import static org.junit.Assert.assertTrue;
 import org.bitcoinj.crypto.MnemonicCodeTest;
 import org.spongycastle.jce.provider.BouncyCastleProvider;
 
+import javax.annotation.Nullable;
+
 public class Bip47WalletTest extends TestWithBip47Wallet {
     private static final Logger log = LoggerFactory.getLogger(org.bitcoinj.wallet.WalletTest.class);
 
@@ -85,6 +87,21 @@ public class Bip47WalletTest extends TestWithBip47Wallet {
         StashDeterministicSeed seed = new StashDeterministicSeed(mnemonic, "", Utils.currentTimeSeconds());
         return new Wallet(b, workingDir, seed);
     };
+
+    static void deleteFolder(String dirname){
+        File dir = new File(dirname);
+        if (!dir.exists())
+            return;
+        String[] entries = dir.list();
+        for(String s: entries){
+            File currentFile = new File(dir.getPath(),s);
+            if (currentFile.isDirectory())
+                deleteFolder((currentFile.getAbsolutePath()));
+            else
+                currentFile.delete();
+        }
+        dir.delete();
+    }
 
     @Test
     public void aliceWalletTest() throws Exception {
@@ -178,6 +195,8 @@ public class Bip47WalletTest extends TestWithBip47Wallet {
     public void notificationTransactionTest() throws Exception {
         super.setUp();
         // folders for alice and bob wallets
+
+        deleteFolder("alice2");deleteFolder("bob2");
         File aliceDir = new File("alice2");
         File bobDir = new File("bob2");
 
@@ -189,10 +208,15 @@ public class Bip47WalletTest extends TestWithBip47Wallet {
         // Alice sends a payment to Bob, she saves Bob's payment code.
 
         setWallet(Alice);
-        sendMoneyToWallet(Alice.getvWallet(), AbstractBlockChain.NewBlockType.BEST_CHAIN, Coin.COIN, Alice.getCurrentAddress());
+        assertTrue(Alice.getCoinsReceivedEventListener() != null);
+        assertTrue(Alice.getAccount(0) != null);
 
-        //boolean needsSaving = Alice.savePaymentCode(Bob.getAccount(0).getPaymentCode());
-        //assertTrue(needsSaving);
+        // both have issued 1 receive address
+        assertEquals(1, Alice.getExternalAddressCount());
+        assertEquals(1, Bob.getExternalAddressCount());
+        assertEquals(0, Bob.getvWallet().getImportedKeys().size());
+
+        sendMoneyToWallet(Alice.getvWallet(), AbstractBlockChain.NewBlockType.BEST_CHAIN, Coin.COIN, Alice.getCurrentAddress());
 
         SendRequest ntxRequest = Alice.makeNotificationTransaction(Bob.getPaymentCode());
 
@@ -203,6 +227,7 @@ public class Bip47WalletTest extends TestWithBip47Wallet {
         Bob.savePaymentCode(Alice.getAccount(0).getPaymentCode()); // bob saves alice
         Bip47Meta channel = Bob.getBip47MetaForPaymentCode(Alice.getPaymentCode());
         assertEquals(10, channel.getIncomingAddresses().size()); // bob's # of incoming addresses
+        assertEquals(10, Bob.getvWallet().getImportedKeys().size());
 
         //  - addresses used by Alice for sending to Bob
         assertEquals("141fi7TY3h936vRUKh1qfUZr8rSBuYbVBK", channel.getIncomingAddresses().get(0).getAddress());
