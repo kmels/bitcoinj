@@ -464,6 +464,10 @@ public class Wallet {
         mTransactionConfidenceListener = transactionEventListener;
     }
 
+    public TransactionEventListener getCoinsReceivedEventListener(){
+        return this.mCoinsReceivedEventListener;
+    }
+
     public boolean isNotificationTransaction(Transaction tx) {
         Address address = getAddressOfReceived(tx);
         Address myNotificationAddress = mAccounts.get(0).getNotificationAddress();
