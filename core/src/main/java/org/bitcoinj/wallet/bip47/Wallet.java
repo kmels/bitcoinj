@@ -711,7 +711,15 @@ public class Wallet {
         return Address.fromBase58(getNetworkParameters(), addr);
     }
 
+    /** <p>Returns true if the given address is a valid payment code or a valid address in the
+     * wallet's blockchain network.</p> */
     public boolean isValidAddress(String address) {
+        try {
+            PaymentCode paymentCode = new PaymentCode(address);
+            return true;
+        } catch (AddressFormatException e){
+        }
+
         try {
             Address.fromBase58(getNetworkParameters(), address);
             return true;
