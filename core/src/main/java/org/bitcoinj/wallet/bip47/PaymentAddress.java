@@ -19,26 +19,37 @@ import org.spongycastle.crypto.ec.CustomNamedCurves;
 import org.spongycastle.crypto.params.ECDomainParameters;
 import org.spongycastle.math.ec.ECPoint;
 
+/**
+ * p>A {@link PaymentAddress} is derived for account deposits in a bip47 channel. It is used by a recipient's bip47 wallet to derive and watch deposits. It
+ * is also used by a sender's bip47 wallet to calculate the next addresses to send a deposit to.</p>
+ *
+ * The BIP47 PaymentAddress is at the derivation path <pre>m / 47' / coin_type' / account_id' / idx' .</pre>. </p>
+ *
+ * <p>Properties:</p>
+ * <ul>
+ * <li>The account_id is irrelevant in this class, it's implied in privKey. </li>
+ * <li>The owner of paymentCode is not the same owner of privKey.</li>
+ * </ul>
+ */
 public class PaymentAddress {
+    // if we are receiving, this is the sender's payment code
+    // if we are sending, this is the receiver's payment code
     private PaymentCode paymentCode = null;
+    // the index to use in the derivation path
     private int index = 0;
+    // the corresponding hardedened key bytes at the derivation path
     private byte[] privKey = null;
+    // the network used for formatting
     private NetworkParameters networkParameters;
+    // give the values for "a", "b", "G" in the ECDSA curve used in Bitcoin (https://en.bitcoin.it/wiki/Secp256k1)
     private static final X9ECParameters CURVE_PARAMS = CustomNamedCurves.getByName("secp256k1");
+    // create the curve
     private static final ECDomainParameters CURVE;
-
-    public PaymentAddress() {
-        this.paymentCode = null;
-        this.privKey = null;
-        this.index = 0;
+    static {
+        CURVE = new ECDomainParameters(CURVE_PARAMS.getCurve(), CURVE_PARAMS.getG(), CURVE_PARAMS.getN(), CURVE_PARAMS.getH());
     }
 
-    public PaymentAddress(PaymentCode paymentCode) throws AddressFormatException {
-        this.paymentCode = paymentCode;
-        this.index = 0;
-        this.privKey = null;
-    }
-
+    /** Creates a PaymentAddress object that the sender will use to pay, using the hardened key at idx */
     public PaymentAddress(NetworkParameters networkParameters, PaymentCode paymentCode, int index, byte[] privKey) throws AddressFormatException {
         this.paymentCode = paymentCode;
         this.index = index;
@@ -46,96 +57,80 @@ public class PaymentAddress {
         this.networkParameters = networkParameters;
     }
 
-    public PaymentCode getPaymentCode() {
-        return this.paymentCode;
-    }
-
-    public void setPaymentCode(PaymentCode paymentCode) {
-        this.paymentCode = paymentCode;
-    }
-
-    public int getIndex() {
-        return this.index;
-    }
-
-    public void setIndex(int index) {
-        this.index = index;
-    }
-
-    public byte[] getPrivKey() {
-        return this.privKey;
-    }
-
-    public void setIndexAndPrivKey(int index, byte[] privKey) {
-        this.index = index;
-        this.privKey = privKey;
-    }
-
-    public void setPrivKey(byte[] privKey) {
-        this.privKey = privKey;
-    }
-
+    /** Creates a HD key to send a deposit */
     public ECKey getSendECKey() throws AddressFormatException, InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException, IllegalStateException, InvalidKeySpecException, NotSecp256k1Exception {
-        return this.getSendECKey(this.getSecretPoint());
+        return this.getSendECKey(this.secretPoint());
     }
 
+    /** Derives a deposit address to watch to receive payments from paymentCode's owner*/
     public ECKey getReceiveECKey() throws AddressFormatException, InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException, IllegalStateException, InvalidKeySpecException, NotSecp256k1Exception {
-        return this.getReceiveECKey(this.getSecretPoint());
+        return this.getReceiveECKey(this.secretPoint());
     }
 
-    public ECPoint get_sG() throws AddressFormatException, InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException, IllegalStateException, InvalidKeySpecException, NotSecp256k1Exception {
-        return CURVE_PARAMS.getG().multiply(this.getSecretPoint());
-    }
+    /* Use the generator "G" by */
+    //public ECPoint get_sG() throws AddressFormatException, InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException, IllegalStateException, InvalidKeySpecException, NotSecp256k1Exception {
+    //    return CURVE_PARAMS.getG().multiply(this.getSecretPoint());
+    //}
 
+    /* Accesor for the secret point between sender and receiver */
     public SecretPoint getSharedSecret() throws AddressFormatException, InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException, IllegalStateException, InvalidKeySpecException {
         return this.sharedSecret();
     }
 
-    public BigInteger getSecretPoint() throws AddressFormatException, InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException, IllegalStateException, InvalidKeySpecException, NotSecp256k1Exception {
-        return this.secretPoint();
-    }
+    //public BigInteger getSecretPoint() throws AddressFormatException, InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException, IllegalStateException, InvalidKeySpecException, NotSecp256k1Exception {
+    //    return this.secretPoint();
+    //}
 
     public ECPoint getECPoint() throws AddressFormatException, InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException, IllegalStateException, InvalidKeySpecException {
         ECKey ecKey = ECKey.fromPublicOnly(this.paymentCode.addressAt(this.networkParameters, this.index).getPubKey());
         return ecKey.getPubKeyPoint();
     }
 
+    /** Returns the scalar shared secret */
     public byte[] hashSharedSecret() throws AddressFormatException, InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException, IllegalStateException, InvalidKeySpecException {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
         byte[] hash = digest.digest(this.getSharedSecret().ECDHSecretAsBytes());
         return hash;
     }
 
+    /* Multply a times the generator G */
     private ECPoint get_sG(BigInteger s) {
         return CURVE_PARAMS.getG().multiply(s);
     }
 
-    private ECKey getSendECKey(BigInteger s) throws AddressFormatException, InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException, IllegalStateException, InvalidKeySpecException {
+    /* Derives the key for the payment address where the paymentCode's owner will be watching for deposits */
+    private ECKey getSendECKey(BigInteger s) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException, InvalidKeySpecException {
         ECPoint ecPoint = this.getECPoint();
         ECPoint sG = this.get_sG(s);
         ECKey ecKey = ECKey.fromPublicOnly(ecPoint.add(sG).getEncoded(true));
         return ecKey;
     }
 
+    /* Calculates the ephemeral hardened key used to generate the P2PKH address where a deposit will be received */
     private ECKey getReceiveECKey(BigInteger s) {
         BigInteger privKeyValue = ECKey.fromPrivate(this.privKey).getPrivKey();
         ECKey ecKey = ECKey.fromPrivate(this.addSecp256k1(privKeyValue, s));
         return ecKey;
     }
 
+    /* Adds two keys together */
     private BigInteger addSecp256k1(BigInteger b1, BigInteger b2) {
         BigInteger ret = b1.add(b2);
         return ret.bitLength() > CURVE.getN().bitLength()?ret.mod(CURVE.getN()):ret;
     }
 
+    /* Return the ECDH shared secret between us and the owner of paymentCode */
     private SecretPoint sharedSecret() throws AddressFormatException, InvalidKeySpecException, InvalidKeyException, IllegalStateException, NoSuchAlgorithmException, NoSuchProviderException {
-        return new SecretPoint(this.privKey, this.paymentCode.addressAt(this.networkParameters, this.index).getPubKey());
+        byte[] pubKey = this.paymentCode.addressAt(this.networkParameters, this.index).getPubKey();
+        return new SecretPoint(this.privKey, pubKey);
     }
 
+    /* Returns true if the given point "b" is in the curve */
     private boolean isSecp256k1(BigInteger b) {
         return b.compareTo(BigInteger.ONE) > 0 && b.bitLength() <= CURVE.getN().bitLength();
     }
 
+    /** Returns a SHA256 mask of the secret point */
     private BigInteger secretPoint() throws AddressFormatException, InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException, InvalidKeySpecException, NotSecp256k1Exception {
         BigInteger s = new BigInteger(1, this.hashSharedSecret());
         if(!this.isSecp256k1(s)) {
@@ -143,9 +138,5 @@ public class PaymentAddress {
         } else {
             return s;
         }
-    }
-
-    static {
-        CURVE = new ECDomainParameters(CURVE_PARAMS.getCurve(), CURVE_PARAMS.getG(), CURVE_PARAMS.getN(), CURVE_PARAMS.getH());
     }
 }

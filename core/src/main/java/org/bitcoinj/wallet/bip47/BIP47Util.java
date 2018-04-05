@@ -42,6 +42,9 @@ import static org.bitcoinj.core.Utils.HEX;
 public class BIP47Util {
     private static final Logger log = LoggerFactory.getLogger(BIP47Util.class);
 
+    /**
+     * Finds the first output in a transaction whose op code is OP_RETURN.
+     */
     @Nullable
     public static TransactionOutput getOpCodeOutput(Transaction tx) {
         List<TransactionOutput> outputs = tx.getOutputs();
@@ -53,11 +56,13 @@ public class BIP47Util {
         return null;
     }
 
+    /** Returns true if the OP_RETURN op code begins with the byte 0x01 (version 1), */
     public static boolean isValidNotificationTransactionOpReturn(TransactionOutput transactionOutput) {
         byte[] data = getOpCodeData(transactionOutput);
         return data != null && HEX.encode(data, 0, 1).equals("01");
     }
 
+    /** Return the payload of the first op code e.g. OP_RETURN. */
     private static byte[] getOpCodeData(TransactionOutput opReturnOutput) {
         List<ScriptChunk> chunks = opReturnOutput.getScriptPubKey().getChunks();
         for (ScriptChunk chunk : chunks) {
@@ -68,6 +73,7 @@ public class BIP47Util {
         return null;
     }
 
+    /* Extract the payment code from an incoming notification transaction */
     public static PaymentCode getPaymentCodeInNotificationTransaction(byte[] privKeyBytes, Transaction tx) {
         log.debug( "Getting pub key");
         byte[] pubKeyBytes = tx.getInput(0).getScriptSig().getPubKey();
@@ -104,40 +110,20 @@ public class BIP47Util {
         return null;
     }
 
-    public static PaymentAddress getReceiveAddress(Wallet wallet, String pcode, int idx) throws AddressFormatException, NotSecp256k1Exception {
-        ECKey accountKey = wallet.getAccount(0).keyAt(idx);
-        return getPaymentAddress(wallet.getNetworkParameters(), new PaymentCode(pcode), 0, accountKey);
+    /** Derives the receive address at idx in depositWallet for senderPaymentCode to deposit, in the wallet's bip47 0th account, i.e. <pre>m / 47' / coin_type' / 0' / idx' .</pre>. */
+    public static PaymentAddress getReceiveAddress(Wallet depositWallet, String senderPaymentCode, int idx) throws AddressFormatException, NotSecp256k1Exception {
+        ECKey accountKey = depositWallet.getAccount(0).keyAt(idx);
+        return getPaymentAddress(depositWallet.getNetworkParameters(), new PaymentCode(senderPaymentCode), 0, accountKey);
     }
 
-    public static PaymentAddress getSendAddress(Wallet bip47Wallet, PaymentCode pcode, int idx) throws AddressFormatException, NotSecp256k1Exception {
-        ECKey key = bip47Wallet.getAccount(0).keyAt(0);
-        return getPaymentAddress(bip47Wallet.getNetworkParameters(), pcode, idx, key);
+    /** Get the address of receiverPaymentCode's owner to send a payment to, using BTC as coin_type */
+    public static PaymentAddress getSendAddress(Wallet spendWallet, PaymentCode receiverPaymentCode, int idx) throws AddressFormatException, NotSecp256k1Exception {
+        ECKey key = spendWallet.getAccount(0).keyAt(0);
+        return getPaymentAddress(spendWallet.getNetworkParameters(), receiverPaymentCode, idx, key);
     }
 
+    /** Creates a PaymentAddress object that the sender will use to pay, using the hardened key at idx */
     private static PaymentAddress getPaymentAddress(NetworkParameters networkParameters, PaymentCode pcode, int idx, ECKey key) throws AddressFormatException, NotSecp256k1Exception {
         return new PaymentAddress(networkParameters, pcode, idx, key.getPrivKeyBytes());
-    }
-
-    public static String readFromFile(File file) throws IOException {
-        try (BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF8"))) {
-            StringBuilder sb = new StringBuilder();
-
-            String newLine = System.lineSeparator();
-            String str;
-            while ((str = in.readLine()) != null) {
-                sb.append(str).append(newLine);
-            }
-            return sb.toString();
-        }
-    }
-
-    public static void saveToFile(File file, File temp) throws IOException {
-        try (InputStream in = new FileInputStream(temp); OutputStream out = new FileOutputStream(file)) {
-            byte[] buf = new byte[1024];
-            int len;
-            while ((len = in.read(buf)) > 0) {
-                out.write(buf, 0, len);
-            }
-        }
     }
 }

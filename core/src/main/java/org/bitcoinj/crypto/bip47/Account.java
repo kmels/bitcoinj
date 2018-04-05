@@ -1,3 +1,7 @@
+/* Copyright (c) 2017 Stash
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 package org.bitcoinj.crypto.bip47;
 
 import org.bitcoinj.wallet.bip47.PaymentCode;
@@ -15,6 +19,20 @@ import static org.bitcoinj.wallet.bip47.PaymentCode.createMasterPubKeyFromPaymen
  * Created by jimmy on 8/4/17.
  */
 
+/**
+ * p>A {@link Bip47Account} is necessary for BIP47 payment channels. It holds the notification key used to derive the
+ * notification address and the key to derive payment addresses in a channel.</p>
+ *
+ * <p>The BIP47 account is at the derivation path <pre>m / 47' / coin_type' / account_id'.</pre>. </p>
+ *
+ * <p>Properties:</p>
+ * <ul>
+ * <li>The coin_type' should be chosen as in BIP43. </li>
+ * <li>The account_id is any integer (from 0 to 2147483647)</li>
+ * <li>The notification key is derived at: <pre>m / 47' / coin_type' / account_id' / 0 </pre> (non hardened)</li>
+ * <li>The payment keys are derived at: <pre>m / 47' / coin_type' / account_id' / idx' </pre> (hardened). </li>
+ * </ul>
+ */
 public class Account {
     private NetworkParameters mNetworkParameters;
     private DeterministicKey mKey;
@@ -22,6 +40,9 @@ public class Account {
     private PaymentCode mPaymentCode;
     private String mXPub;
 
+    /**
+     * Constructor expecting a coin_type' derivation path key and the identity number.
+     */
     public Account(NetworkParameters parameters, DeterministicKey deterministicKey, int index) {
         mNetworkParameters = parameters;
         mIndex = index;
@@ -30,6 +51,10 @@ public class Account {
         mXPub = mKey.serializePubB58(parameters);
     }
 
+    /**
+     * Constructor expecting a Base58Check encoded payment code.
+     * @throws AddressFormatException if the payment code is invalid
+     */
     public Account(NetworkParameters parameters, String strPaymentCode) {
         mNetworkParameters = parameters;
         mIndex = 0;
@@ -38,6 +63,7 @@ public class Account {
         mXPub = mKey.serializePubB58(parameters);
     }
 
+    /** Return the Base58Check representation of the payment code*/
     public String getStringPaymentCode() {
         return mPaymentCode.toString();
     }
@@ -46,14 +72,17 @@ public class Account {
         return mXPub;
     }
 
+    /** Returns the P2PKH address associated with the 0th public key  */
     public Address getNotificationAddress() {
         return HDKeyDerivation.deriveChildKey(mKey, ChildNumber.ZERO).toAddress(mNetworkParameters);
     }
 
+    /** Returns the 0th derivation key */
     public ECKey getNotificationKey() {
         return HDKeyDerivation.deriveChildKey(mKey, ChildNumber.ZERO);
     }
 
+    /** Return the payment code as is */
     public PaymentCode getPaymentCode() {
         return mPaymentCode;
     }
@@ -62,6 +91,9 @@ public class Account {
         return new org.bitcoinj.crypto.bip47.Address(mNetworkParameters, mKey, idx);
     }
 
+    /** Returns the nth key.
+     * @param idx must be between 0 and 2147483647
+     */
     public ECKey keyAt(int idx) {
         return HDKeyDerivation.deriveChildKey(mKey, new ChildNumber(idx, false));
     }
