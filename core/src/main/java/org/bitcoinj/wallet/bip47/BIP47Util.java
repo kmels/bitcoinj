@@ -110,16 +110,16 @@ public class BIP47Util {
         return null;
     }
 
-    /** Derives the address at idx in the wallet's bip47 account */
-    public static PaymentAddress getReceiveAddress(Wallet wallet, String pcode, int idx) throws AddressFormatException, NotSecp256k1Exception {
-        ECKey accountKey = wallet.getAccount(0).keyAt(idx);
-        return getPaymentAddress(wallet.getNetworkParameters(), new PaymentCode(pcode), 0, accountKey);
+    /** Derives the receive address at idx in depositWallet for senderPaymentCode to deposit, in the wallet's bip47 0th account, i.e. <pre>m / 47' / coin_type' / 0' / idx' .</pre>. */
+    public static PaymentAddress getReceiveAddress(Wallet depositWallet, String senderPaymentCode, int idx) throws AddressFormatException, NotSecp256k1Exception {
+        ECKey accountKey = depositWallet.getAccount(0).keyAt(idx);
+        return getPaymentAddress(depositWallet.getNetworkParameters(), new PaymentCode(senderPaymentCode), 0, accountKey);
     }
 
-    /** Get the address of pcode's owner to send a payment to, using BTC as coin_type */
-    public static PaymentAddress getSendAddress(Wallet bip47Wallet, PaymentCode pcode, int idx) throws AddressFormatException, NotSecp256k1Exception {
-        ECKey key = bip47Wallet.getAccount(0).keyAt(0);
-        return getPaymentAddress(bip47Wallet.getNetworkParameters(), pcode, idx, key);
+    /** Get the address of receiverPaymentCode's owner to send a payment to, using BTC as coin_type */
+    public static PaymentAddress getSendAddress(Wallet spendWallet, PaymentCode receiverPaymentCode, int idx) throws AddressFormatException, NotSecp256k1Exception {
+        ECKey key = spendWallet.getAccount(0).keyAt(0);
+        return getPaymentAddress(spendWallet.getNetworkParameters(), receiverPaymentCode, idx, key);
     }
 
     /** Creates a PaymentAddress object that the sender will use to pay, using the hardened key at idx */

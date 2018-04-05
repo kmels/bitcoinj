@@ -277,9 +277,8 @@ public class Bip47WalletTest extends TestWithBip47Wallet {
         Blockchain b = new Blockchain(0, TestNet3Params.get(), "tBTC","Bitcoin Core Test");
         Wallet w = new Wallet(b, new File("peerGroup"), null);
         assertFalse(w.isStarted());
-        w.start(false);
         assertFalse(w.isStarted());
-        w.start(true);
+        w.startBlockchainDownload();
         assertTrue(w.isStarted());
         w.startBlockchainDownload();
         assertTrue(w.isStarted());
