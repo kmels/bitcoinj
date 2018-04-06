@@ -13,29 +13,13 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
+import org.bitcoinj.core.*;
 import org.bitcoinj.wallet.bip47.listeners.BlockchainDownloadProgressTracker;
 import org.bitcoinj.wallet.bip47.listeners.TransactionEventListener;
 import org.bitcoinj.crypto.bip47.Account;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.bitcoinj.core.Address;
-import org.bitcoinj.core.AddressFormatException;
-import org.bitcoinj.core.BlockChain;
-import org.bitcoinj.core.CashAddress;
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.Context;
-import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.InsufficientMoneyException;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.Peer;
-import org.bitcoinj.core.PeerAddress;
-import org.bitcoinj.core.PeerGroup;
-import org.bitcoinj.core.ScriptException;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionInput;
-import org.bitcoinj.core.TransactionOutput;
-import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.HDKeyDerivation;
@@ -996,5 +980,9 @@ public class Wallet {
 
     public int getExternalAddressCount() {
         return vWallet.getActiveKeyChain().getIssuedReceiveKeys().size();
+    }
+
+    public void unsafeRRemoveTx(Sha256Hash txHash){
+        this.vWallet.unsafeRemoveTxHash(txHash);
     }
 }

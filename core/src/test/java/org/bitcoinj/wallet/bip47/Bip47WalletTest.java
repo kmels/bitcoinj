@@ -18,9 +18,7 @@ import java.security.Security;
 import java.util.List;
 
 import static org.bitcoinj.core.Utils.HEX;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import org.bitcoinj.crypto.MnemonicCodeTest;
 import org.spongycastle.jce.provider.BouncyCastleProvider;
@@ -293,6 +291,21 @@ public class Bip47WalletTest extends TestWithBip47Wallet {
         Wallet w = new Wallet(b, new File("peerGroup"), null);
         assertFalse(w.isStarted());
         w.broadcastTransaction(new Transaction(TestNet3Params.get()));
+    }
+
+    @Test
+    public void testUnsafeRemoveTx() throws Exception {
+        super.setUp();
+        deleteFolder("charly");
+        File charlyDir = new File("charly");
+        Blockchain b = new Blockchain(0, MainNetParams.get(), SUPPORTED_COINS[1], "Bitcoin Core");
+        Wallet Charly = createWallet(b, charlyDir, ALICE_BIP39_MNEMONIC);
+
+        setWallet(Charly);
+        sendMoneyToWallet(Charly.getvWallet(), AbstractBlockChain.NewBlockType.BEST_CHAIN, Coin.COIN, Charly.getCurrentAddress());
+        assertEquals(1, Charly.getTransactions().size());
+        Charly.unsafeRRemoveTx(Charly.getTransactions().get(0).getHash());
+        assertEquals(0, Charly.getTransactions().size());
     }
 
 }

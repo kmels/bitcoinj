@@ -5285,4 +5285,13 @@ public class Wallet extends BaseTaggableObject
         }
     }
     //endregion
+
+    public void unsafeRemoveTxHash(Sha256Hash sha256Hash){
+        transactions.remove(sha256Hash);
+        pending.remove(sha256Hash);
+        unspent.remove(sha256Hash);
+        spent.remove(sha256Hash);
+        dead.remove(sha256Hash);
+    }
+
 }
