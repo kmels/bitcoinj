@@ -288,11 +288,32 @@ public class Bip47WalletTest extends TestWithBip47Wallet {
         assertTrue(w.isStarted());
     }
 
+    @Test
     public void testBroadcastTransactionException() throws Exception{
         Blockchain b = new Blockchain(0, TestNet3Params.get(), "tBTC","Bitcoin Core Test");
         Wallet w = new Wallet(b, new File("peerGroup"), null);
         assertFalse(w.isStarted());
         w.broadcastTransaction(new Transaction(TestNet3Params.get()));
+    }
+
+    @Test
+    public void testIsValidAddress() throws Exception {
+        Blockchain b = new Blockchain(0, TestNet3Params.get(), "tBTC","Bitcoin Core Test");
+        Wallet w = new Wallet(b, new File("validAdress"), null);
+        assertFalse(w.isValidAddress(null));
+        assertFalse(w.isValidAddress(""));
+
+        // bip47 or bch should work by default as fallbacks
+        assertTrue(w.isValidAddress(ALICE_PAYMENT_CODE_V1));
+        assertTrue(w.isValidAddress("bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a"));
+
+        // BTC shouldn't work, only tBTC
+        assertFalse(w.isValidAddress("113bNV8bjbK2vexYRburKdX1ikEVX6pCuX"));
+        assertTrue(w.isValidAddress("2N78FmngiQEpBoFLEwk4je96ozQPvypH589"));
+
+        Blockchain b2 = new Blockchain(0, MainNetParams.get(), "BTC","Bitcoin Core");
+        Wallet w2 = new Wallet(b2, new File("validAdress"), null);
+        assertTrue(w2.isValidAddress("2N78FmngiQEpBoFLEwk4je96ozQPvypH589"));
     }
 
 }

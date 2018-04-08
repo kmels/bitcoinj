@@ -779,6 +779,9 @@ public class Wallet {
     /** <p>Returns true if the given address is a valid payment code or a valid address in the
      * wallet's blockchain network.</p> */
     public boolean isValidAddress(String address) {
+        if (address == null)
+            return false;
+
         try {
             PaymentCode paymentCode = new PaymentCode(address);
             return true;
@@ -793,7 +796,6 @@ public class Wallet {
                 CashAddress.decode(address);
                 return true;
             } catch (AddressFormatException e2) {
-                e2.printStackTrace();
                 return false;
             }
         }
