@@ -13,15 +13,6 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
-import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.bitcoinj.core.listeners.OnTransactionBroadcastListener;
-import org.bitcoinj.core.listeners.TransactionConfidenceEventListener;
-import org.bitcoinj.wallet.bip47.BIP47Util;
-import org.bitcoinj.wallet.bip47.Bip47Address;
-import org.bitcoinj.wallet.bip47.Bip47Meta;
-import org.bitcoinj.wallet.bip47.NotSecp256k1Exception;
-import org.bitcoinj.wallet.bip47.PaymentCode;
-import org.bitcoinj.wallet.bip47.SecretPoint;
 import org.bitcoinj.wallet.bip47.listeners.BlockchainDownloadProgressTracker;
 import org.bitcoinj.wallet.bip47.listeners.TransactionEventListener;
 import org.bitcoinj.crypto.bip47.Account;
@@ -79,30 +70,49 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
 
 /**
  * Created by jimmy on 9/28/17.
  */
-
+/**
+ * <p>A {@link Bip47Wallet} that runs in SPV mode and supports BIP 47 payments for coins BTC, BCH, tBTC and tBCH. You will
+ * need to instantiate one wallet per supported coin.</p>
+ *
+ * <p>It produces two files in a designated directory. The directory name is the coin name. and is created in workingDirectory: </p>
+ * <ul>
+ *     <il>The .spvchain (blockstore): maintains a maximum # of headers mapped to memory (5000)</il>
+ *     <il>The .wallet: stores the wallet with txs, can be encrypted, storing keys</il>
+ * </ul>
+ *
+ * <p>By calling {@link Bip47Wallet.start()}, this wallet will automatically import payment addresses when a Bip 47
+ * notification transaction is received.</p>
+ *
+ */
 public class Wallet {
     private static final String TAG = "Wallet";
 
+    // the blockchain that this wallet supports. Can be: BTC, tBTC, BCH, tBCH
     protected final Blockchain blockchain;
+    // the blokstore is used by a blockchain as a memory data structure
     private volatile BlockChain vChain;
     private volatile BlockStore vStore;
     private volatile org.bitcoinj.wallet.Wallet vWallet;
+    // sync with the blockchain by using a peergroup
     private volatile PeerGroup vPeerGroup;
 
+    // the directory will have the spvchain and the wallet files
     private final File directory;
     private volatile File vWalletFile;
+    // Wether this wallet is restored from a BIP39 seed and will need to replay the complete blockchain
+    // Will be null if it's not a restored wallet.
     private StashDeterministicSeed restoreFromSeed;
 
+    // Support for BIP47-type accounts. Only one account is currently handled in this wallet.
     private List<Account> mAccounts = new ArrayList<>(1);
 
+    // The progress tracker will callback the listener with a porcetage of the blockchain that it has downloaded, while downloading..
     private BlockchainDownloadProgressTracker mBlockchainDownloadProgressTracker;
 
     // This wallet allows one listener to be invoked when there are coins received and
@@ -112,16 +122,26 @@ public class Wallet {
 
     private boolean mBlockchainDownloadStarted = false;
 
+    // The payment channels indexed by payment codes.
+    // A payment channel is created and saved if:
+    //   - someone sends a notification transaction to this wallet's notifiction address
+    //   - this wallet creates a notification transaction to a payment channel.
+    //
+    // It doesn't check if the notification transactions are mined before adding a payment code.
+    // If you want to know a transaction's confidence, see #{@link Transaction.getConfidence()}
     private ConcurrentHashMap<String, Bip47Meta> bip47MetaData = new ConcurrentHashMap<>();
     private static final Logger log = LoggerFactory.getLogger(Wallet.class);
 
+    /**
+     * <p>Creates a new wallet for a blockchain network, the .spvchain and .wallet files in workingDir/coinName.</p>
+     * Any keys will be derived from deterministicSeed.
+     */
     public Wallet(Blockchain blockchain, File walletDirectory, @Nullable StashDeterministicSeed deterministicSeed) throws Exception {
         this.blockchain = blockchain;
-
         this.directory = new File(walletDirectory, blockchain.getCoin());
-
         this.restoreFromSeed = deterministicSeed;
 
+        // ensure directory exists
         if (!directory.exists()) {
             if (!directory.mkdirs()) {
                 throw new IOException("Could not create directory " + directory.getAbsolutePath());
@@ -130,8 +150,11 @@ public class Wallet {
 
         File chainFile = new File(directory, blockchain.getCoin() + ".spvchain");
         boolean chainFileExists = chainFile.exists();
+        // point to the file with the (possibly existent) Wallet
         vWalletFile = new File(directory, blockchain.getCoin() + ".wallet");
         log.debug("Wallet: "+getCoin());
+
+        // replay the wallet if deterministicSeed is defined or if it's chain file is deleted (as a trigger to replay it)
         boolean shouldReplayWallet = (vWalletFile.exists() && !chainFileExists) || restoreFromSeed != null;
 
         Context.propagate(new Context(blockchain.getNetworkParameters()));
@@ -150,7 +173,11 @@ public class Wallet {
         log.debug(vWallet.toString());
 
         // Initiate Bitcoin network objects (block store, blockchain and peer group)
+
+        // open the blockstore file
         vStore = new SPVBlockStore(blockchain.getNetworkParameters(), chainFile);
+
+        // create a fresh blockstore file before restoring a wallet
         if (restoreFromSeed != null && chainFileExists) {
             log.info( "Deleting the chain file in preparation from restore.");
             vStore.close();
@@ -160,6 +187,7 @@ public class Wallet {
         }
 
         try {
+            // create the blockchain object using the file-backed blockstore
             vChain = new BlockChain(blockchain.getNetworkParameters(), vStore);
         } catch (BlockStoreException e){
 
@@ -173,18 +201,20 @@ public class Wallet {
             vChain = new BlockChain(blockchain.getNetworkParameters(), vStore);
         }
 
+        // add the wallet so that syncing and rolling the chain can affect this wallet
         vChain.addWallet(vWallet);
         derivePeerGroup();
         addBip47Listener();
     }
 
+    // create peergroup for the blockchain
     private void derivePeerGroup(){
         Context.propagate(new Context(blockchain.getNetworkParameters()));
         if (vPeerGroup == null)
             vPeerGroup = new PeerGroup(blockchain.getNetworkParameters(), vChain);
 
+        // add Stash-Crypto dedicated nodes for BCH and tBCH
         if (blockchain.getCoin().equals("BCH")) {
-            // stash crypto
             vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("158.69.119.35"), 8333));
             vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("144.217.73.86"), 8333));
             // bitcoin abc from shodan.io
@@ -204,12 +234,22 @@ public class Wallet {
             //vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("47.74.186.127"), 18333));
         }
 
+        // connect to peer running in localhost (127.0.0.1)
         vPeerGroup.setUseLocalhostPeerWhenPossible(true);
+        // connect to peers in the blockchain network
         vPeerGroup.addPeerDiscovery(new DnsDiscovery(blockchain.getNetworkParameters()));
 
+        // add the wallet to the peers so that every peer listener can find this wallet e.g. to invoke listeners
         vPeerGroup.addWallet(vWallet);
     }
 
+    // Bip47-specific listener
+    // When a new *notification* transaction is received:
+    //  - new keys are generated and imported for incoming payments in the bip47 account/contact payment channel
+    //  - the chain is rolled back 2 blocks so that payment transactions are not missed if in the same block as the notification transaction.
+    //
+    // When a new *payment* transaction is received:
+    //  - a new key is generated and imported to the wallet
     private void addBip47Listener(){
         this.addOnReceiveTransactionListener(new TransactionEventListener() {
             @Override
@@ -248,24 +288,31 @@ public class Wallet {
         });
     }
 
+    // if coinName/coinName.wallet exists, we load it as a core Wallet and then manually set each of the bip47 properties
     private org.bitcoinj.wallet.Wallet createOrLoadWallet(boolean shouldReplayWallet) throws Exception {
         org.bitcoinj.wallet.Wallet wallet;
 
         if (vWalletFile.exists()) {
             wallet = loadWallet(shouldReplayWallet);
         } else {
+            // create an empty wallet
             wallet = createWallet();
+            // with a seed
             wallet.freshReceiveKey();
-
+            // reload the wallet
             wallet.saveToFile(vWalletFile);
             wallet = loadWallet(false);
         }
 
+        // every 5 seconds let's persist the transactions, keys, last block height, watched scripts, etc.
+        // does not persist channels recurrently, instead payment channels are currently saved in a separete file (.bip47 extension).
         wallet.autosaveToFile(vWalletFile, 5, TimeUnit.SECONDS, null);
 
         return wallet;
     }
 
+    // Load an offline wallet from a file and return a @{link org.bitcoinj.wallet.Wallet}.
+    // If shouldReplayWallet is false, the wallet last block is reset to -1
     private org.bitcoinj.wallet.Wallet loadWallet(boolean shouldReplayWallet) throws Exception {
         try (FileInputStream walletStream = new FileInputStream(vWalletFile)) {
             Protos.Wallet proto = WalletProtobufSerializer.parseToProto(walletStream);
@@ -290,6 +337,11 @@ public class Wallet {
         return blockchain.getCoin();
     }
 
+    /**
+     * <p>Create the account M/47'/0'/0' from the seed as a Bip47Account.</p>
+     *
+     * <p>After deriving, this wallet's payment code is available in @{link Bip47Wallet.getPaymentCode()}</p>
+     */
     public void setAccount() {
         byte[] hd_seed = this.restoreFromSeed != null ?
                 this.restoreFromSeed.getSeedBytes() :
@@ -305,16 +357,9 @@ public class Wallet {
         mAccounts.add(account);
     }
 
-    public void start(boolean startBlockchainDownload) {
-        //Context.propagate(new Context(blockchain.getNetworkParameters()));
-        //File chainFile = new File(directory, blockchain.getCoin() + ".spvchain");
-        //boolean chainFileExists = chainFile.exists();
-
-        if (startBlockchainDownload) {
-            startBlockchainDownload();
-        }
-    }
-
+    /*
+     * <p>Connect this wallet to the network. Watch notification and payment transactions.</p>
+     */
     public void startBlockchainDownload() {
         if (!isStarted() && !mBlockchainDownloadStarted) {
             log.debug("Starting blockchain download.");
@@ -330,6 +375,9 @@ public class Wallet {
         return vPeerGroup.getConnectedPeers();
     }
 
+    /**
+     * Disconnects the wallet from the network
+     */
     public void stop() {
         if (!isStarted()) {
             return;
@@ -373,7 +421,7 @@ public class Wallet {
     }
 
     /**
-     *
+     * <p>Reads the channels from .bip47 file. Return true if any payment code was loaded. </p>
      */
     public boolean loadBip47MetaData() {
         String jsonString = readBip47MetaDataFile();
@@ -387,6 +435,9 @@ public class Wallet {
         return importBip47MetaData(jsonString);
     }
 
+    /**
+     * <p>Reads the channels from .bip47 file. Return true if any payment code was loaded. </p>
+     */
     public String readBip47MetaDataFile() {
         File file = new File(directory, getCoin().concat(".bip47"));
         String jsonString;
@@ -402,6 +453,9 @@ public class Wallet {
         return jsonString;
     }
 
+    /**
+     * <p>Load channels from json. Return true if any payment code was loaded. </p>
+     */
     public boolean importBip47MetaData(String jsonString) {
         log.debug("loadBip47MetaData: "+jsonString);
 
@@ -420,6 +474,9 @@ public class Wallet {
         return false;
     }
 
+    /**
+     * <p>Persists the .bip47 file with the channels. </p>
+     */
     public synchronized void saveBip47MetaData() {
         try {
             vWallet.saveToFile(vWalletFile);
@@ -468,6 +525,7 @@ public class Wallet {
         return this.mCoinsReceivedEventListener;
     }
 
+    /** <p> Retrieve the relevant address (P2PKH or P2PSH) and compares it with the notification address of this wallet. </p> */
     public boolean isNotificationTransaction(Transaction tx) {
         Address address = getAddressOfReceived(tx);
         Address myNotificationAddress = mAccounts.get(0).getNotificationAddress();
@@ -475,6 +533,8 @@ public class Wallet {
         return address != null && address.toString().equals(myNotificationAddress.toString());
     }
 
+    /** <p> Retrieve the relevant address (P2PKH or P2PSH), return true if any key in this wallet translates to it. </p> */
+    // TODO: return true if and only if it is a channel address.
     public boolean isToBIP47Address(Transaction transaction) {
         List<ECKey> keys = vWallet.getImportedKeys();
         for (ECKey key : keys) {
@@ -490,6 +550,7 @@ public class Wallet {
         return false;
     }
 
+    /** Find the address that received the transaction (P2PKH or P2PSH output) */
     public Address getAddressOfReceived(Transaction tx) {
         for (final TransactionOutput output : tx.getOutputs()) {
             try {
@@ -505,6 +566,7 @@ public class Wallet {
         return null;
     }
 
+    /* Find the address (in P2PKH or P2PSH output) that does not belong to this wallet. */
     public Address getAddressOfSent(Transaction tx) {
         for (final TransactionOutput output : tx.getOutputs()) {
             try {
@@ -520,12 +582,14 @@ public class Wallet {
         return null;
     }
 
+    /** Given a notification transaction, extracts a valid payment code */
     public PaymentCode getPaymentCodeInNotificationTransaction(Transaction tx) {
         byte[] privKeyBytes = mAccounts.get(0).getNotificationKey().getPrivKeyBytes();
 
         return BIP47Util.getPaymentCodeInNotificationTransaction(privKeyBytes, tx);
     }
 
+    // <p> Receives a payment code and returns true iff there is already an incoming address generated for the channel</p>
     public boolean savePaymentCode(PaymentCode paymentCode) {
         if (bip47MetaData.containsKey(paymentCode.toString())) {
             Bip47Meta bip47Meta = bip47MetaData.get(paymentCode.toString());
@@ -571,6 +635,7 @@ public class Wallet {
         vWallet.importKey(key);
     }
 
+    /** Return true if this is the first time the address is seen used*/
     public boolean generateNewBip47IncomingAddress(String address) {
         for (Bip47Meta bip47Meta : bip47MetaData.values()) {
             for (Bip47Address bip47Address : bip47Meta.getIncomingAddresses()) {
@@ -861,6 +926,7 @@ public class Wallet {
         return false;
     }
 
+    /* Mark a channel's notification transaction as sent*/
     public void putPaymenCodeStatusSent(String paymentCode) {
         if (bip47MetaData.containsKey(paymentCode)) {
             Bip47Meta bip47Meta = bip47MetaData.get(paymentCode);
@@ -871,6 +937,7 @@ public class Wallet {
         }
     }
 
+    /* Return the next address to send a payment to */
     public String getCurrentOutgoingAddress(Bip47Meta bip47Meta) {
         try {
             ECKey key = BIP47Util.getSendAddress(this, new PaymentCode(bip47Meta.getPaymentCode()), bip47Meta.getCurrentOutgoingIndex()).getSendECKey();
