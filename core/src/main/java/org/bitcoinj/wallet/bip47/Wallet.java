@@ -712,6 +712,9 @@ public class Wallet {
     }
 
     public boolean isValidAddress(String address) {
+        if (address == null)
+            return false;
+
         try {
             Address.fromBase58(getNetworkParameters(), address);
             return true;
@@ -720,7 +723,6 @@ public class Wallet {
                 CashAddress.decode(address);
                 return true;
             } catch (AddressFormatException e2) {
-                e2.printStackTrace();
                 return false;
             }
         }
