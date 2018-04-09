@@ -5285,4 +5285,39 @@ public class Wallet extends BaseTaggableObject
         }
     }
     //endregion
+
+    public Transaction unsafeRemoveTxHash(Sha256Hash sha256Hash){
+        Transaction removed = transactions.remove(sha256Hash);
+        if (removed == null)
+            return null;
+
+        pending.remove(sha256Hash);
+        unspent.remove(sha256Hash);
+        spent.remove(sha256Hash);
+        dead.remove(sha256Hash);
+
+        // if it's an incoming tx, we should remove the unspent
+        if (removed.getValue(this).isGreaterThan(Coin.ZERO))
+            for (TransactionOutput to : removed.getOutputs())
+                myUnspents.remove(to);
+
+        // if this is an spend, we want to mark it as unspent, and remove the change from unspents
+        if (removed.getValue(this).isLessThan(Coin.ZERO)){
+
+            // for every input, we want do this process
+            for (TransactionInput spenditure : removed.getInputs()) {
+                TransactionOutput spentOutput = spenditure.getOutpoint().getConnectedOutput();
+                myUnspents.add(spentOutput);
+
+                // find the change and remove it from unspents
+                for (TransactionOutput output : removed.getOutputs()) {
+                    if (output.isMine(this))
+                        myUnspents.remove(output);
+                }
+            }
+        }
+
+        return removed;
+    }
+
 }

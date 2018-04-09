@@ -5,6 +5,7 @@
 
 package org.bitcoinj.wallet.bip47;
 
+import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.wallet.bip47.Wallet;
 
 import org.bitcoinj.core.Address;
@@ -34,6 +35,7 @@ public class Bip47Meta {
     private int status = STATUS_NOT_SENT;
     private int currentOutgoingIndex = 0;
     private int currentIncomingIndex = -1;
+    private Sha256Hash ntxHash;
 
     private static final Logger log = LoggerFactory.getLogger(Bip47Meta.class);
     public Bip47Meta() {}
@@ -125,5 +127,11 @@ public class Bip47Meta {
 
     public void setStatusNotSent() {
         status = STATUS_NOT_SENT;
+    }
+
+    public Sha256Hash getNtxHash() { return ntxHash; }
+
+    public void setNtxHash(Sha256Hash ntxHash) {
+        this.ntxHash = ntxHash;
     }
 }
