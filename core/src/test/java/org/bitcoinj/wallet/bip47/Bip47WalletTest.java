@@ -338,7 +338,7 @@ public class Bip47WalletTest extends TestWithBip47Wallet {
 
         // payment channel should not exist
         assertEquals(null, Charly.getBip47MetaForPaymentCode(BOB_PAYMENT_CODE_V1));
-        //assertEquals(Coin.MILLICOIN, Charly.getBalance());
+        assertEquals(Coin.MILLICOIN, Charly.getBalance());
     }
 
 }

@@ -5301,6 +5301,19 @@ public class Wallet extends BaseTaggableObject
             for (TransactionOutput to : removed.getOutputs())
                 myUnspents.remove(to);
 
+        // if this is an spend, we want to mark it as unspent, and remove the change from unspents
+        if (removed.getValue(this).isLessThan(Coin.ZERO)){
+            TransactionInput spenditure = removed.getInputs().get(0);
+            TransactionOutput spentOutput = spenditure.getOutpoint().getConnectedOutput();
+            myUnspents.add(spentOutput);
+
+            // find the change and remove it from unspents
+            for (TransactionOutput output : removed.getOutputs()){
+                if (output.isMine(this))
+                    myUnspents.remove(output);
+            }
+        }
+
         return removed;
     }
 

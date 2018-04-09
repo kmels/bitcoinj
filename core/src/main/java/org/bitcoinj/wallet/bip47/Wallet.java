@@ -1003,6 +1003,7 @@ public class Wallet {
                         bip47MetaData.remove(channel.getKey());
             }
         } catch (ScriptException e) {}
+
         return removedTx;
 
     }
