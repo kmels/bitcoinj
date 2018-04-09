@@ -302,10 +302,45 @@ public class Bip47WalletTest extends TestWithBip47Wallet {
         Wallet Charly = createWallet(b, charlyDir, ALICE_BIP39_MNEMONIC);
 
         setWallet(Charly);
-        sendMoneyToWallet(Charly.getvWallet(), AbstractBlockChain.NewBlockType.BEST_CHAIN, Coin.COIN, Charly.getCurrentAddress());
+        sendMoneyToWallet(Charly.getvWallet(), AbstractBlockChain.NewBlockType.BEST_CHAIN, Coin.FIFTY_COINS, Charly.getCurrentAddress());
         assertEquals(1, Charly.getTransactions().size());
-        Charly.unsafeRRemoveTx(Charly.getTransactions().get(0).getHash());
+        assertEquals(Coin.FIFTY_COINS, Charly.getBalance());
+
+        // verify balance is 0 and no txs found after removing the incoming tx
+        Sha256Hash txHash = Charly.getTransactions().get(0).getHash();
+        Transaction removedTx = Charly.unsafeRRemoveTx(txHash);
+        assertEquals(removedTx.getHash(), txHash);
+        assertNotEquals(null, removedTx);
         assertEquals(0, Charly.getTransactions().size());
+        assertEquals(Coin.ZERO, Charly.getBalance());
+
+        // calling the removal again should be fine
+        Charly.unsafeRRemoveTx(txHash);
+
+
+        // send a notification tx
+        sendMoneyToWallet(Charly.getvWallet(), AbstractBlockChain.NewBlockType.BEST_CHAIN, Coin.MILLICOIN, Charly.getCurrentAddress());
+        assertEquals(1, Charly.getTransactions().size());
+        assertEquals(Coin.MILLICOIN, Charly.getBalance());
+        SendRequest ntxRequest = Charly.makeNotificationTransaction(BOB_PAYMENT_CODE_V1);
+        Charly.broadcastTransaction(ntxRequest.tx);
+        assertEquals(2, Charly.getTransactions().size());
+        assertEquals(Coin.MILLICOIN.minus(ntxRequest.tx.getFee()).minus(Transaction.MIN_NONDUST_OUTPUT), Charly.getBalance());
+
+        // persist
+        assertEquals(null, Charly.getBip47MetaForPaymentCode(BOB_PAYMENT_CODE_V1));
+        Charly.putPaymenCodeStatusSent(BOB_PAYMENT_CODE_V1, ntxRequest.tx);
+        assertNotEquals(null, Charly.getBip47MetaForPaymentCode(BOB_PAYMENT_CODE_V1));
+        Bip47Meta channel = Charly.getBip47MetaForPaymentCode(BOB_PAYMENT_CODE_V1);
+        assertTrue(channel.isNotificationTransactionSent());
+
+        // remove the notification tx
+        Charly.unsafeRRemoveTx(ntxRequest.tx.getHash());
+        assertEquals(1, Charly.getTransactions().size());
+
+        // payment channel should not exist
+        assertEquals(null, Charly.getBip47MetaForPaymentCode(BOB_PAYMENT_CODE_V1));
+        //assertEquals(Coin.MILLICOIN, Charly.getBalance());
     }
 
 }

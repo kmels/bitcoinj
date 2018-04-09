@@ -52,6 +52,7 @@ import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -894,28 +895,33 @@ public class Wallet {
         return vPeerGroup.broadcastTransaction(transactionToSend).future();
     }
 
-    public boolean putBip47Meta(String profileId, String name) {
+    public boolean putBip47Meta(String profileId, String name, @Nullable Transaction ntx) {
         if (bip47MetaData.containsKey(profileId)) {
             Bip47Meta bip47Meta = bip47MetaData.get(profileId);
+            if (ntx != null)
+                bip47Meta.setNtxHash(ntx.getHash());
             if (!name.equals(bip47Meta.getLabel())) {
                 bip47Meta.setLabel(name);
                 return true;
             }
         } else {
             bip47MetaData.put(profileId, new Bip47Meta(profileId, name));
+            if (ntx != null)
+                bip47MetaData.get(profileId).setNtxHash(ntx.getHash());
             return true;
         }
         return false;
     }
 
     /* Mark a channel's notification transaction as sent*/
-    public void putPaymenCodeStatusSent(String paymentCode) {
+    public void putPaymenCodeStatusSent(String paymentCode, Transaction ntx) {
         if (bip47MetaData.containsKey(paymentCode)) {
             Bip47Meta bip47Meta = bip47MetaData.get(paymentCode);
+            bip47Meta.setNtxHash(ntx.getHash());
             bip47Meta.setStatusSent();
         } else {
-            putBip47Meta(paymentCode, paymentCode);
-            putPaymenCodeStatusSent(paymentCode);
+            putBip47Meta(paymentCode, paymentCode, ntx);
+            putPaymenCodeStatusSent(paymentCode, ntx);
         }
     }
 
@@ -982,7 +988,22 @@ public class Wallet {
         return vWallet.getActiveKeyChain().getIssuedReceiveKeys().size();
     }
 
-    public void unsafeRRemoveTx(Sha256Hash txHash){
-        this.vWallet.unsafeRemoveTxHash(txHash);
+    /* Intended usage only for outgoing transactions. */
+    public Transaction unsafeRRemoveTx(Sha256Hash txHash){
+        Transaction removedTx = this.vWallet.unsafeRemoveTxHash(txHash);
+        if (removedTx == null)
+            return null;
+
+        try {
+            // if we sent out a notification tx, find out who the receiver is and delete the channel
+            PaymentCode ourPaymentCode = getPaymentCodeInNotificationTransaction(removedTx);
+            if (ourPaymentCode != null) {
+                for (Map.Entry<String, Bip47Meta> channel : bip47MetaData.entrySet())
+                    if (channel.getValue().isNotificationTransactionSent() && channel.getValue().getNtxHash().equals(txHash))
+                        bip47MetaData.remove(channel.getKey());
+            }
+        } catch (ScriptException e) {}
+        return removedTx;
+
     }
 }
