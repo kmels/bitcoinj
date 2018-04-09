@@ -33,7 +33,7 @@ public class Bip47WalletTest extends TestWithBip47Wallet {
     private final String ALICE_PAYMENT_CODE_V1 = "PM8TJTLJbPRGxSbc8EJi42Wrr6QbNSaSSVJ5Y3E4pbCYiTHUskHg13935Ubb7q8tx9GVbh2UuRnBc3WSyJHhUrw8KhprKnn9eDznYGieTzFcwQRya4GA";
     private final String ALICE_NOTIFICATION_ADDRESS = "1JDdmqFLhpzcUwPeinhJbUPw4Co3aWLyzW";
 
-    private final String BOB_BIP39_MNEMONIC = "reward upper indicate eight swift arch injury crystal super wrestle already dentist";
+    private final String BOB_BIP39_MNEMONIC = " ";
     private final String BOB_BIP39_RAW_ENTROPY = "b8bde1cba37dbc161d09aad9bfc81c9d";
     private final String BOB_BIP32_SEED = "87eaaac5a539ab028df44d9110defbef3797ddb805ca309f61a69ff96dbaa7ab5b24038cf029edec5235d933110f0aea8aeecf939ed14fc20730bba71e4b1110";
     private final String BOB_PAYMENT_CODE_V1 = "PM8TJS2JxQ5ztXUpBBRnpTbcUXbUHy2T1abfrb3KkAAtMEGNbey4oumH7Hc578WgQJhPjBxteQ5GHHToTYHE3A1w6p7tU6KSoFmWBVbFGjKPisZDbP97";
@@ -284,11 +284,32 @@ public class Bip47WalletTest extends TestWithBip47Wallet {
         assertTrue(w.isStarted());
     }
 
+    @Test
     public void testBroadcastTransactionException() throws Exception{
         Blockchain b = new Blockchain(0, TestNet3Params.get(), "tBTC","Bitcoin Core Test");
         Wallet w = new Wallet(b, new File("peerGroup"), null);
         assertFalse(w.isStarted());
         w.broadcastTransaction(new Transaction(TestNet3Params.get()));
+    }
+
+    @Test
+    public void testIsValidAddress() throws Exception {
+        Blockchain b = new Blockchain(0, TestNet3Params.get(), "tBTC","Bitcoin Core Test");
+        Wallet w = new Wallet(b, new File("validAdress"), null);
+        assertFalse(w.isValidAddress(null));
+        assertFalse(w.isValidAddress(""));
+
+        // bip47 or bch should work by default as fallbacks
+        assertTrue(w.isValidAddress(ALICE_PAYMENT_CODE_V1));
+        assertTrue(w.isValidAddress("bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a"));
+
+        // BTC shouldn't work, only tBTC
+        assertFalse(w.isValidAddress("113bNV8bjbK2vexYRburKdX1ikEVX6pCuX"));
+        assertTrue(w.isValidAddress("2N78FmngiQEpBoFLEwk4je96ozQPvypH589"));
+
+        Blockchain b2 = new Blockchain(0, MainNetParams.get(), "BTC","Bitcoin Core");
+        Wallet w2 = new Wallet(b2, new File("validAdress"), null);
+        assertTrue(w2.isValidAddress("2N78FmngiQEpBoFLEwk4je96ozQPvypH589"));
     }
 
     @Test
@@ -340,5 +361,4 @@ public class Bip47WalletTest extends TestWithBip47Wallet {
         assertEquals(null, Charly.getBip47MetaForPaymentCode(BOB_PAYMENT_CODE_V1));
         assertEquals(Coin.MILLICOIN, Charly.getBalance());
     }
-
 }
