@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.bitcoincashj</groupId>
         <artifactId>bitcoincashj-parent</artifactId>
-        <version>0.14.5-bip47.3</version>
+        <version>0.14.5-bip47.4</version>
     </parent>
 
     <artifactId>wallettemplate</artifactId>
