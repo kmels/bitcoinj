@@ -23,8 +23,6 @@ import static org.junit.Assert.*;
 import org.bitcoinj.crypto.MnemonicCodeTest;
 import org.spongycastle.jce.provider.BouncyCastleProvider;
 
-import javax.annotation.Nullable;
-
 public class Bip47WalletTest extends TestWithBip47Wallet {
     private static final Logger log = LoggerFactory.getLogger(org.bitcoinj.wallet.WalletTest.class);
 
@@ -308,14 +306,14 @@ public class Bip47WalletTest extends TestWithBip47Wallet {
 
         // verify balance is 0 and no txs found after removing the incoming tx
         Sha256Hash txHash = Charly.getTransactions().get(0).getHash();
-        Transaction removedTx = Charly.unsafeRRemoveTx(txHash);
+        Transaction removedTx = Charly.unsafeRemoveTxHash(txHash);
         assertEquals(removedTx.getHash(), txHash);
         assertNotEquals(null, removedTx);
         assertEquals(0, Charly.getTransactions().size());
         assertEquals(Coin.ZERO, Charly.getBalance());
 
         // calling the removal again should be fine
-        Charly.unsafeRRemoveTx(txHash);
+        Charly.unsafeRemoveTxHash(txHash);
 
 
         // send a notification tx
@@ -335,7 +333,7 @@ public class Bip47WalletTest extends TestWithBip47Wallet {
         assertTrue(channel.isNotificationTransactionSent());
 
         // remove the notification tx
-        Charly.unsafeRRemoveTx(ntxRequest.tx.getHash());
+        Charly.unsafeRemoveTxHash(ntxRequest.tx.getHash());
         assertEquals(1, Charly.getTransactions().size());
 
         // payment channel should not exist

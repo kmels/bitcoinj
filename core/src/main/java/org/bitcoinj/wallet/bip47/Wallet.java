@@ -989,7 +989,7 @@ public class Wallet {
     }
 
     /* Intended usage only for outgoing transactions. */
-    public Transaction unsafeRRemoveTx(Sha256Hash txHash){
+    public Transaction unsafeRemoveTxHash(Sha256Hash txHash){
         Transaction removedTx = this.vWallet.unsafeRemoveTxHash(txHash);
         if (removedTx == null)
             return null;
