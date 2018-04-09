@@ -285,14 +285,6 @@ public class Bip47WalletTest extends TestWithBip47Wallet {
     }
 
     @Test
-    public void testBroadcastTransactionException() throws Exception{
-        Blockchain b = new Blockchain(0, TestNet3Params.get(), "tBTC","Bitcoin Core Test");
-        Wallet w = new Wallet(b, new File("peerGroup"), null);
-        assertFalse(w.isStarted());
-        w.broadcastTransaction(new Transaction(TestNet3Params.get()));
-    }
-
-    @Test
     public void testIsValidAddress() throws Exception {
         Blockchain b = new Blockchain(0, TestNet3Params.get(), "tBTC","Bitcoin Core Test");
         Wallet w = new Wallet(b, new File("validAdress"), null);
@@ -303,13 +295,14 @@ public class Bip47WalletTest extends TestWithBip47Wallet {
         assertTrue(w.isValidAddress(ALICE_PAYMENT_CODE_V1));
         assertTrue(w.isValidAddress("bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a"));
 
-        // BTC shouldn't work, only tBTC
-        assertFalse(w.isValidAddress("113bNV8bjbK2vexYRburKdX1ikEVX6pCuX"));
-        assertTrue(w.isValidAddress("2N78FmngiQEpBoFLEwk4je96ozQPvypH589"));
+        // BTC shouldn't work on a tBTC wallet
+        assertTrue(w.isValidAddress("2NBMEXqk5SMdHsEeATAByw7DqZ8jjLwf1MY")); // tBTC
+        assertFalse(w.isValidAddress("3CMXDwnQfyGmTkw5U58f2ffoVYroMBWrJe")); //BTC
 
-        Blockchain b2 = new Blockchain(0, MainNetParams.get(), "BTC","Bitcoin Core");
+        // BTC should work
+        Blockchain b2 = new Blockchain(0, MainNetParams.get(), "BTC", "Bitcoin Core");
         Wallet w2 = new Wallet(b2, new File("validAdress"), null);
-        assertTrue(w2.isValidAddress("2N78FmngiQEpBoFLEwk4je96ozQPvypH589"));
+        assertTrue(w2.isValidAddress("3CMXDwnQfyGmTkw5U58f2ffoVYroMBWrJe"));
     }
 
     @Test
