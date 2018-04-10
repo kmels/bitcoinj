@@ -80,7 +80,9 @@ public class Bip47WalletTest extends TestWithBip47Wallet {
         Security.addProvider(new BouncyCastleProvider());
     }
     private Wallet createWallet(Blockchain b, File workingDir, String mnemonic) throws Exception {
-        StashDeterministicSeed seed = new StashDeterministicSeed(mnemonic, "", Utils.currentTimeSeconds());
+        StashDeterministicSeed seed = null;
+        if (mnemonic != null)
+            seed = new StashDeterministicSeed(mnemonic, "", Utils.currentTimeSeconds());
         return new Wallet(b, workingDir, seed);
     };
 
@@ -329,7 +331,6 @@ public class Bip47WalletTest extends TestWithBip47Wallet {
         // calling the removal again should be fine
         Charly.unsafeRemoveTxHash(txHash);
 
-
         // send a notification tx
         sendMoneyToWallet(Charly.getvWallet(), AbstractBlockChain.NewBlockType.BEST_CHAIN, Coin.MILLICOIN, Charly.getCurrentAddress());
         assertEquals(1, Charly.getTransactions().size());
@@ -338,6 +339,7 @@ public class Bip47WalletTest extends TestWithBip47Wallet {
         Charly.broadcastTransaction(ntxRequest.tx);
         assertEquals(2, Charly.getTransactions().size());
         assertEquals(Coin.MILLICOIN.minus(ntxRequest.tx.getFee()).minus(Transaction.MIN_NONDUST_OUTPUT), Charly.getBalance());
+        Charly.getvWallet().saveToFile(Charly.getvWalletFile());
 
         // persist
         assertEquals(null, Charly.getBip47MetaForPaymentCode(BOB_PAYMENT_CODE_V1));
@@ -345,6 +347,7 @@ public class Bip47WalletTest extends TestWithBip47Wallet {
         assertNotEquals(null, Charly.getBip47MetaForPaymentCode(BOB_PAYMENT_CODE_V1));
         Bip47Meta channel = Charly.getBip47MetaForPaymentCode(BOB_PAYMENT_CODE_V1);
         assertTrue(channel.isNotificationTransactionSent());
+        Charly.getvWallet().saveToFile(Charly.getvWalletFile());
 
         // remove the notification tx
         Charly.unsafeRemoveTxHash(ntxRequest.tx.getHash());
@@ -353,5 +356,15 @@ public class Bip47WalletTest extends TestWithBip47Wallet {
         // payment channel should not exist
         assertEquals(null, Charly.getBip47MetaForPaymentCode(BOB_PAYMENT_CODE_V1));
         assertEquals(Coin.MILLICOIN, Charly.getBalance());
+        assertEquals(1, Charly.getTransactions().size());
+
+
+        // read the wallet again
+        Charly.getvWallet().saveToFile(Charly.getvWalletFile());
+        Charly.stop();
+        Charly.closeBlockStore();
+        Wallet CharlyReload = createWallet(b, charlyDir, null); //should not fail
+        assertEquals(Coin.MILLICOIN, Charly.getBalance());
+        assertEquals(1, CharlyReload.getTransactions().size());
     }
 }

@@ -5307,6 +5307,7 @@ public class Wallet extends BaseTaggableObject
             // for every input, we want do this process
             for (TransactionInput spenditure : removed.getInputs()) {
                 TransactionOutput spentOutput = spenditure.getOutpoint().getConnectedOutput();
+                spentOutput.markAsUnspent();
                 myUnspents.add(spentOutput);
 
                 // find the change and remove it from unspents
