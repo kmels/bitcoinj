@@ -1000,9 +1000,16 @@ public class Wallet {
             // if we sent out a notification tx, find out who the receiver is and delete the channel
             PaymentCode ourPaymentCode = getPaymentCodeInNotificationTransaction(removedTx);
             if (ourPaymentCode != null) {
-                for (Map.Entry<String, Bip47Meta> channel : bip47MetaData.entrySet())
+                for (Map.Entry<String, Bip47Meta> channel : bip47MetaData.entrySet()) {
+
+                    if (channel.getValue() == null)
+                        continue;
+                    if (channel.getValue().getNtxHash() == null)
+                        continue;
+
                     if (channel.getValue().isNotificationTransactionSent() && channel.getValue().getNtxHash().equals(txHash))
                         bip47MetaData.remove(channel.getKey());
+                }
             }
         } catch (ScriptException e) {}
 
