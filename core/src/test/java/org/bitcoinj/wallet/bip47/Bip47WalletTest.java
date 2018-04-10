@@ -80,7 +80,9 @@ public class Bip47WalletTest extends TestWithBip47Wallet {
         Security.addProvider(new BouncyCastleProvider());
     }
     private Wallet createWallet(Blockchain b, File workingDir, String mnemonic) throws Exception {
-        StashDeterministicSeed seed = new StashDeterministicSeed(mnemonic, "", Utils.currentTimeSeconds());
+        StashDeterministicSeed seed = null;
+        if (mnemonic != null)
+            seed = new StashDeterministicSeed(mnemonic, "", Utils.currentTimeSeconds());
         return new Wallet(b, workingDir, seed);
     };
 
@@ -361,6 +363,8 @@ public class Bip47WalletTest extends TestWithBip47Wallet {
         Charly.getvWallet().saveToFile(Charly.getvWalletFile());
         Charly.stop();
         Charly.closeBlockStore();
-        Wallet CharlyReload = createWallet(b, charlyDir, ALICE_BIP39_MNEMONIC); //should not fail
+        Wallet CharlyReload = createWallet(b, charlyDir, null); //should not fail
+        assertEquals(Coin.MILLICOIN, Charly.getBalance());
+        assertEquals(1, CharlyReload.getTransactions().size());
     }
 }
