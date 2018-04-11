@@ -51,6 +51,7 @@ public class PaymentSessionTest {
 
     @Before
     public void setUp() throws Exception {
+        new Context(PARAMS);
         serverKey = new ECKey();
         tx = new Transaction(PARAMS);
         outputToMe = new TransactionOutput(PARAMS, tx, coin, serverKey);
