@@ -805,7 +805,7 @@ public class Wallet {
     }
 
     private static Coin getDefaultFee(NetworkParameters params){
-        if (params.getUseForkId()) {
+        if (!params.getUseForkId()) {
             return Transaction.DEFAULT_TX_FEE;
         } else {
             return Transaction.BCC_DEFAULT_TX_FEE;
