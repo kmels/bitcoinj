@@ -3,9 +3,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-package org.bitcoinj.wallet.bip47;
+package org.bitcoinj.core.bip47;
 
-import org.bitcoinj.crypto.bip47.Address;
+import java.math.BigInteger;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.security.InvalidKeyException;
@@ -13,15 +13,15 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.bitcoinj.core.AddressFormatException;
-import org.bitcoinj.core.Base58;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.*;
+import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.HDKeyDerivation;
 
-public class PaymentCode {
+public class BIP47PaymentCode {
     private static final int PUBLIC_KEY_Y_OFFSET = 2;
     private static final int PUBLIC_KEY_X_OFFSET = 3;
     private static final int CHAIN_OFFSET = 35;
@@ -33,19 +33,19 @@ public class PaymentCode {
     private byte[] pubkey = null;
     private byte[] chain = null;
 
-    public PaymentCode() {
+    public BIP47PaymentCode() {
         this.strPaymentCode = null;
         this.pubkey = null;
         this.chain = null;
     }
 
-    public PaymentCode(String payment_code) throws AddressFormatException {
+    public BIP47PaymentCode(String payment_code) throws AddressFormatException {
         this.strPaymentCode = payment_code;
         this.pubkey = this.parse().getLeft();
         this.chain = this.parse().getRight();
     }
 
-    public PaymentCode(byte[] payload) {
+    public BIP47PaymentCode(byte[] payload) {
         if(payload.length == 80) {
             this.pubkey = new byte[33];
             this.chain = new byte[32];
@@ -55,19 +55,10 @@ public class PaymentCode {
         }
     }
 
-    public PaymentCode(byte[] pubkey, byte[] chain) {
+    public BIP47PaymentCode(byte[] pubkey, byte[] chain) {
         this.pubkey = pubkey;
         this.chain = chain;
         this.strPaymentCode = this.makeV1();
-    }
-
-    public Address notificationAddress(NetworkParameters networkParameters) throws AddressFormatException {
-        return this.addressAt(networkParameters, 0);
-    }
-
-    public Address addressAt(NetworkParameters networkParameters, int idx) throws AddressFormatException {
-        DeterministicKey key = createMasterPubKeyFromPaymentCode(this.strPaymentCode);
-        return new Address(networkParameters, key, idx);
     }
 
     public byte[] getPayload() throws AddressFormatException {
@@ -243,5 +234,24 @@ public class PaymentCode {
             bb.get(chain);
             return HDKeyDerivation.createMasterPubKeyFromBytes(pub, chain);
         }
+    }
+
+    /** Returns the pubkey on the ith derivation path */
+    public byte[] derivePubKeyAt(NetworkParameters networkParameters, int i) throws AddressFormatException {
+        DeterministicKey key = createMasterPubKeyFromPaymentCode(this.strPaymentCode);
+        DeterministicKey dk = HDKeyDerivation.deriveChildKey(key, new ChildNumber(i, false));
+
+        ECKey ecKey;
+        if(dk.hasPrivKey()) {
+            byte[] now = ArrayUtils.addAll(new byte[1], dk.getPrivKeyBytes());
+            ecKey = ECKey.fromPrivate(new BigInteger(now), true);
+        } else {
+            ecKey = ECKey.fromPublicOnly(dk.getPubKey());
+        }
+
+        long now1 = Utils.now().getTime() / 1000L;
+        ecKey.setCreationTimeSeconds(now1);
+
+        return ecKey.getPubKey();
     }
 }

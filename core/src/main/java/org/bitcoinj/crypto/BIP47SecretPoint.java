@@ -3,7 +3,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-package org.bitcoinj.wallet.bip47;
+package org.bitcoinj.crypto;
 
 import java.math.BigInteger;
 import java.security.InvalidKeyException;
@@ -23,7 +23,7 @@ import org.spongycastle.jce.spec.ECPrivateKeySpec;
 import org.spongycastle.jce.spec.ECPublicKeySpec;
 import org.spongycastle.util.encoders.Hex;
 
-public class SecretPoint {
+public class BIP47SecretPoint {
     private static final ECParameterSpec params = ECNamedCurveTable.getParameterSpec("secp256k1");
 
     static {
@@ -34,10 +34,10 @@ public class SecretPoint {
     private PublicKey pubKey = null;
     private KeyFactory kf = null;
 
-    public SecretPoint() {
+    public BIP47SecretPoint() {
     }
 
-    public SecretPoint(byte[] dataPrv, byte[] dataPub) throws InvalidKeySpecException, InvalidKeyException, IllegalStateException, NoSuchAlgorithmException, NoSuchProviderException {
+    public BIP47SecretPoint(byte[] dataPrv, byte[] dataPub) throws InvalidKeySpecException, InvalidKeyException, IllegalStateException, NoSuchAlgorithmException, NoSuchProviderException {
         this.kf = KeyFactory.getInstance("ECDH", "SC");
         this.privKey = this.loadPrivateKey(dataPrv);
         this.pubKey = this.loadPublicKey(dataPub);
@@ -63,7 +63,7 @@ public class SecretPoint {
         return this.ECDHSecret().getEncoded();
     }
 
-    public boolean isShared(SecretPoint secret) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException {
+    public boolean isShared(BIP47SecretPoint secret) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException {
         return this.equals(secret);
     }
 
@@ -75,7 +75,7 @@ public class SecretPoint {
         return secret;
     }
 
-    private boolean equals(SecretPoint secret) throws InvalidKeyException, IllegalStateException, NoSuchAlgorithmException, NoSuchProviderException {
+    private boolean equals(BIP47SecretPoint secret) throws InvalidKeyException, IllegalStateException, NoSuchAlgorithmException, NoSuchProviderException {
         return Hex.toHexString(this.ECDHSecretAsBytes()).equals(Hex.toHexString(secret.ECDHSecretAsBytes()));
     }
 

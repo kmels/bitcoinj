@@ -3,7 +3,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-package org.bitcoinj.wallet.bip47;
+package org.bitcoinj.core.bip47;
 
 import java.math.BigInteger;
 import java.security.InvalidKeyException;
@@ -14,27 +14,29 @@ import java.security.spec.InvalidKeySpecException;
 import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.crypto.BIP47SecretPoint;
+import org.bitcoinj.wallet.bip47.NotSecp256k1Exception;
 import org.spongycastle.asn1.x9.X9ECParameters;
 import org.spongycastle.crypto.ec.CustomNamedCurves;
 import org.spongycastle.crypto.params.ECDomainParameters;
 import org.spongycastle.math.ec.ECPoint;
 
 /**
- * p>A {@link PaymentAddress} is derived for account deposits in a bip47 channel. It is used by a recipient's bip47 wallet to derive and watch deposits. It
+ * p>A {@link BIP47PaymentAddress} is derived for account deposits in a bip47 channel. It is used by a recipient's bip47 wallet to derive and watch deposits. It
  * is also used by a sender's bip47 wallet to calculate the next addresses to send a deposit to.</p>
  *
- * The BIP47 PaymentAddress is at the derivation path <pre>m / 47' / coin_type' / account_id' / idx' .</pre>. </p>
+ * The BIP47 BIP47PaymentAddress is at the derivation path <pre>m / 47' / coin_type' / account_id' / idx' .</pre>. </p>
  *
  * <p>Properties:</p>
  * <ul>
  * <li>The account_id is irrelevant in this class, it's implied in privKey. </li>
- * <li>The owner of paymentCode is not the same owner of privKey.</li>
+ * <li>The owner of BIP47PaymentCode is not the same owner of privKey.</li>
  * </ul>
  */
-public class PaymentAddress {
+public class BIP47PaymentAddress {
     // if we are receiving, this is the sender's payment code
     // if we are sending, this is the receiver's payment code
-    private PaymentCode paymentCode = null;
+    private org.bitcoinj.core.bip47.BIP47PaymentCode BIP47PaymentCode = null;
     // the index to use in the derivation path
     private int index = 0;
     // the corresponding hardedened key bytes at the derivation path
@@ -49,9 +51,9 @@ public class PaymentAddress {
         CURVE = new ECDomainParameters(CURVE_PARAMS.getCurve(), CURVE_PARAMS.getG(), CURVE_PARAMS.getN(), CURVE_PARAMS.getH());
     }
 
-    /** Creates a PaymentAddress object that the sender will use to pay, using the hardened key at idx */
-    public PaymentAddress(NetworkParameters networkParameters, PaymentCode paymentCode, int index, byte[] privKey) throws AddressFormatException {
-        this.paymentCode = paymentCode;
+    /** Creates a BIP47PaymentAddress object that the sender will use to pay, using the hardened key at idx */
+    public BIP47PaymentAddress(NetworkParameters networkParameters, BIP47PaymentCode BIP47PaymentCode, int index, byte[] privKey) throws AddressFormatException {
+        this.BIP47PaymentCode = BIP47PaymentCode;
         this.index = index;
         this.privKey = privKey;
         this.networkParameters = networkParameters;
@@ -62,7 +64,7 @@ public class PaymentAddress {
         return this.getSendECKey(this.secretPoint());
     }
 
-    /** Derives a deposit address to watch to receive payments from paymentCode's owner*/
+    /** Derives a deposit address to watch to receive payments from BIP47PaymentCode's owner*/
     public ECKey getReceiveECKey() throws AddressFormatException, InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException, IllegalStateException, InvalidKeySpecException, NotSecp256k1Exception {
         return this.getReceiveECKey(this.secretPoint());
     }
@@ -73,7 +75,7 @@ public class PaymentAddress {
     //}
 
     /* Accesor for the secret point between sender and receiver */
-    public SecretPoint getSharedSecret() throws AddressFormatException, InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException, IllegalStateException, InvalidKeySpecException {
+    public BIP47SecretPoint getSharedSecret() throws AddressFormatException, InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException, IllegalStateException, InvalidKeySpecException {
         return this.sharedSecret();
     }
 
@@ -82,7 +84,7 @@ public class PaymentAddress {
     //}
 
     public ECPoint getECPoint() throws AddressFormatException, InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException, IllegalStateException, InvalidKeySpecException {
-        ECKey ecKey = ECKey.fromPublicOnly(this.paymentCode.addressAt(this.networkParameters, this.index).getPubKey());
+        ECKey ecKey = ECKey.fromPublicOnly(this.BIP47PaymentCode.derivePubKeyAt(this.networkParameters, this.index));
         return ecKey.getPubKeyPoint();
     }
 
@@ -98,7 +100,7 @@ public class PaymentAddress {
         return CURVE_PARAMS.getG().multiply(s);
     }
 
-    /* Derives the key for the payment address where the paymentCode's owner will be watching for deposits */
+    /* Derives the key for the payment address where the BIP47PaymentCode's owner will be watching for deposits */
     private ECKey getSendECKey(BigInteger s) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException, InvalidKeySpecException {
         ECPoint ecPoint = this.getECPoint();
         ECPoint sG = this.get_sG(s);
@@ -119,10 +121,10 @@ public class PaymentAddress {
         return ret.bitLength() > CURVE.getN().bitLength()?ret.mod(CURVE.getN()):ret;
     }
 
-    /* Return the ECDH shared secret between us and the owner of paymentCode */
-    private SecretPoint sharedSecret() throws AddressFormatException, InvalidKeySpecException, InvalidKeyException, IllegalStateException, NoSuchAlgorithmException, NoSuchProviderException {
-        byte[] pubKey = this.paymentCode.addressAt(this.networkParameters, this.index).getPubKey();
-        return new SecretPoint(this.privKey, pubKey);
+    /* Return the ECDH shared secret between us and the owner of BIP47PaymentCode */
+    private BIP47SecretPoint sharedSecret() throws AddressFormatException, InvalidKeySpecException, InvalidKeyException, IllegalStateException, NoSuchAlgorithmException, NoSuchProviderException {
+        byte[] pubKey = this.BIP47PaymentCode.derivePubKeyAt(this.networkParameters, this.index);
+        return new BIP47SecretPoint(this.privKey, pubKey);
     }
 
     /* Returns true if the given point "b" is in the curve */

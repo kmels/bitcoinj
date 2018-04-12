@@ -14,9 +14,11 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 import org.bitcoinj.core.*;
+import org.bitcoinj.core.bip47.*;
+import org.bitcoinj.crypto.BIP47SecretPoint;
+import org.bitcoinj.wallet.*;
 import org.bitcoinj.wallet.bip47.listeners.BlockchainDownloadProgressTracker;
 import org.bitcoinj.wallet.bip47.listeners.TransactionEventListener;
-import org.bitcoinj.crypto.bip47.Account;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -29,13 +31,6 @@ import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.SPVBlockStore;
-import org.bitcoinj.wallet.CoinSelection;
-import org.bitcoinj.wallet.KeyChainGroup;
-import org.bitcoinj.wallet.Protos;
-import org.bitcoinj.wallet.RedeemData;
-import org.bitcoinj.wallet.SendRequest;
-import org.bitcoinj.wallet.WalletProtobufSerializer;
-import org.bitcoinj.wallet.bip47.models.StashDeterministicSeed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,8 +70,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * notification transaction is received.</p>
  *
  */
-public class Wallet {
-    private static final String TAG = "Wallet";
+public class BIP47Wallet {
+    private static final String TAG = "BIP47Wallet";
 
     // the blockchain that this wallet supports. Can be: BTC, tBTC, BCH, tBCH
     protected final Blockchain blockchain;
@@ -92,10 +87,10 @@ public class Wallet {
     private volatile File vWalletFile;
     // Wether this wallet is restored from a BIP39 seed and will need to replay the complete blockchain
     // Will be null if it's not a restored wallet.
-    private StashDeterministicSeed restoreFromSeed;
+    private DeterministicSeed restoreFromSeed;
 
     // Support for BIP47-type accounts. Only one account is currently handled in this wallet.
-    private List<Account> mAccounts = new ArrayList<>(1);
+    private List<BIP47Account> mAccounts = new ArrayList<>(1);
 
     // The progress tracker will callback the listener with a porcetage of the blockchain that it has downloaded, while downloading..
     private BlockchainDownloadProgressTracker mBlockchainDownloadProgressTracker;
@@ -114,14 +109,14 @@ public class Wallet {
     //
     // It doesn't check if the notification transactions are mined before adding a payment code.
     // If you want to know a transaction's confidence, see #{@link Transaction.getConfidence()}
-    private ConcurrentHashMap<String, Bip47Meta> bip47MetaData = new ConcurrentHashMap<>();
-    private static final Logger log = LoggerFactory.getLogger(Wallet.class);
+    private ConcurrentHashMap<String, BIP47Channel> bip47MetaData = new ConcurrentHashMap<>();
+    private static final Logger log = LoggerFactory.getLogger(BIP47Wallet.class);
 
     /**
      * <p>Creates a new wallet for a blockchain network, the .spvchain and .wallet files in workingDir/coinName.</p>
      * Any keys will be derived from deterministicSeed.
      */
-    public Wallet(Blockchain blockchain, File walletDirectory, @Nullable StashDeterministicSeed deterministicSeed) throws Exception {
+    public BIP47Wallet(Blockchain blockchain, File walletDirectory, @Nullable DeterministicSeed deterministicSeed) throws Exception {
         this.blockchain = blockchain;
         this.directory = new File(walletDirectory, blockchain.getCoin());
         this.restoreFromSeed = deterministicSeed;
@@ -135,9 +130,9 @@ public class Wallet {
 
         File chainFile = new File(directory, blockchain.getCoin() + ".spvchain");
         boolean chainFileExists = chainFile.exists();
-        // point to the file with the (possibly existent) Wallet
+        // point to the file with the (possibly existent) BIP47Wallet
         vWalletFile = new File(directory, blockchain.getCoin() + ".wallet");
-        log.debug("Wallet: "+getCoin());
+        log.debug("BIP47Wallet: "+getCoin());
 
         // replay the wallet if deterministicSeed is defined or if it's chain file is deleted (as a trigger to replay it)
         boolean shouldReplayWallet = (vWalletFile.exists() && !chainFileExists) || restoreFromSeed != null;
@@ -147,7 +142,7 @@ public class Wallet {
         setAccount();
 
         Address notificationAddress = mAccounts.get(0).getNotificationAddress();
-        log.debug("Wallet notification address: "+notificationAddress.toString());
+        log.debug("BIP47Wallet notification address: "+notificationAddress.toString());
 
         if (!vWallet.isAddressWatched(notificationAddress)) {
             vWallet.addWatchedAddress(notificationAddress);
@@ -238,16 +233,16 @@ public class Wallet {
     private void addBip47Listener(){
         this.addOnReceiveTransactionListener(new TransactionEventListener() {
             @Override
-            public void onTransactionReceived(Wallet bip47Wallet, Transaction transaction) {
+            public void onTransactionReceived(BIP47Wallet bip47Wallet, Transaction transaction) {
 
                 if (isNotificationTransaction(transaction)) {
                     log.debug("Valid notification transaction received");
-                    PaymentCode paymentCode = getPaymentCodeInNotificationTransaction(transaction);
-                    if (paymentCode == null) {
+                    BIP47PaymentCode BIP47PaymentCode = getPaymentCodeInNotificationTransaction(transaction);
+                    if (BIP47PaymentCode == null) {
                         log.warn("Error decoding payment code in tx {}", transaction);
                     } else {
-                        log.debug("Payment Code: " + paymentCode);
-                        boolean needsSaving = savePaymentCode(paymentCode);
+                        log.debug("Payment Code: " + BIP47PaymentCode);
+                        boolean needsSaving = savePaymentCode(BIP47PaymentCode);
                         if (needsSaving) {
                             saveBip47MetaData();
                         }
@@ -267,13 +262,13 @@ public class Wallet {
             }
 
             @Override
-            public void onTransactionConfidenceEvent(Wallet bip47Wallet, Transaction transaction) {
+            public void onTransactionConfidenceEvent(BIP47Wallet bip47Wallet, Transaction transaction) {
                 return;
             }
         });
     }
 
-    // if coinName/coinName.wallet exists, we load it as a core Wallet and then manually set each of the bip47 properties
+    // if coinName/coinName.wallet exists, we load it as a core BIP47Wallet and then manually set each of the bip47 properties
     private org.bitcoinj.wallet.Wallet createOrLoadWallet(boolean shouldReplayWallet) throws Exception {
         org.bitcoinj.wallet.Wallet wallet;
 
@@ -296,7 +291,7 @@ public class Wallet {
         return wallet;
     }
 
-    // Load an offline wallet from a file and return a @{link org.bitcoinj.wallet.Wallet}.
+    // Load an offline wallet from a file and return a @{link org.bitcoinj.wallet.BIP47Wallet}.
     // If shouldReplayWallet is false, the wallet last block is reset to -1
     private org.bitcoinj.wallet.Wallet loadWallet(boolean shouldReplayWallet) throws Exception {
         try (FileInputStream walletStream = new FileInputStream(vWalletFile)) {
@@ -336,7 +331,7 @@ public class Wallet {
         DeterministicKey purposeKey = HDKeyDerivation.deriveChildKey(mKey, 47 | ChildNumber.HARDENED_BIT);
         DeterministicKey coinKey = HDKeyDerivation.deriveChildKey(purposeKey, ChildNumber.HARDENED_BIT);
 
-        Account account = new Account(blockchain.getNetworkParameters(), coinKey, 0);
+        BIP47Account account = new BIP47Account(blockchain.getNetworkParameters(), coinKey, 0);
 
         mAccounts.clear();
         mAccounts.add(account);
@@ -445,12 +440,12 @@ public class Wallet {
         log.debug("loadBip47MetaData: "+jsonString);
 
         Gson gson = new Gson();
-        Type collectionType = new TypeToken<Collection<Bip47Meta>>(){}.getType();
+        Type collectionType = new TypeToken<Collection<BIP47Channel>>(){}.getType();
         try {
-            List<Bip47Meta> bip47MetaList = gson.fromJson(jsonString, collectionType);
-            if (bip47MetaList != null) {
-                for (Bip47Meta bip47Meta: bip47MetaList) {
-                    bip47MetaData.put(bip47Meta.getPaymentCode(), bip47Meta);
+            List<BIP47Channel> BIP47ChannelList = gson.fromJson(jsonString, collectionType);
+            if (BIP47ChannelList != null) {
+                for (BIP47Channel BIP47Channel : BIP47ChannelList) {
+                    bip47MetaData.put(BIP47Channel.getPaymentCode(), BIP47Channel);
                 }
             }
         } catch (JsonSyntaxException e) {
@@ -568,21 +563,21 @@ public class Wallet {
     }
 
     /** Given a notification transaction, extracts a valid payment code */
-    public PaymentCode getPaymentCodeInNotificationTransaction(Transaction tx) {
+    public BIP47PaymentCode getPaymentCodeInNotificationTransaction(Transaction tx) {
         byte[] privKeyBytes = mAccounts.get(0).getNotificationKey().getPrivKeyBytes();
 
         return BIP47Util.getPaymentCodeInNotificationTransaction(privKeyBytes, tx);
     }
 
     // <p> Receives a payment code and returns true iff there is already an incoming address generated for the channel</p>
-    public boolean savePaymentCode(PaymentCode paymentCode) {
-        if (bip47MetaData.containsKey(paymentCode.toString())) {
-            Bip47Meta bip47Meta = bip47MetaData.get(paymentCode.toString());
-            if (bip47Meta.getIncomingAddresses().size() != 0) {
+    public boolean savePaymentCode(BIP47PaymentCode BIP47PaymentCode) {
+        if (bip47MetaData.containsKey(BIP47PaymentCode.toString())) {
+            BIP47Channel BIP47Channel = bip47MetaData.get(BIP47PaymentCode.toString());
+            if (BIP47Channel.getIncomingAddresses().size() != 0) {
                 return false;
             } else {
                 try {
-                    bip47Meta.generateKeys(this);
+                    BIP47Channel.generateKeys(this);
                     return true;
                 } catch (NotSecp256k1Exception | InvalidKeyException | InvalidKeySpecException | NoSuchAlgorithmException | NoSuchProviderException e) {
                     e.printStackTrace();
@@ -591,11 +586,11 @@ public class Wallet {
             }
         }
 
-        Bip47Meta bip47Meta = new Bip47Meta(paymentCode.toString());
+        BIP47Channel BIP47Channel = new BIP47Channel(BIP47PaymentCode.toString());
 
         try {
-            bip47Meta.generateKeys(this);
-            bip47MetaData.put(paymentCode.toString(), bip47Meta);
+            BIP47Channel.generateKeys(this);
+            bip47MetaData.put(BIP47PaymentCode.toString(), BIP47Channel);
         } catch (Exception e) {
             e.printStackTrace();
             return false;
@@ -604,7 +599,7 @@ public class Wallet {
         return true;
     }
 
-    public Account getAccount(int i) {
+    public BIP47Account getAccount(int i) {
         return mAccounts.get(i);
     }
 
@@ -622,8 +617,8 @@ public class Wallet {
 
     /** Return true if this is the first time the address is seen used*/
     public boolean generateNewBip47IncomingAddress(String address) {
-        for (Bip47Meta bip47Meta : bip47MetaData.values()) {
-            for (Bip47Address bip47Address : bip47Meta.getIncomingAddresses()) {
+        for (BIP47Channel BIP47Channel : bip47MetaData.values()) {
+            for (BIP47Address bip47Address : BIP47Channel.getIncomingAddresses()) {
                 if (!bip47Address.getAddress().equals(address)) {
                     continue;
                 }
@@ -631,12 +626,12 @@ public class Wallet {
                     return false;
                 }
 
-                int nextIndex = bip47Meta.getCurrentIncomingIndex() + 1;
+                int nextIndex = BIP47Channel.getCurrentIncomingIndex() + 1;
                 try {
-                    ECKey key = BIP47Util.getReceiveAddress(this, bip47Meta.getPaymentCode(), nextIndex).getReceiveECKey();
+                    ECKey key = BIP47Util.getReceiveAddress(this, BIP47Channel.getPaymentCode(), nextIndex).getReceiveECKey();
                     vWallet.importKey(key);
                     Address newAddress = getAddressOfKey(key);
-                    bip47Meta.addNewIncomingAddress(newAddress.toString(), nextIndex);
+                    BIP47Channel.addNewIncomingAddress(newAddress.toString(), nextIndex);
                     bip47Address.setSeen(true);
                     return true;
                 } catch (Exception e) {
@@ -648,11 +643,11 @@ public class Wallet {
         return false;
     }
 
-    public Bip47Meta getBip47MetaForAddress(String address) {
-        for (Bip47Meta bip47Meta : bip47MetaData.values()) {
-            for (Bip47Address bip47Address : bip47Meta.getIncomingAddresses()) {
+    public BIP47Channel getBip47MetaForAddress(String address) {
+        for (BIP47Channel BIP47Channel : bip47MetaData.values()) {
+            for (BIP47Address bip47Address : BIP47Channel.getIncomingAddresses()) {
                 if (bip47Address.getAddress().equals(address)) {
-                    return bip47Meta;
+                    return BIP47Channel;
                 }
             }
         }
@@ -660,31 +655,31 @@ public class Wallet {
     }
 
     public String getPaymentCodeForAddress(String address) {
-        for (Bip47Meta bip47Meta : bip47MetaData.values()) {
-            for (Bip47Address bip47Address : bip47Meta.getIncomingAddresses()) {
+        for (BIP47Channel BIP47Channel : bip47MetaData.values()) {
+            for (BIP47Address bip47Address : BIP47Channel.getIncomingAddresses()) {
                 if (bip47Address.getAddress().equals(address)) {
-                    return bip47Meta.getPaymentCode();
+                    return BIP47Channel.getPaymentCode();
                 }
             }
         }
         return null;
     }
 
-    public Bip47Meta getBip47MetaForOutgoingAddress(String address) {
-        for (Bip47Meta bip47Meta : bip47MetaData.values()) {
-            for (String outgoingAddress : bip47Meta.getOutgoingAddresses()) {
+    public BIP47Channel getBip47MetaForOutgoingAddress(String address) {
+        for (BIP47Channel BIP47Channel : bip47MetaData.values()) {
+            for (String outgoingAddress : BIP47Channel.getOutgoingAddresses()) {
                 if (outgoingAddress.equals(address)) {
-                    return bip47Meta;
+                    return BIP47Channel;
                 }
             }
         }
         return null;
     }
 
-    public Bip47Meta getBip47MetaForPaymentCode(String paymentCode) {
-        for (Bip47Meta bip47Meta : bip47MetaData.values()) {
-            if (bip47Meta.getPaymentCode().equals(paymentCode)) {
-                return bip47Meta;
+    public BIP47Channel getBip47MetaForPaymentCode(String paymentCode) {
+        for (BIP47Channel BIP47Channel : bip47MetaData.values()) {
+            if (BIP47Channel.getPaymentCode().equals(paymentCode)) {
+                return BIP47Channel;
             }
         }
         return null;
@@ -768,7 +763,7 @@ public class Wallet {
             return false;
 
         try {
-            PaymentCode paymentCode = new PaymentCode(address);
+            BIP47PaymentCode BIP47PaymentCode = new BIP47PaymentCode(address);
             return true;
         } catch (AddressFormatException e){
         }
@@ -821,7 +816,7 @@ public class Wallet {
     }
 
     public SendRequest makeNotificationTransaction(String paymentCode) throws InsufficientMoneyException {
-        Account toAccount = new Account(getNetworkParameters(), paymentCode);
+        BIP47Account toAccount = new BIP47Account(getNetworkParameters(), paymentCode);
         Coin ntValue =  getNetworkParameters().getMinNonDustOutput();
         Address ntAddress = toAccount.getNotificationAddress();
 
@@ -836,7 +831,7 @@ public class Wallet {
 
         sendRequest.memo = "notification_transaction";
 
-        FeeCalculation feeCalculation = WalletUtil.calculateFee(vWallet, sendRequest, ntValue, vWallet.calculateAllSpendCandidates());
+        FeeCalculation feeCalculation = BIP47WalletUtil.calculateFee(vWallet, sendRequest, ntValue, vWallet.calculateAllSpendCandidates());
 
         for (TransactionOutput output :feeCalculation.bestCoinSelection.gathered) {
             sendRequest.tx.addInput(output);
@@ -856,16 +851,16 @@ public class Wallet {
 
             byte[] mask = null;
             try {
-                SecretPoint secretPoint = new SecretPoint(privKey, pubKey);
-                log.debug("Secret Point: "+Utils.HEX.encode(secretPoint.ECDHSecretAsBytes()));
+                BIP47SecretPoint BIP47SecretPoint = new BIP47SecretPoint(privKey, pubKey);
+                log.debug("Secret Point: "+Utils.HEX.encode(BIP47SecretPoint.ECDHSecretAsBytes()));
                 log.debug("Outpoint: "+Utils.HEX.encode(outpoint));
-                mask = PaymentCode.getMask(secretPoint.ECDHSecretAsBytes(), outpoint);
+                mask = BIP47PaymentCode.getMask(BIP47SecretPoint.ECDHSecretAsBytes(), outpoint);
             } catch (InvalidKeyException | NoSuchAlgorithmException | InvalidKeySpecException | NoSuchProviderException e) {
                 e.printStackTrace();
             }
             log.debug("My payment code: "+mAccounts.get(0).getPaymentCode().toString());
             log.debug("Mask: "+Utils.HEX.encode(mask));
-            byte[] op_return = PaymentCode.blind(mAccounts.get(0).getPaymentCode().getPayload(), mask);
+            byte[] op_return = BIP47PaymentCode.blind(mAccounts.get(0).getPaymentCode().getPayload(), mask);
 
             sendRequest.tx.addOutput(Coin.ZERO, ScriptBuilder.createOpReturnScript(op_return));
         }
@@ -882,10 +877,10 @@ public class Wallet {
     }
 
     public Transaction getSignedNotificationTransaction(SendRequest sendRequest, String paymentCode) {
-        //Account toAccount = new Account(getNetworkParameters(), paymentCode);
+        //BIP47Account toAccount = new BIP47Account(getNetworkParameters(), paymentCode);
 
         // notification address pub key
-        //WalletUtil.signTransaction(vWallet, sendRequest, toAccount.getNotificationKey().getPubKey(), mAccounts.get(0).getPaymentCode());
+        //BIP47WalletUtil.signTransaction(vWallet, sendRequest, toAccount.getNotificationKey().getPubKey(), mAccounts.get(0).getPaymentCode());
 
         vWallet.commitTx(sendRequest.tx);
 
@@ -899,15 +894,15 @@ public class Wallet {
 
     public boolean putBip47Meta(String profileId, String name, @Nullable Transaction ntx) {
         if (bip47MetaData.containsKey(profileId)) {
-            Bip47Meta bip47Meta = bip47MetaData.get(profileId);
+            BIP47Channel BIP47Channel = bip47MetaData.get(profileId);
             if (ntx != null)
-                bip47Meta.setNtxHash(ntx.getHash());
-            if (!name.equals(bip47Meta.getLabel())) {
-                bip47Meta.setLabel(name);
+                BIP47Channel.setNtxHash(ntx.getHash());
+            if (!name.equals(BIP47Channel.getLabel())) {
+                BIP47Channel.setLabel(name);
                 return true;
             }
         } else {
-            bip47MetaData.put(profileId, new Bip47Meta(profileId, name));
+            bip47MetaData.put(profileId, new BIP47Channel(profileId, name));
             if (ntx != null)
                 bip47MetaData.get(profileId).setNtxHash(ntx.getHash());
             return true;
@@ -918,9 +913,9 @@ public class Wallet {
     /* Mark a channel's notification transaction as sent*/
     public void putPaymenCodeStatusSent(String paymentCode, Transaction ntx) {
         if (bip47MetaData.containsKey(paymentCode)) {
-            Bip47Meta bip47Meta = bip47MetaData.get(paymentCode);
-            bip47Meta.setNtxHash(ntx.getHash());
-            bip47Meta.setStatusSent();
+            BIP47Channel BIP47Channel = bip47MetaData.get(paymentCode);
+            BIP47Channel.setNtxHash(ntx.getHash());
+            BIP47Channel.setStatusSent();
         } else {
             putBip47Meta(paymentCode, paymentCode, ntx);
             putPaymenCodeStatusSent(paymentCode, ntx);
@@ -928,9 +923,9 @@ public class Wallet {
     }
 
     /* Return the next address to send a payment to */
-    public String getCurrentOutgoingAddress(Bip47Meta bip47Meta) {
+    public String getCurrentOutgoingAddress(BIP47Channel BIP47Channel) {
         try {
-            ECKey key = BIP47Util.getSendAddress(this, new PaymentCode(bip47Meta.getPaymentCode()), bip47Meta.getCurrentOutgoingIndex()).getSendECKey();
+            ECKey key = BIP47Util.getSendAddress(this, new BIP47PaymentCode(BIP47Channel.getPaymentCode()), BIP47Channel.getCurrentOutgoingIndex()).getSendECKey();
             return key.toAddress(getNetworkParameters()).toString();
         } catch (InvalidKeyException | InvalidKeySpecException | NotSecp256k1Exception | NoSuchProviderException | NoSuchAlgorithmException e) {
             e.printStackTrace();
@@ -998,9 +993,9 @@ public class Wallet {
 
         try {
             // if we sent out a notification tx, find out who the receiver is and delete the channel
-            PaymentCode ourPaymentCode = getPaymentCodeInNotificationTransaction(removedTx);
-            if (ourPaymentCode != null) {
-                for (Map.Entry<String, Bip47Meta> channel : bip47MetaData.entrySet()) {
+            BIP47PaymentCode ourBIP47PaymentCode = getPaymentCodeInNotificationTransaction(removedTx);
+            if (ourBIP47PaymentCode != null) {
+                for (Map.Entry<String, BIP47Channel> channel : bip47MetaData.entrySet()) {
 
                     if (channel.getValue() == null)
                         continue;

@@ -5,9 +5,6 @@
 
 package org.bitcoinj.wallet.bip47;
 
-import org.bitcoinj.wallet.bip47.PaymentCode;
-import org.bitcoinj.wallet.bip47.SecretPoint;
-
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
@@ -18,6 +15,8 @@ import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.VarInt;
+import org.bitcoinj.core.bip47.BIP47PaymentCode;
+import org.bitcoinj.crypto.BIP47SecretPoint;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.signers.MissingSigResolutionSigner;
@@ -45,11 +44,11 @@ import static com.google.common.base.Preconditions.checkState;
  * Created by jimmy on 10/3/17.
  */
 
-public class WalletUtil {
-    private static final String TAG = "WalletUtil";
-    private static final Logger log = LoggerFactory.getLogger(WalletUtil.class);
+public class BIP47WalletUtil {
+    private static final String TAG = "BIP47WalletUtil";
+    private static final Logger log = LoggerFactory.getLogger(BIP47WalletUtil.class);
 
-    static Wallet.FeeCalculation calculateFee(org.bitcoinj.wallet.Wallet vWallet, SendRequest req, Coin value, List<TransactionOutput> candidates) throws InsufficientMoneyException {
+    static BIP47Wallet.FeeCalculation calculateFee(org.bitcoinj.wallet.Wallet vWallet, SendRequest req, Coin value, List<TransactionOutput> candidates) throws InsufficientMoneyException {
         CoinSelector selector = vWallet.getCoinSelector();
         // There are 3 possibilities for what adding change might do:
         // 1) No effect
@@ -197,7 +196,7 @@ public class WalletUtil {
         }
 
         Coin lowestFee = null;
-        Wallet.FeeCalculation result = new Wallet.FeeCalculation();
+        BIP47Wallet.FeeCalculation result = new BIP47Wallet.FeeCalculation();
         if (selection1 != null) {
             if (selection1Change != null)
                 lowestFee = selection1.valueGathered.subtract(selection1Change.getValue());
@@ -231,7 +230,7 @@ public class WalletUtil {
      * <p>Actual signing is done by pluggable signers and it's not guaranteed that
      * transaction will be complete in the end.</p>
      */
-    static void signTransaction(org.bitcoinj.wallet.Wallet vWallet, SendRequest req, byte[] pubKey, PaymentCode myPaymentCode) {
+    static void signTransaction(org.bitcoinj.wallet.Wallet vWallet, SendRequest req, byte[] pubKey, BIP47PaymentCode myBIP47PaymentCode) {
         Transaction tx = req.tx;
         List<TransactionInput> inputs = tx.getInputs();
         List<TransactionOutput> outputs = tx.getOutputs();
@@ -278,10 +277,10 @@ public class WalletUtil {
 
                 byte[] mask = null;
                 try {
-                    SecretPoint secretPoint = new SecretPoint(privKey, pubKey);
-                    log.debug("Secret Point: "+Utils.HEX.encode(secretPoint.ECDHSecretAsBytes()));
+                    BIP47SecretPoint BIP47SecretPoint = new BIP47SecretPoint(privKey, pubKey);
+                    log.debug("Secret Point: "+Utils.HEX.encode(BIP47SecretPoint.ECDHSecretAsBytes()));
                     log.debug("Outpoint: "+Utils.HEX.encode(outpoint));
-                    mask = PaymentCode.getMask(secretPoint.ECDHSecretAsBytes(), outpoint);
+                    mask = BIP47PaymentCode.getMask(BIP47SecretPoint.ECDHSecretAsBytes(), outpoint);
                 } catch (InvalidKeyException e) {
                     e.printStackTrace();
                 } catch (NoSuchAlgorithmException e) {
@@ -291,9 +290,9 @@ public class WalletUtil {
                 } catch (InvalidKeySpecException e) {
                     e.printStackTrace();
                 }
-                log.debug("My payment code: "+myPaymentCode.toString());
+                log.debug("My payment code: "+ myBIP47PaymentCode.toString());
                 log.debug("Mask: "+Utils.HEX.encode(mask));
-                byte[] op_return = PaymentCode.blind(myPaymentCode.getPayload(), mask);
+                byte[] op_return = BIP47PaymentCode.blind(myBIP47PaymentCode.getPayload(), mask);
 
                 tx.addOutput(Coin.ZERO, ScriptBuilder.createOpReturnScript(op_return));
             }

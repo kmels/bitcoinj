@@ -3,13 +3,14 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-package org.bitcoinj.wallet.bip47;
+package org.bitcoinj.core.bip47;
 
 import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.wallet.bip47.Wallet;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.ECKey;
+import org.bitcoinj.wallet.bip47.BIP47Wallet;
+import org.bitcoinj.wallet.bip47.NotSecp256k1Exception;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,8 +21,8 @@ import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Bip47Meta {
-    private static final String TAG = "Bip47Meta";
+public class BIP47Channel {
+    private static final String TAG = "BIP47Channel";
 
     private static final int STATUS_NOT_SENT = -1;
     private static final int STATUS_SENT_CFM = 1;
@@ -30,21 +31,21 @@ public class Bip47Meta {
 
     private String paymentCode;
     private String label = "";
-    private List<Bip47Address> incomingAddresses = new ArrayList<>();
+    private List<BIP47Address> incomingAddresses = new ArrayList<>();
     private List<String> outgoingAddresses = new ArrayList<>();
     private int status = STATUS_NOT_SENT;
     private int currentOutgoingIndex = 0;
     private int currentIncomingIndex = -1;
     private Sha256Hash ntxHash;
 
-    private static final Logger log = LoggerFactory.getLogger(Bip47Meta.class);
-    public Bip47Meta() {}
+    private static final Logger log = LoggerFactory.getLogger(BIP47Channel.class);
+    public BIP47Channel() {}
 
-    public Bip47Meta(String paymentCode) {
+    public BIP47Channel(String paymentCode) {
         this.paymentCode = paymentCode;
     }
 
-    public Bip47Meta(String paymentCode, String label) {
+    public BIP47Channel(String paymentCode, String label) {
         this(paymentCode);
         this.label = label;
     }
@@ -57,7 +58,7 @@ public class Bip47Meta {
         paymentCode = pc;
     }
 
-    public List<Bip47Address> getIncomingAddresses() {
+    public List<BIP47Address> getIncomingAddresses() {
         return incomingAddresses;
     }
 
@@ -65,7 +66,7 @@ public class Bip47Meta {
         return currentIncomingIndex;
     }
 
-    public void generateKeys(Wallet wallet) throws NotSecp256k1Exception, NoSuchProviderException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    public void generateKeys(BIP47Wallet wallet) throws NotSecp256k1Exception, NoSuchProviderException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
         for (int i = 0; i < LOOKAHEAD; i++) {
             ECKey key = BIP47Util.getReceiveAddress(wallet, paymentCode, i).getReceiveECKey();
             Address address = wallet.getAddressOfKey(key);
@@ -73,14 +74,14 @@ public class Bip47Meta {
             log.debug("New address generated");
             log.debug(address.toString());
             wallet.importKey(key);
-            incomingAddresses.add(i, new Bip47Address(address.toString(), i));
+            incomingAddresses.add(i, new BIP47Address(address.toString(), i));
         }
 
         currentIncomingIndex = LOOKAHEAD - 1;
     }
 
-    public Bip47Address getIncomingAddress(String address) {
-        for (Bip47Address bip47Address: incomingAddresses) {
+    public BIP47Address getIncomingAddress(String address) {
+        for (BIP47Address bip47Address: incomingAddresses) {
             if (bip47Address.getAddress().equals(address)) {
                 return bip47Address;
             }
@@ -89,7 +90,7 @@ public class Bip47Meta {
     }
 
     public void addNewIncomingAddress(String newAddress, int nextIndex) {
-        incomingAddresses.add(nextIndex, new Bip47Address(newAddress, nextIndex));
+        incomingAddresses.add(nextIndex, new BIP47Address(newAddress, nextIndex));
         currentIncomingIndex = nextIndex;
     }
 
