@@ -3,9 +3,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-package org.bitcoinj.wallet.bip47;
-
-import org.bitcoinj.wallet.bip47.Wallet;
+package org.bitcoinj.core.bip47;
 
 import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.ECKey;
@@ -13,20 +11,14 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.Utils;
+import org.bitcoinj.crypto.BIP47SecretPoint;
 import org.bitcoinj.script.ScriptChunk;
+import org.bitcoinj.wallet.bip47.BIP47Wallet;
+import org.bitcoinj.wallet.bip47.NotSecp256k1Exception;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
@@ -74,7 +66,7 @@ public class BIP47Util {
     }
 
     /* Extract the payment code from an incoming notification transaction */
-    public static PaymentCode getPaymentCodeInNotificationTransaction(byte[] privKeyBytes, Transaction tx) {
+    public static BIP47PaymentCode getPaymentCodeInNotificationTransaction(byte[] privKeyBytes, Transaction tx) {
         log.debug( "Getting pub key");
         byte[] pubKeyBytes = tx.getInput(0).getScriptSig().getPubKey();
 
@@ -90,19 +82,19 @@ public class BIP47Util {
 
         try {
             log.debug( "Getting secret point..");
-            SecretPoint secretPoint = new SecretPoint(privKeyBytes, pubKeyBytes);
-            log.debug( "Secret Point: "+ HEX.encode(secretPoint.ECDHSecretAsBytes()));
+            BIP47SecretPoint BIP47SecretPoint = new BIP47SecretPoint(privKeyBytes, pubKeyBytes);
+            log.debug( "Secret Point: "+ HEX.encode(BIP47SecretPoint.ECDHSecretAsBytes()));
             log.debug( "Outpoint: "+ HEX.encode(tx.getInput(0).getOutpoint().bitcoinSerialize()));
             log.debug( "Getting mask...");
-            byte[] s = PaymentCode.getMask(secretPoint.ECDHSecretAsBytes(), tx.getInput(0).getOutpoint().bitcoinSerialize());
+            byte[] s = BIP47PaymentCode.getMask(BIP47SecretPoint.ECDHSecretAsBytes(), tx.getInput(0).getOutpoint().bitcoinSerialize());
             log.debug( "Getting payload...");
             log.debug( "OpCode Data: "+Utils.HEX.encode(data));
             log.debug( "Mask: "+Utils.HEX.encode(s));
-            byte[] payload = PaymentCode.blind(data, s);
+            byte[] payload = BIP47PaymentCode.blind(data, s);
             log.debug( "Getting payment code...");
-            PaymentCode paymentCode = new PaymentCode(payload);
-            log.debug( "Payment Code: "+paymentCode.toString());
-            return paymentCode;
+            BIP47PaymentCode BIP47PaymentCode = new BIP47PaymentCode(payload);
+            log.debug( "Payment Code: "+ BIP47PaymentCode.toString());
+            return BIP47PaymentCode;
 
         } catch (InvalidKeySpecException | InvalidKeyException | NoSuchProviderException | NoSuchAlgorithmException | NoSuchFieldError e) {
             e.printStackTrace();
@@ -111,19 +103,19 @@ public class BIP47Util {
     }
 
     /** Derives the receive address at idx in depositWallet for senderPaymentCode to deposit, in the wallet's bip47 0th account, i.e. <pre>m / 47' / coin_type' / 0' / idx' .</pre>. */
-    public static PaymentAddress getReceiveAddress(Wallet depositWallet, String senderPaymentCode, int idx) throws AddressFormatException, NotSecp256k1Exception {
+    public static BIP47PaymentAddress getReceiveAddress(BIP47Wallet depositWallet, String senderPaymentCode, int idx) throws AddressFormatException, NotSecp256k1Exception {
         ECKey accountKey = depositWallet.getAccount(0).keyAt(idx);
-        return getPaymentAddress(depositWallet.getNetworkParameters(), new PaymentCode(senderPaymentCode), 0, accountKey);
+        return getPaymentAddress(depositWallet.getNetworkParameters(), new BIP47PaymentCode(senderPaymentCode), 0, accountKey);
     }
 
-    /** Get the address of receiverPaymentCode's owner to send a payment to, using BTC as coin_type */
-    public static PaymentAddress getSendAddress(Wallet spendWallet, PaymentCode receiverPaymentCode, int idx) throws AddressFormatException, NotSecp256k1Exception {
+    /** Get the address of receiverBIP47PaymentCode's owner to send a payment to, using BTC as coin_type */
+    public static BIP47PaymentAddress getSendAddress(BIP47Wallet spendWallet, BIP47PaymentCode receiverBIP47PaymentCode, int idx) throws AddressFormatException, NotSecp256k1Exception {
         ECKey key = spendWallet.getAccount(0).keyAt(0);
-        return getPaymentAddress(spendWallet.getNetworkParameters(), receiverPaymentCode, idx, key);
+        return getPaymentAddress(spendWallet.getNetworkParameters(), receiverBIP47PaymentCode, idx, key);
     }
 
-    /** Creates a PaymentAddress object that the sender will use to pay, using the hardened key at idx */
-    private static PaymentAddress getPaymentAddress(NetworkParameters networkParameters, PaymentCode pcode, int idx, ECKey key) throws AddressFormatException, NotSecp256k1Exception {
-        return new PaymentAddress(networkParameters, pcode, idx, key.getPrivKeyBytes());
+    /** Creates a BIP47PaymentAddress object that the sender will use to pay, using the hardened key at idx */
+    private static BIP47PaymentAddress getPaymentAddress(NetworkParameters networkParameters, BIP47PaymentCode pcode, int idx, ECKey key) throws AddressFormatException, NotSecp256k1Exception {
+        return new BIP47PaymentAddress(networkParameters, pcode, idx, key.getPrivKeyBytes());
     }
 }

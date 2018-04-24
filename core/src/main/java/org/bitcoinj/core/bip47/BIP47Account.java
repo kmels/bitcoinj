@@ -2,9 +2,7 @@
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
-package org.bitcoinj.crypto.bip47;
-
-import org.bitcoinj.wallet.bip47.PaymentCode;
+package org.bitcoinj.core.bip47;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.ECKey;
@@ -13,7 +11,7 @@ import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.HDKeyDerivation;
 
-import static org.bitcoinj.wallet.bip47.PaymentCode.createMasterPubKeyFromPaymentCode;
+import static org.bitcoinj.core.bip47.BIP47PaymentCode.createMasterPubKeyFromPaymentCode;
 
 /**
  * Created by jimmy on 8/4/17.
@@ -33,21 +31,21 @@ import static org.bitcoinj.wallet.bip47.PaymentCode.createMasterPubKeyFromPaymen
  * <li>The payment keys are derived at: <pre>m / 47' / coin_type' / account_id' / idx' </pre> (hardened). </li>
  * </ul>
  */
-public class Account {
+public class BIP47Account {
     private NetworkParameters mNetworkParameters;
     private DeterministicKey mKey;
     private int mIndex;
-    private PaymentCode mPaymentCode;
+    private BIP47PaymentCode mBIP47PaymentCode;
     private String mXPub;
 
     /**
      * Constructor expecting a coin_type' derivation path key and the identity number.
      */
-    public Account(NetworkParameters parameters, DeterministicKey deterministicKey, int index) {
+    public BIP47Account(NetworkParameters parameters, DeterministicKey deterministicKey, int index) {
         mNetworkParameters = parameters;
         mIndex = index;
         mKey = HDKeyDerivation.deriveChildKey(deterministicKey, mIndex | ChildNumber.HARDENED_BIT);
-        mPaymentCode = new PaymentCode(mKey.getPubKey(), mKey.getChainCode());
+        mBIP47PaymentCode = new BIP47PaymentCode(mKey.getPubKey(), mKey.getChainCode());
         mXPub = mKey.serializePubB58(parameters);
     }
 
@@ -55,17 +53,17 @@ public class Account {
      * Constructor expecting a Base58Check encoded payment code.
      * @throws AddressFormatException if the payment code is invalid
      */
-    public Account(NetworkParameters parameters, String strPaymentCode) {
+    public BIP47Account(NetworkParameters parameters, String strPaymentCode) {
         mNetworkParameters = parameters;
         mIndex = 0;
         mKey = createMasterPubKeyFromPaymentCode(strPaymentCode);
-        mPaymentCode = new PaymentCode(strPaymentCode);
+        mBIP47PaymentCode = new BIP47PaymentCode(strPaymentCode);
         mXPub = mKey.serializePubB58(parameters);
     }
 
     /** Return the Base58Check representation of the payment code*/
     public String getStringPaymentCode() {
-        return mPaymentCode.toString();
+        return mBIP47PaymentCode.toString();
     }
 
     public String getXPub() {
@@ -83,12 +81,8 @@ public class Account {
     }
 
     /** Return the payment code as is */
-    public PaymentCode getPaymentCode() {
-        return mPaymentCode;
-    }
-
-    public org.bitcoinj.crypto.bip47.Address addressAt(int idx) {
-        return new org.bitcoinj.crypto.bip47.Address(mNetworkParameters, mKey, idx);
+    public BIP47PaymentCode getPaymentCode() {
+        return mBIP47PaymentCode;
     }
 
     /** Returns the nth key.
