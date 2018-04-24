@@ -57,7 +57,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * Created by jimmy on 9/28/17.
  */
 /**
- * <p>A {@link Bip47Wallet} that runs in SPV mode and supports BIP 47 payments for coins BTC, BCH, tBTC and tBCH. You will
+ * <p>Runs a spv wallet and supports BIP 47 payments for coins. You will
  * need to instantiate one wallet per supported coin.</p>
  *
  * <p>It produces two files in a designated directory. The directory name is the coin name. and is created in workingDirectory: </p>
@@ -66,12 +66,12 @@ import static com.google.common.base.Preconditions.checkNotNull;
  *     <il>The .wallet: stores the wallet with txs, can be encrypted, storing keys</il>
  * </ul>
  *
- * <p>By calling {@link Bip47Wallet.start()}, this wallet will automatically import payment addresses when a Bip 47
+ * <p>By using this kit, your wallet will import keys for bip 47 payment addresses, when a BIP 47
  * notification transaction is received.</p>
  *
  */
-public class BIP47Wallet {
-    private static final String TAG = "BIP47Wallet";
+public class BIP47AppKit {
+    private static final String TAG = "BIP47AppKit";
 
     // the blockchain that this wallet supports. Can be: BTC, tBTC, BCH, tBCH
     protected final Blockchain blockchain;
@@ -110,13 +110,13 @@ public class BIP47Wallet {
     // It doesn't check if the notification transactions are mined before adding a payment code.
     // If you want to know a transaction's confidence, see #{@link Transaction.getConfidence()}
     private ConcurrentHashMap<String, BIP47Channel> bip47MetaData = new ConcurrentHashMap<>();
-    private static final Logger log = LoggerFactory.getLogger(BIP47Wallet.class);
+    private static final Logger log = LoggerFactory.getLogger(BIP47AppKit.class);
 
     /**
      * <p>Creates a new wallet for a blockchain network, the .spvchain and .wallet files in workingDir/coinName.</p>
      * Any keys will be derived from deterministicSeed.
      */
-    public BIP47Wallet(Blockchain blockchain, File walletDirectory, @Nullable DeterministicSeed deterministicSeed) throws Exception {
+    public BIP47AppKit(Blockchain blockchain, File walletDirectory, @Nullable DeterministicSeed deterministicSeed) throws Exception {
         this.blockchain = blockchain;
         this.directory = new File(walletDirectory, blockchain.getCoin());
         this.restoreFromSeed = deterministicSeed;
@@ -130,9 +130,9 @@ public class BIP47Wallet {
 
         File chainFile = new File(directory, blockchain.getCoin() + ".spvchain");
         boolean chainFileExists = chainFile.exists();
-        // point to the file with the (possibly existent) BIP47Wallet
+        // point to the file with the (possibly existent) BIP47AppKit
         vWalletFile = new File(directory, blockchain.getCoin() + ".wallet");
-        log.debug("BIP47Wallet: "+getCoin());
+        log.debug("BIP47AppKit: "+getCoin());
 
         // replay the wallet if deterministicSeed is defined or if it's chain file is deleted (as a trigger to replay it)
         boolean shouldReplayWallet = (vWalletFile.exists() && !chainFileExists) || restoreFromSeed != null;
@@ -142,7 +142,7 @@ public class BIP47Wallet {
         setAccount();
 
         Address notificationAddress = mAccounts.get(0).getNotificationAddress();
-        log.debug("BIP47Wallet notification address: "+notificationAddress.toString());
+        log.debug("BIP47AppKit notification address: "+notificationAddress.toString());
 
         if (!vWallet.isAddressWatched(notificationAddress)) {
             vWallet.addWatchedAddress(notificationAddress);
@@ -184,7 +184,7 @@ public class BIP47Wallet {
         // add the wallet so that syncing and rolling the chain can affect this wallet
         vChain.addWallet(vWallet);
         derivePeerGroup();
-        addBip47Listener();
+        addTransactionsListener();
     }
 
     // create peergroup for the blockchain
@@ -223,17 +223,17 @@ public class BIP47Wallet {
         vPeerGroup.addWallet(vWallet);
     }
 
-    // Bip47-specific listener
+    // BIP47-specific listener
     // When a new *notification* transaction is received:
     //  - new keys are generated and imported for incoming payments in the bip47 account/contact payment channel
     //  - the chain is rolled back 2 blocks so that payment transactions are not missed if in the same block as the notification transaction.
     //
     // When a new *payment* transaction is received:
     //  - a new key is generated and imported to the wallet
-    private void addBip47Listener(){
+    private void addTransactionsListener(){
         this.addOnReceiveTransactionListener(new TransactionEventListener() {
             @Override
-            public void onTransactionReceived(BIP47Wallet bip47Wallet, Transaction transaction) {
+            public void onTransactionReceived(BIP47AppKit bip47AppKit, Transaction transaction) {
 
                 if (isNotificationTransaction(transaction)) {
                     log.debug("Valid notification transaction received");
@@ -262,13 +262,13 @@ public class BIP47Wallet {
             }
 
             @Override
-            public void onTransactionConfidenceEvent(BIP47Wallet bip47Wallet, Transaction transaction) {
+            public void onTransactionConfidenceEvent(BIP47AppKit bip47AppKit, Transaction transaction) {
                 return;
             }
         });
     }
 
-    // if coinName/coinName.wallet exists, we load it as a core BIP47Wallet and then manually set each of the bip47 properties
+    // if coinName/coinName.wallet exists, we load it as a core BIP47AppKit and then manually set each of the bip47 properties
     private org.bitcoinj.wallet.Wallet createOrLoadWallet(boolean shouldReplayWallet) throws Exception {
         org.bitcoinj.wallet.Wallet wallet;
 
@@ -291,7 +291,7 @@ public class BIP47Wallet {
         return wallet;
     }
 
-    // Load an offline wallet from a file and return a @{link org.bitcoinj.wallet.BIP47Wallet}.
+    // Load an offline wallet from a file and return a @{link org.bitcoinj.wallet.BIP47AppKit}.
     // If shouldReplayWallet is false, the wallet last block is reset to -1
     private org.bitcoinj.wallet.Wallet loadWallet(boolean shouldReplayWallet) throws Exception {
         try (FileInputStream walletStream = new FileInputStream(vWalletFile)) {

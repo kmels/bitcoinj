@@ -48,7 +48,7 @@ public class BIP47WalletUtil {
     private static final String TAG = "BIP47WalletUtil";
     private static final Logger log = LoggerFactory.getLogger(BIP47WalletUtil.class);
 
-    static BIP47Wallet.FeeCalculation calculateFee(org.bitcoinj.wallet.Wallet vWallet, SendRequest req, Coin value, List<TransactionOutput> candidates) throws InsufficientMoneyException {
+    static BIP47AppKit.FeeCalculation calculateFee(org.bitcoinj.wallet.Wallet vWallet, SendRequest req, Coin value, List<TransactionOutput> candidates) throws InsufficientMoneyException {
         CoinSelector selector = vWallet.getCoinSelector();
         // There are 3 possibilities for what adding change might do:
         // 1) No effect
@@ -196,7 +196,7 @@ public class BIP47WalletUtil {
         }
 
         Coin lowestFee = null;
-        BIP47Wallet.FeeCalculation result = new BIP47Wallet.FeeCalculation();
+        BIP47AppKit.FeeCalculation result = new BIP47AppKit.FeeCalculation();
         if (selection1 != null) {
             if (selection1Change != null)
                 lowestFee = selection1.valueGathered.subtract(selection1Change.getValue());
