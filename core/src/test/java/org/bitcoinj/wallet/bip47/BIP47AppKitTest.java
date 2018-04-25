@@ -4,6 +4,7 @@ import org.bitcoinj.core.*;
 import org.bitcoinj.core.bip47.BIP47Channel;
 import org.bitcoinj.core.bip47.BIP47Util;
 import org.bitcoinj.crypto.MnemonicCode;
+import org.bitcoinj.kits.BIP47AppKit;
 import org.bitcoinj.params.BCCMainNetParams;
 import org.bitcoinj.params.BCCTestNet3Params;
 import org.bitcoinj.params.MainNetParams;
@@ -15,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.security.SecureRandom;
 import java.security.Security;
 import java.util.List;
 
@@ -367,5 +369,29 @@ public class BIP47AppKitTest extends TestWithBIP47AppKit {
         BIP47AppKit CharlyReload = createWallet(b, charlyDir, null); //should not fail
         assertEquals(Coin.MILLICOIN, Charly.getBalance());
         assertEquals(1, CharlyReload.getTransactions().size());
+    }
+
+    /* Test that a wallet restored from seed is persistent */
+    @Test
+    public void testMnemonicWordsPersistence() throws Exception{
+        // create a fresh new wallet
+        String davesPath = "src/test/resources/org/bitcoinj/wallet/dave-bip47";
+        File davesDir = new File(davesPath);
+        deleteFolder(davesPath);
+        DeterministicSeed davesSeed = new DeterministicSeed(new SecureRandom(), 256, "", System.currentTimeMillis() / 1000);
+        assertFalse(davesDir.exists()); //delete previous wallets created by this test
+        Blockchain b = new Blockchain(0, MainNetParams.get(), SUPPORTED_COINS[1], "Bitcoin Core");
+        //create Dave's wallet and save it
+        BIP47AppKit Dave = new BIP47AppKit(b, davesDir, davesSeed);
+        String davesMnemonic = Dave.getMnemonicCode();
+        String davesPaymentCode = Dave.getPaymentCode();
+        assertTrue(davesDir.exists());
+        Dave.stop();
+        Dave.closeBlockStore();
+        // the same directory/coin will have the same seed as saved before.
+        BIP47AppKit DaveReload = new BIP47AppKit(b, davesDir, null);
+        assertEquals(DaveReload.getMnemonicCode(), davesMnemonic);
+        assertEquals(DaveReload.getPaymentCode(), davesPaymentCode);
+        deleteFolder(davesPath);
     }
 }

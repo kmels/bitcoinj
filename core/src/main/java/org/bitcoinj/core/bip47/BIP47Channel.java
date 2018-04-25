@@ -9,7 +9,7 @@ import org.bitcoinj.core.Sha256Hash;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.ECKey;
-import org.bitcoinj.wallet.bip47.BIP47AppKit;
+import org.bitcoinj.kits.BIP47AppKit;
 import org.bitcoinj.wallet.bip47.NotSecp256k1Exception;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

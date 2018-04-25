@@ -13,7 +13,7 @@ import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.BIP47SecretPoint;
 import org.bitcoinj.script.ScriptChunk;
-import org.bitcoinj.wallet.bip47.BIP47AppKit;
+import org.bitcoinj.kits.BIP47AppKit;
 import org.bitcoinj.wallet.bip47.NotSecp256k1Exception;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -3,7 +3,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-package org.bitcoinj.wallet.bip47;
+package org.bitcoinj.kits;
 
 
 import com.google.common.base.Joiner;
@@ -17,6 +17,9 @@ import org.bitcoinj.core.*;
 import org.bitcoinj.core.bip47.*;
 import org.bitcoinj.crypto.BIP47SecretPoint;
 import org.bitcoinj.wallet.*;
+import org.bitcoinj.utils.BIP47Util;
+import org.bitcoinj.wallet.bip47.Blockchain;
+import org.bitcoinj.wallet.bip47.NotSecp256k1Exception;
 import org.bitcoinj.wallet.bip47.listeners.BlockchainDownloadProgressTracker;
 import org.bitcoinj.wallet.bip47.listeners.TransactionEventListener;
 
@@ -56,6 +59,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * Created by jimmy on 9/28/17.
  */
+
 /**
  * <p>Runs a spv wallet and supports BIP 47 payments for coins. You will
  * need to instantiate one wallet per supported coin.</p>
@@ -566,7 +570,7 @@ public class BIP47AppKit {
     public BIP47PaymentCode getPaymentCodeInNotificationTransaction(Transaction tx) {
         byte[] privKeyBytes = mAccounts.get(0).getNotificationKey().getPrivKeyBytes();
 
-        return BIP47Util.getPaymentCodeInNotificationTransaction(privKeyBytes, tx);
+        return org.bitcoinj.core.bip47.BIP47Util.getPaymentCodeInNotificationTransaction(privKeyBytes, tx);
     }
 
     // <p> Receives a payment code and returns true iff there is already an incoming address generated for the channel</p>
@@ -628,7 +632,7 @@ public class BIP47AppKit {
 
                 int nextIndex = BIP47Channel.getCurrentIncomingIndex() + 1;
                 try {
-                    ECKey key = BIP47Util.getReceiveAddress(this, BIP47Channel.getPaymentCode(), nextIndex).getReceiveECKey();
+                    ECKey key = org.bitcoinj.core.bip47.BIP47Util.getReceiveAddress(this, BIP47Channel.getPaymentCode(), nextIndex).getReceiveECKey();
                     vWallet.importKey(key);
                     Address newAddress = getAddressOfKey(key);
                     BIP47Channel.addNewIncomingAddress(newAddress.toString(), nextIndex);
@@ -831,7 +835,7 @@ public class BIP47AppKit {
 
         sendRequest.memo = "notification_transaction";
 
-        FeeCalculation feeCalculation = BIP47WalletUtil.calculateFee(vWallet, sendRequest, ntValue, vWallet.calculateAllSpendCandidates());
+        org.bitcoinj.utils.BIP47Util.FeeCalculation feeCalculation = BIP47Util.calculateFee(vWallet, sendRequest, ntValue, vWallet.calculateAllSpendCandidates());
 
         for (TransactionOutput output :feeCalculation.bestCoinSelection.gathered) {
             sendRequest.tx.addInput(output);
@@ -880,7 +884,7 @@ public class BIP47AppKit {
         //BIP47Account toAccount = new BIP47Account(getNetworkParameters(), paymentCode);
 
         // notification address pub key
-        //BIP47WalletUtil.signTransaction(vWallet, sendRequest, toAccount.getNotificationKey().getPubKey(), mAccounts.get(0).getPaymentCode());
+        //BIP47Util.signTransaction(vWallet, sendRequest, toAccount.getNotificationKey().getPubKey(), mAccounts.get(0).getPaymentCode());
 
         vWallet.commitTx(sendRequest.tx);
 
@@ -925,7 +929,7 @@ public class BIP47AppKit {
     /* Return the next address to send a payment to */
     public String getCurrentOutgoingAddress(BIP47Channel BIP47Channel) {
         try {
-            ECKey key = BIP47Util.getSendAddress(this, new BIP47PaymentCode(BIP47Channel.getPaymentCode()), BIP47Channel.getCurrentOutgoingIndex()).getSendECKey();
+            ECKey key = org.bitcoinj.core.bip47.BIP47Util.getSendAddress(this, new BIP47PaymentCode(BIP47Channel.getPaymentCode()), BIP47Channel.getCurrentOutgoingIndex()).getSendECKey();
             return key.toAddress(getNetworkParameters()).toString();
         } catch (InvalidKeyException | InvalidKeySpecException | NotSecp256k1Exception | NoSuchProviderException | NoSuchAlgorithmException e) {
             e.printStackTrace();
@@ -939,11 +943,6 @@ public class BIP47AppKit {
 
     public org.bitcoinj.wallet.Wallet.SendResult sendCoins(SendRequest sendRequest) throws InsufficientMoneyException {
         return vWallet.sendCoins(sendRequest);
-    }
-
-    static class FeeCalculation {
-        CoinSelection bestCoinSelection;
-        TransactionOutput bestChangeOutput;
     }
 
     public void rescanTxBlock(Transaction tx) throws BlockStoreException {
