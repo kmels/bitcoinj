@@ -13,7 +13,7 @@ import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.BIP47SecretPoint;
 import org.bitcoinj.script.ScriptChunk;
-import org.bitcoinj.wallet.bip47.BIP47Wallet;
+import org.bitcoinj.kits.BIP47AppKit;
 import org.bitcoinj.wallet.bip47.NotSecp256k1Exception;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -103,15 +103,15 @@ public class BIP47Util {
     }
 
     /** Derives the receive address at idx in depositWallet for senderPaymentCode to deposit, in the wallet's bip47 0th account, i.e. <pre>m / 47' / coin_type' / 0' / idx' .</pre>. */
-    public static BIP47PaymentAddress getReceiveAddress(BIP47Wallet depositWallet, String senderPaymentCode, int idx) throws AddressFormatException, NotSecp256k1Exception {
+    public static BIP47PaymentAddress getReceiveAddress(BIP47AppKit depositWallet, String senderPaymentCode, int idx) throws AddressFormatException, NotSecp256k1Exception {
         ECKey accountKey = depositWallet.getAccount(0).keyAt(idx);
-        return getPaymentAddress(depositWallet.getNetworkParameters(), new BIP47PaymentCode(senderPaymentCode), 0, accountKey);
+        return getPaymentAddress(depositWallet.getParams(), new BIP47PaymentCode(senderPaymentCode), 0, accountKey);
     }
 
     /** Get the address of receiverBIP47PaymentCode's owner to send a payment to, using BTC as coin_type */
-    public static BIP47PaymentAddress getSendAddress(BIP47Wallet spendWallet, BIP47PaymentCode receiverBIP47PaymentCode, int idx) throws AddressFormatException, NotSecp256k1Exception {
+    public static BIP47PaymentAddress getSendAddress(BIP47AppKit spendWallet, BIP47PaymentCode receiverBIP47PaymentCode, int idx) throws AddressFormatException, NotSecp256k1Exception {
         ECKey key = spendWallet.getAccount(0).keyAt(0);
-        return getPaymentAddress(spendWallet.getNetworkParameters(), receiverBIP47PaymentCode, idx, key);
+        return getPaymentAddress(spendWallet.getParams(), receiverBIP47PaymentCode, idx, key);
     }
 
     /** Creates a BIP47PaymentAddress object that the sender will use to pay, using the hardened key at idx */

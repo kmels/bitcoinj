@@ -5,7 +5,7 @@
 
 package org.bitcoinj.wallet.bip47.listeners;
 
-import org.bitcoinj.wallet.bip47.BIP47Wallet;
+import org.bitcoinj.kits.BIP47AppKit;
 
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Transaction;
@@ -17,9 +17,9 @@ import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
  */
 
 public abstract class TransactionEventListener implements WalletCoinsReceivedEventListener, TransactionConfidenceEventListener {
-    protected BIP47Wallet wallet;
+    protected BIP47AppKit wallet;
 
-    public void setWallet(BIP47Wallet wallet) {
+    public void setWallet(BIP47AppKit wallet) {
         this.wallet = wallet;
     }
 
@@ -33,7 +33,7 @@ public abstract class TransactionEventListener implements WalletCoinsReceivedEve
         onTransactionConfidenceEvent(this.wallet, transaction);
     }
 
-    public abstract void onTransactionReceived(BIP47Wallet wallet, Transaction transaction);
+    public abstract void onTransactionReceived(BIP47AppKit wallet, Transaction transaction);
 
-    public abstract void onTransactionConfidenceEvent(BIP47Wallet wallet, Transaction transaction);
+    public abstract void onTransactionConfidenceEvent(BIP47AppKit wallet, Transaction transaction);
 }

@@ -4,17 +4,19 @@ import org.bitcoinj.core.*;
 import org.bitcoinj.core.bip47.BIP47Channel;
 import org.bitcoinj.core.bip47.BIP47Util;
 import org.bitcoinj.crypto.MnemonicCode;
+import org.bitcoinj.kits.BIP47AppKit;
 import org.bitcoinj.params.BCCMainNetParams;
 import org.bitcoinj.params.BCCTestNet3Params;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
-import org.bitcoinj.testing.TestWithBip47Wallet;
+import org.bitcoinj.testing.TestWithBIP47AppKit;
 import org.bitcoinj.wallet.*;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.security.SecureRandom;
 import java.security.Security;
 import java.util.List;
 
@@ -24,7 +26,7 @@ import static org.junit.Assert.*;
 import org.bitcoinj.crypto.MnemonicCodeTest;
 import org.spongycastle.jce.provider.BouncyCastleProvider;
 
-public class BIP47WalletTest extends TestWithBip47Wallet {
+public class BIP47AppKitTest extends TestWithBIP47AppKit {
     private static final Logger log = LoggerFactory.getLogger(org.bitcoinj.wallet.WalletTest.class);
 
     //  - test vectors
@@ -80,11 +82,11 @@ public class BIP47WalletTest extends TestWithBip47Wallet {
         Security.insertProviderAt(new org.spongycastle.jce.provider.BouncyCastleProvider(), 2);
         Security.addProvider(new BouncyCastleProvider());
     }
-    private BIP47Wallet createWallet(Blockchain b, File workingDir, String mnemonic) throws Exception {
-        StashDeterministicSeed seed = null;
+    private BIP47AppKit createWallet(String coinName, NetworkParameters params, File workingDir, String mnemonic) throws Exception {
+        DeterministicSeed seed = null;
         if (mnemonic != null)
-            seed = new StashDeterministicSeed(mnemonic, "", Utils.currentTimeSeconds());
-        return new BIP47Wallet(b, workingDir, seed);
+            seed = new DeterministicSeed(mnemonic, null, "", Utils.currentTimeSeconds());
+        return new BIP47AppKit(coinName, params, workingDir, seed);
     };
 
     static void deleteFolder(String dirname){
@@ -117,17 +119,15 @@ public class BIP47WalletTest extends TestWithBip47Wallet {
 
         File workingDir = new File("alice");
 
-        Blockchain b = new Blockchain(0, MainNetParams.get(), SUPPORTED_COINS[1], "Bitcoin Core");
         //  - test bip 47
-        BIP47Wallet w = createWallet(b,workingDir,ALICE_BIP39_MNEMONIC);
+        BIP47AppKit w = createWallet("BTC", MainNetParams.get(),workingDir,ALICE_BIP39_MNEMONIC);
         assertEquals("xpub6D3t231wUi5v9PEa8mgmyV7Tovg3CzrGEUGNQTfm9cK93je3PgX9udfhzUDx29pkeeHQBPpTSHpAxnDgsf2XRbvLrmbCUQybjtHx8SUb3JB", w.getAccount(0).getXPub());
         byte[] BTC_PUBKEY = w.getAccount(0).getPaymentCode().getPubKey();
         //assertEquals("xpub6D3t231wUi5v9PEa8mgmyV7Tovg3CzrGEUGNQTfm9cK93je3PgX9udfhzUDx29pkeeHQBPpTSHpAxnDgsf2XRbvLrmbCUQybjtHx8SUb3JB", w.getAccount(0).getPaymentCode().getPubKey());
         assertEquals(ALICE_PAYMENT_CODE_V1, w.getPaymentCode());
         assertEquals(ALICE_NOTIFICATION_ADDRESS, w.getAccount(0).getNotificationAddress().toString());
 
-        b = new Blockchain(1, TestNet3Params.get(), SUPPORTED_COINS[3], "Test Bitcoin Core");
-        w = createWallet(b,workingDir,ALICE_BIP39_MNEMONIC);
+        w = createWallet("tBTC", TestNet3Params.get(),workingDir,ALICE_BIP39_MNEMONIC);
         //assertEquals("tpubDEctaKJzZ8eirGRVS7QREGzP2aX8VnnaLxEZtiRM8HQUah42oBtWxvdsviTbExdfQHHaVj3RxroN12iFNbR89XhLQbRFuQrwFjT2ZfZ99aJ", w.getAccount(0).getXPub());
         //assertEquals("xpub6D3t231wUi5v9PEa8mgmyV7Tovg3CzrGEUGNQTfm9cK93je3PgX9udfhzUDx29pkeeHQBPpTSHpAxnDgsf2XRbvLrmbCUQybjtHx8SUb3JB", w.getAccount(0).getXPub());
         byte[] tBTC_PUBKEY = w.getAccount(0).getPaymentCode().getPubKey();
@@ -135,16 +135,14 @@ public class BIP47WalletTest extends TestWithBip47Wallet {
         assertEquals(ALICE_PAYMENT_CODE_V1, w.getPaymentCode());
         //assertEquals(ALICE_NOTIFICATION_ADDRESS, w.getAccount(0).getNotificationAddress().toString());
 
-        b = new Blockchain(2, BCCMainNetParams.get(), SUPPORTED_COINS[0], "Bitcoin Cash");
-        w = createWallet(b,workingDir,ALICE_BIP39_MNEMONIC);
+        w = createWallet("BCH", BCCMainNetParams.get(),workingDir,ALICE_BIP39_MNEMONIC);
         assertEquals("xpub6D3t231wUi5v9PEa8mgmyV7Tovg3CzrGEUGNQTfm9cK93je3PgX9udfhzUDx29pkeeHQBPpTSHpAxnDgsf2XRbvLrmbCUQybjtHx8SUb3JB", w.getAccount(0).getXPub());
         byte[] BCH_PUBKEY = w.getAccount(0).getPaymentCode().getPubKey();
         assertEquals(HEX.encode(tBTC_PUBKEY), HEX.encode(BCH_PUBKEY));
         assertEquals(ALICE_PAYMENT_CODE_V1, w.getPaymentCode());
         assertEquals(ALICE_NOTIFICATION_ADDRESS, w.getAccount(0).getNotificationAddress().toString());
 
-        b = new Blockchain(3, BCCTestNet3Params.get(), SUPPORTED_COINS[2], "Test Bitcoin Cash");
-        w = createWallet(b,workingDir,ALICE_BIP39_MNEMONIC);
+        w = createWallet("tBCH", BCCTestNet3Params.get(), workingDir,ALICE_BIP39_MNEMONIC);
         byte[] tBCH_PUBKEY = w.getAccount(0).getPaymentCode().getPubKey();
         assertEquals(HEX.encode(tBCH_PUBKEY), HEX.encode(BCH_PUBKEY));
         //assertEquals(ALICE_BIP44_PUBKEY, w.getAccount(0).getXPub());
@@ -166,25 +164,21 @@ public class BIP47WalletTest extends TestWithBip47Wallet {
 
         File workingDir = new File("bob");
 
-        Blockchain b = new Blockchain(0, MainNetParams.get(), SUPPORTED_COINS[1], "Bitcoin Core");
-        BIP47Wallet w = createWallet(b,workingDir,BOB_BIP39_MNEMONIC);
+        BIP47AppKit w = createWallet("BTC", MainNetParams.get(), workingDir, BOB_BIP39_MNEMONIC);
         //assertEquals("tpubDCyvczNnKRM37QUHTCG1d6dFbXXkPUNfoay6XjVRhBKaGy47i1nFJQEmusyybMjaHBgpBbPFJRvwsWjtqQ8GTNiDw62ngm18w3QqyV6eHrY", w.getAccount(0).getXPub());
         assertEquals(BOB_PAYMENT_CODE_V1, w.getPaymentCode());
 
-        b = new Blockchain(1, TestNet3Params.get(), SUPPORTED_COINS[3], "Test Bitcoin Core");
-        w = createWallet(b,workingDir,BOB_BIP39_MNEMONIC);
+        w = createWallet("tBTC", TestNet3Params.get(),workingDir,BOB_BIP39_MNEMONIC);
         //assertEquals("tpubDDf84AmZb36BcJKZHrpuToRNj9bhDEwQ1PbrZ7guzq3EHFLxhW9ZjtghxLZauHVwXsm42wSRRxrNEkbFJu4qmvA1PyK8rYTa1o33XVsr6vw", w.getAccount(0).getXPub());
         assertEquals(BOB_PAYMENT_CODE_V1, w.getPaymentCode());
         //assertEquals(BOB_NOTIFICATION_ADDRESS, w.getAccount(0).getNotificationAddress().toString());
 
-        b = new Blockchain(2, BCCMainNetParams.get(), SUPPORTED_COINS[0], "Bitcoin Cash");
-        w = createWallet(b,workingDir,BOB_BIP39_MNEMONIC);
+        w = createWallet("BCH", BCCMainNetParams.get(),workingDir,BOB_BIP39_MNEMONIC);
         //assertEquals(BOB_BIP44_PUBKEY, w.getAccount(0).getXPub());
         assertEquals(BOB_PAYMENT_CODE_V1, w.getPaymentCode());
         assertEquals(BOB_NOTIFICATION_ADDRESS, w.getAccount(0).getNotificationAddress().toString());
 
-        b = new Blockchain(3, BCCTestNet3Params.get(), SUPPORTED_COINS[2], "Test Bitcoin Cash");
-        w = createWallet(b,workingDir,BOB_BIP39_MNEMONIC);
+        w = createWallet("tBCH", BCCTestNet3Params.get(), workingDir,BOB_BIP39_MNEMONIC);
         //assertEquals(BOB_BIP44_PUBKEY, w.getAccount(0).getXPub());
         assertEquals(BOB_PAYMENT_CODE_V1, w.getPaymentCode());
         //assertEquals(BOB_NOTIFICATION_ADDRESS, w.getAccount(0).getNotificationAddress().toString());
@@ -199,10 +193,8 @@ public class BIP47WalletTest extends TestWithBip47Wallet {
         File aliceDir = new File("alice2");
         File bobDir = new File("bob2");
 
-        Blockchain b = new Blockchain(0, MainNetParams.get(), SUPPORTED_COINS[1], "Bitcoin Core");
-
-        BIP47Wallet Alice = createWallet(b, aliceDir, ALICE_BIP39_MNEMONIC);
-        BIP47Wallet Bob = createWallet(b, bobDir, BOB_BIP39_MNEMONIC);
+        BIP47AppKit Alice = createWallet("BTC", MainNetParams.get(), aliceDir, ALICE_BIP39_MNEMONIC);
+        BIP47AppKit Bob = createWallet("BTC", MainNetParams.get(), bobDir, BOB_BIP39_MNEMONIC);
 
         // Alice sends a payment to Bob, she saves Bob's payment code.
 
@@ -261,20 +253,17 @@ public class BIP47WalletTest extends TestWithBip47Wallet {
     public void carlosWalletTest() throws Exception {
         File workingDir = new File("carlos");
 
-        Blockchain b = new Blockchain(1, TestNet3Params.get(), SUPPORTED_COINS[3], "Test Bitcoin Core");
-        BIP47Wallet w = createWallet(b,workingDir,CARLOS_BIP39_MNEMONIC);
+        BIP47AppKit w = createWallet("tBTC", TestNet3Params.get(), workingDir,CARLOS_BIP39_MNEMONIC);
         assertEquals("tpubDCfC54qrR5PkDXCL2TkCJ46pYbFt7CX3UDF9e7qxsQw8Nm9HQy7eZ7tL3FrHhJhxAZU8dwmqpzhntLxax93914cq8vQUTsAxcKPBBoZDm28", w.getAccount(0).getXPub());
         assertEquals(CARLOS_PAYMENT_CODE, w.getPaymentCode());
 
-        b = new Blockchain(0, MainNetParams.get(), SUPPORTED_COINS[1], "Bitcoin Core");
-        w = createWallet(b,workingDir,CARLOS_BIP39_MNEMONIC);
+        w = createWallet("BTC", MainNetParams.get(), workingDir,CARLOS_BIP39_MNEMONIC);
         //assertEquals("tpubDDX2RK6EL7nuqjxFuZZTKsyMDx7PvPnbXmAtwuZaL9QorhjtussQTW5ReBF3G8G3wAY3RyusFkW2AuWz8YsiNXtkHZn2DmJRXA6m3rRwH8A", w.getAccount(0).getXPub());
     }
 
     @Test
     public void testPeerGroupStart() throws Exception{
-        Blockchain b = new Blockchain(0, TestNet3Params.get(), "tBTC","Bitcoin Core Test");
-        BIP47Wallet w = new BIP47Wallet(b, new File("peerGroup"), null);
+        BIP47AppKit w = new BIP47AppKit("tBTC", TestNet3Params.get(), new File("peerGroup"), null);
         assertFalse(w.isStarted());
         assertFalse(w.isStarted());
         w.startBlockchainDownload();
@@ -289,8 +278,7 @@ public class BIP47WalletTest extends TestWithBip47Wallet {
 
     @Test
     public void testIsValidAddress() throws Exception {
-        Blockchain b = new Blockchain(0, TestNet3Params.get(), "tBTC","Bitcoin Core Test");
-        BIP47Wallet w = new BIP47Wallet(b, new File("validAdress"), null);
+        BIP47AppKit w = new BIP47AppKit("tBTC", TestNet3Params.get(), new File("validAdress"), null);
         assertFalse(w.isValidAddress(null));
         assertFalse(w.isValidAddress(""));
 
@@ -303,8 +291,7 @@ public class BIP47WalletTest extends TestWithBip47Wallet {
         assertFalse(w.isValidAddress("3CMXDwnQfyGmTkw5U58f2ffoVYroMBWrJe")); //BTC
 
         // BTC should work
-        Blockchain b2 = new Blockchain(0, MainNetParams.get(), "BTC", "Bitcoin Core");
-        BIP47Wallet w2 = new BIP47Wallet(b2, new File("validAdress"), null);
+        BIP47AppKit w2 = new BIP47AppKit("BTC", MainNetParams.get(), new File("validAdress"), null);
         assertTrue(w2.isValidAddress("3CMXDwnQfyGmTkw5U58f2ffoVYroMBWrJe"));
     }
 
@@ -313,8 +300,7 @@ public class BIP47WalletTest extends TestWithBip47Wallet {
         super.setUp();
         deleteFolder("charly");
         File charlyDir = new File("charly");
-        Blockchain b = new Blockchain(0, MainNetParams.get(), SUPPORTED_COINS[1], "Bitcoin Core");
-        BIP47Wallet Charly = createWallet(b, charlyDir, ALICE_BIP39_MNEMONIC);
+        BIP47AppKit Charly = createWallet("BTC", MainNetParams.get(), charlyDir, ALICE_BIP39_MNEMONIC);
 
         setWallet(Charly);
         sendMoneyToWallet(Charly.getvWallet(), AbstractBlockChain.NewBlockType.BEST_CHAIN, Coin.FIFTY_COINS, Charly.getCurrentAddress());
@@ -364,8 +350,53 @@ public class BIP47WalletTest extends TestWithBip47Wallet {
         Charly.getvWallet().saveToFile(Charly.getvWalletFile());
         Charly.stop();
         Charly.closeBlockStore();
-        BIP47Wallet CharlyReload = createWallet(b, charlyDir, null); //should not fail
+        BIP47AppKit CharlyReload = createWallet(Charly.getCoinName(), Charly.getParams(), charlyDir, null); //should not fail
         assertEquals(Coin.MILLICOIN, Charly.getBalance());
         assertEquals(1, CharlyReload.getTransactions().size());
+    }
+
+    /* Test that a wallet restored from seed is persistent */
+    @Test
+    public void testMnemonicWordsPersistence() throws Exception{
+        // create a fresh new wallet
+        String davesPath = "src/test/resources/org/bitcoinj/wallet/dave-bip47";
+        File davesDir = new File(davesPath);
+        deleteFolder(davesPath);
+        DeterministicSeed davesSeed = new DeterministicSeed(new SecureRandom(), 256, "", System.currentTimeMillis() / 1000);
+        assertFalse(davesDir.exists()); //delete previous wallets created by this test
+        //create Dave's wallet and save it
+        BIP47AppKit Dave = new BIP47AppKit("BTC", MainNetParams.get(), davesDir, davesSeed);
+        String davesMnemonic = Dave.getMnemonicCode();
+        String davesPaymentCode = Dave.getPaymentCode();
+        assertTrue(davesDir.exists());
+        Dave.stop();
+        Dave.closeBlockStore();
+        // the same directory/coin will have the same seed as saved before.
+        BIP47AppKit DaveReload = new BIP47AppKit("BTC", MainNetParams.get(), davesDir, null);
+        assertEquals(DaveReload.getMnemonicCode(), davesMnemonic);
+        assertEquals(DaveReload.getPaymentCode(), davesPaymentCode);
+        deleteFolder(davesPath);
+    }
+
+    @Test
+    public void loadAliceV1Kit() throws Exception{
+        // load a v1 wallet for Alice
+        File dir = new File("src/test/resources/org/bitcoinj/wallet/bip47/alice-bip47wallet-v1");
+        File walletFile = new File(dir,"BTC/BTC.wallet");
+        assertTrue(walletFile.exists());
+        // check that the version 1 payment for BTC is loaded correctly
+        BIP47AppKit AliceBTC = new BIP47AppKit("BTC", MainNetParams.get(), dir,  null);
+        assertEquals(ALICE_BIP39_MNEMONIC, AliceBTC.getMnemonicCode());
+        assertEquals(ALICE_PAYMENT_CODE_V1, AliceBTC.getAccount(0).getStringPaymentCode());
+
+        // check that the version 1 payment for tBTC is loaded correctly
+        BIP47AppKit AliceBCH = new BIP47AppKit("BCH", BCCMainNetParams.get(), dir,  null);
+        assertEquals(ALICE_BIP39_MNEMONIC, AliceBTC.getMnemonicCode());
+        assertEquals(ALICE_PAYMENT_CODE_V1, AliceBTC.getAccount(0).getStringPaymentCode());
+
+        // check that the version 1 payment for tBTC is loaded correctly
+        BIP47AppKit AliceTBTC = new BIP47AppKit("tBTC", TestNet3Params.get(), dir,  null);
+        assertEquals(ALICE_BIP39_MNEMONIC, AliceBTC.getMnemonicCode());
+        assertEquals(ALICE_PAYMENT_CODE_V1, AliceBTC.getAccount(0).getStringPaymentCode());
     }
 }

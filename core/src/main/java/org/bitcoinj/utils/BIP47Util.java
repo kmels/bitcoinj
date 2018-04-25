@@ -3,7 +3,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-package org.bitcoinj.wallet.bip47;
+package org.bitcoinj.utils;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
@@ -44,11 +44,16 @@ import static com.google.common.base.Preconditions.checkState;
  * Created by jimmy on 10/3/17.
  */
 
-public class BIP47WalletUtil {
-    private static final String TAG = "BIP47WalletUtil";
-    private static final Logger log = LoggerFactory.getLogger(BIP47WalletUtil.class);
+public class BIP47Util {
+    private static final String TAG = "BIP47Util";
+    private static final Logger log = LoggerFactory.getLogger(BIP47Util.class);
 
-    static BIP47Wallet.FeeCalculation calculateFee(org.bitcoinj.wallet.Wallet vWallet, SendRequest req, Coin value, List<TransactionOutput> candidates) throws InsufficientMoneyException {
+    public static class FeeCalculation {
+        public CoinSelection bestCoinSelection;
+        public TransactionOutput bestChangeOutput;
+    }
+
+    public static FeeCalculation calculateFee(org.bitcoinj.wallet.Wallet vWallet, SendRequest req, Coin value, List<TransactionOutput> candidates) throws InsufficientMoneyException {
         CoinSelector selector = vWallet.getCoinSelector();
         // There are 3 possibilities for what adding change might do:
         // 1) No effect
@@ -196,7 +201,7 @@ public class BIP47WalletUtil {
         }
 
         Coin lowestFee = null;
-        BIP47Wallet.FeeCalculation result = new BIP47Wallet.FeeCalculation();
+        FeeCalculation result = new FeeCalculation();
         if (selection1 != null) {
             if (selection1Change != null)
                 lowestFee = selection1.valueGathered.subtract(selection1Change.getValue());
