@@ -24,7 +24,6 @@ import static org.bitcoinj.core.Utils.SPACE_JOINER;
 import static org.bitcoinj.core.Utils.WHITESPACE_SPLITTER;
 import static org.junit.Assert.*;
 
-import org.bitcoinj.crypto.MnemonicCodeTest;
 import org.spongycastle.jce.provider.BouncyCastleProvider;
 
 public class BIP47AppKitTest extends TestWithBIP47AppKit {
@@ -101,11 +100,12 @@ public class BIP47AppKitTest extends TestWithBIP47AppKit {
         MnemonicCode mc = new MnemonicCode();
         List<String> code = mc.toMnemonic(HEX.decode(ALICE_BIP39_RAW_ENTROPY));
         byte[] seed = MnemonicCode.toSeed(code,"");
-        List<String> words = Lists.newArrayList(WHITESPACE_SPLITTER.split(BOB_BIP39_MNEMONIC));
+        List<String> words = Lists.newArrayList(WHITESPACE_SPLITTER.split(ALICE_BIP39_MNEMONIC));
         assertEquals(12, words.size());
         byte[] entropy = mc.toEntropy(words);
 
         assertEquals(ALICE_BIP39_RAW_ENTROPY, HEX.encode(entropy));
+        assertEquals(words, mc.toMnemonic(entropy));
         assertEquals(ALICE_BIP39_MNEMONIC, SPACE_JOINER.join(code));
         assertEquals(ALICE_BIP32_SEED, HEX.encode(seed));
 
@@ -252,7 +252,7 @@ public class BIP47AppKitTest extends TestWithBIP47AppKit {
         assertTrue(w2.isValidAddress("3CMXDwnQfyGmTkw5U58f2ffoVYroMBWrJe"));
     }
 
-    /* Test that a wallet restored from seed is persistent */
+    /* Test that a wallet restored from a seed is persistent. */
     @Test
     public void testMnemonicWordsPersistence() throws Exception{
         // create a fresh new wallet
@@ -273,22 +273,5 @@ public class BIP47AppKitTest extends TestWithBIP47AppKit {
         assertEquals(DaveReload.getMnemonicCode(), davesMnemonic);
         assertEquals(DaveReload.getPaymentCode(), davesPaymentCode);
         deleteFolder(davesPath);
-    }
-
-    @Test
-    public void loadAliceV1Kit() throws Exception{
-        // load a v1 wallet for Alice
-        File dir = new File("src/test/resources/org/bitcoinj/wallet/bip47/alice-bip47wallet-v1");
-        File walletFile = new File(dir,"BTC/BTC.wallet");
-        assertTrue(walletFile.exists());
-        // check that the version 1 payment for BTC is loaded correctly
-        BIP47AppKit AliceBTC = new BIP47AppKit("BTC", MainNetParams.get(), dir,  null);
-        assertEquals(ALICE_BIP39_MNEMONIC, AliceBTC.getMnemonicCode());
-        assertEquals(ALICE_PAYMENT_CODE_V1, AliceBTC.getAccount(0).getStringPaymentCode());
-
-        // check that the version 1 payment for tBTC is loaded correctly
-        BIP47AppKit AliceTBTC = new BIP47AppKit("tBTC", TestNet3Params.get(), dir,  null);
-        assertEquals(ALICE_BIP39_MNEMONIC, AliceBTC.getMnemonicCode());
-        assertEquals(ALICE_PAYMENT_CODE_V1, AliceBTC.getAccount(0).getStringPaymentCode());
     }
 }
