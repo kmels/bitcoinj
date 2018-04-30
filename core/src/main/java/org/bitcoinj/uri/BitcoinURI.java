@@ -17,7 +17,7 @@
 package org.bitcoinj.uri;
 
 import org.bitcoinj.core.*;
-import org.bitcoinj.params.AbstractBitcoinNetParams;
+import org.bitcoinj.params.AbstractBitcoinCoreParams;
 
 import javax.annotation.Nullable;
 
@@ -82,7 +82,7 @@ public class BitcoinURI {
     public static final String FIELD_PAYMENT_REQUEST_URL = "r";
 
     /**
-     * URI for Bitcoin network. Use {@link org.bitcoinj.params.AbstractBitcoinNetParams#BITCOIN_SCHEME} if you specifically
+     * URI for Bitcoin network. Use {@link AbstractBitcoinCoreParams#BITCOIN_SCHEME} if you specifically
      * need Bitcoin, or use {@link org.bitcoinj.core.NetworkParameters#getUriScheme} to get the scheme
      * from network parameters.
      */
@@ -120,7 +120,7 @@ public class BitcoinURI {
         checkNotNull(input);
 
         String scheme = null == params
-            ? AbstractBitcoinNetParams.BITCOIN_SCHEME
+            ? AbstractBitcoinCoreParams.BITCOIN_SCHEME
             : params.getUriScheme();
 
         System.out.println("scheme = " + scheme);

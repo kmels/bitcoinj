@@ -257,6 +257,13 @@ public abstract class NetworkParameters {
     public abstract void checkDifficultyTransitions(StoredBlock storedPrev, Block next, final BlockStore blockStore) throws VerificationException, BlockStoreException;
 
     /**
+     * Throws an exception if the block's difficulty is not correct.
+     *
+     * @throws VerificationException if the block's difficulty is not correct.
+     */
+    public abstract void checkDifficultyTransitions(StoredBlock storedPrev, Block next, final BlockStore blockStore, AbstractBlockChain blockChain) throws VerificationException, BlockStoreException;
+
+    /**
      * Returns true if the block height is either not a checkpoint, or is a checkpoint and the hash matches.
      */
     public boolean passesCheckpoint(int height, Sha256Hash hash) {

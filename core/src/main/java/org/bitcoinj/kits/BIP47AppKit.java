@@ -202,6 +202,7 @@ public class BIP47AppKit {
 
         // add Stash-Crypto dedicated nodes for BCH and tBCH
         if (coinName.equals("BCH")) {
+            vPeerGroup.setMaxConnections(vPeerGroup.DEFAULT_CONNECTIONS);
             vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("158.69.119.35"), 8333));
             vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("144.217.73.86"), 8333));
             // bitcoin abc from shodan.io
@@ -213,6 +214,7 @@ public class BIP47AppKit {
             //vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("5.44.97.110"), 8333));
             //vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("185.69.52.180"), 8333));
         } else if (coinName.equals("tBCH")) {
+            vPeerGroup.setMaxConnections(vPeerGroup.DEFAULT_CONNECTIONS);
             // stash crypto
             vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("158.69.119.35"), 18333));
             vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("144.217.73.86"), 18333));
@@ -959,6 +961,8 @@ public class BIP47AppKit {
         return this.vWalletFile;
     }
 
+    public PeerGroup getPeerGroup() { return this.vPeerGroup; }
+
     public org.bitcoinj.wallet.Wallet getvWallet(){
         return vWallet;
     }
@@ -1008,7 +1012,14 @@ public class BIP47AppKit {
             }
         } catch (ScriptException e) {}
 
+        try {
+            log.debug("Saving wallet after removing tx hash ...");
+            this.vWallet.saveToFile(this.vWalletFile);
+            log.debug("Saving wallet after removing tx hash ... done");
+        } catch (IOException io){
+            log.error("Saving wallet after removing tx hash ... error", io);
+            io.printStackTrace();
+        }
         return removedTx;
-
     }
 }

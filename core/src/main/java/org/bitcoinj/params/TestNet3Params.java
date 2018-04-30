@@ -30,7 +30,7 @@ import static com.google.common.base.Preconditions.checkState;
  * Parameters for the testnet, a separate public instance of Bitcoin that has relaxed rules suitable for development
  * and testing of applications and new Bitcoin versions.
  */
-public class TestNet3Params extends AbstractBitcoinNetParams {
+public class TestNet3Params extends AbstractBitcoinCoreParams {
     public TestNet3Params() {
         super();
         id = ID_TESTNET;

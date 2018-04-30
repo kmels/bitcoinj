@@ -532,6 +532,10 @@ public class PeerGroup implements TransactionBroadcaster {
 
                 boolean havePeerWeCanTry = !inactives.isEmpty() && backoffMap.get(inactives.peek()).getRetryTime() <= now;
                 doDiscovery = !havePeerWeCanTry;
+            } catch(Exception e){
+                log.error("Exception occured in building connections ",e);
+                e.printStackTrace();
+                throw e;
             } finally {
                 firstRun = false;
                 lock.unlock();
@@ -587,6 +591,9 @@ public class PeerGroup implements TransactionBroadcaster {
                     return;
                 }
                 connectTo(addrToTry, false, vConnectTimeoutMillis);
+            } catch(Exception e){
+                log.error("Exception occured in building connections ",e);
+                e.printStackTrace();
             } finally {
                 lock.unlock();
             }
@@ -2172,6 +2179,7 @@ public class PeerGroup implements TransactionBroadcaster {
             log.info("Transaction source unknown, setting to SELF: {}", tx.getHashAsString());
             tx.getConfidence().setSource(TransactionConfidence.Source.SELF);
         }
+        log.info("Preparing to broadcast transaction in network {} to {} peers at least ({} are connected) ...", params.getClass().getName(), minConnections, numConnectedPeers());
         final TransactionBroadcast broadcast = new TransactionBroadcast(this, tx);
         broadcast.setMinConnections(minConnections);
         // Send the TX to the wallet once we have a successful broadcast.
