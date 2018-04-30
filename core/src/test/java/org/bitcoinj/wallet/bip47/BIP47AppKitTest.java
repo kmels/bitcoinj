@@ -377,26 +377,4 @@ public class BIP47AppKitTest extends TestWithBIP47AppKit {
         assertEquals(DaveReload.getPaymentCode(), davesPaymentCode);
         deleteFolder(davesPath);
     }
-
-    @Test
-    public void loadAliceV1Kit() throws Exception{
-        // load a v1 wallet for Alice
-        File dir = new File("src/test/resources/org/bitcoinj/wallet/bip47/alice-bip47wallet-v1");
-        File walletFile = new File(dir,"BTC/BTC.wallet");
-        assertTrue(walletFile.exists());
-        // check that the version 1 payment for BTC is loaded correctly
-        BIP47AppKit AliceBTC = new BIP47AppKit("BTC", MainNetParams.get(), dir,  null);
-        assertEquals(ALICE_BIP39_MNEMONIC, AliceBTC.getMnemonicCode());
-        assertEquals(ALICE_PAYMENT_CODE_V1, AliceBTC.getAccount(0).getStringPaymentCode());
-
-        // check that the version 1 payment for tBTC is loaded correctly
-        BIP47AppKit AliceBCH = new BIP47AppKit("BCH", BCCMainNetParams.get(), dir,  null);
-        assertEquals(ALICE_BIP39_MNEMONIC, AliceBTC.getMnemonicCode());
-        assertEquals(ALICE_PAYMENT_CODE_V1, AliceBTC.getAccount(0).getStringPaymentCode());
-
-        // check that the version 1 payment for tBTC is loaded correctly
-        BIP47AppKit AliceTBTC = new BIP47AppKit("tBTC", TestNet3Params.get(), dir,  null);
-        assertEquals(ALICE_BIP39_MNEMONIC, AliceBTC.getMnemonicCode());
-        assertEquals(ALICE_PAYMENT_CODE_V1, AliceBTC.getAccount(0).getStringPaymentCode());
-    }
 }

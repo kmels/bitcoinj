@@ -26,8 +26,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigInteger;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.*;
@@ -35,7 +33,7 @@ import static com.google.common.base.Preconditions.*;
 /**
  * Parameters for the main production network on which people trade goods and services.
  */
-public class BCCMainNetParams extends AbstractBitcoinNetParams {
+public class BCCMainNetParams extends AbstractBitcoinCashParams {
     public static final int MAINNET_MAJORITY_WINDOW = 1000;
     public static final int MAINNET_MAJORITY_REJECT_BLOCK_OUTDATED = 950;
     public static final int MAINNET_MAJORITY_ENFORCE_BLOCK_UPGRADE = 750;
@@ -455,7 +453,7 @@ public class BCCMainNetParams extends AbstractBitcoinNetParams {
      * block. Because timestamps are the least trustworthy information we have as
      * input, this ensures the algorithm is more resistant to malicious inputs.
      */
-    void checkNextCashWorkRequired(StoredBlock pindexPrev,
+    protected void checkNextCashWorkRequired(StoredBlock pindexPrev,
                                    Block pblock, BlockStore blockStore) {
         // This cannot handle the genesis block and early blocks in general.
         //assert(pindexPrev);
