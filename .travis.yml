@@ -1,8 +1,8 @@
 # configuration for https://travis-ci.org/bitcoincash-wallet/bitcoincashj
-sudo: false
+sudo: sudo
 dist: trusty
 language: java
-jdk: oraclejdk8
+jdk: openjdk8
 addons:
   postgresql: "9.3"   # min supported version
 cache:
@@ -14,6 +14,14 @@ services:
 
 install: true   # disable default because no need to do the mvn install before mvn verify
 
+before_install:
+  - wget https://oss.sonatype.org/content/repositories/releases/org/javafxports/dalvik-sdk/8.60.9/dalvik-sdk-8.60.9.zip && unzip dalvik-sdk-8.60.9.zip
+  - sudo cp dalvik-sdk/rt/lib/ext/jfxrt.jar $JAVA_HOME/jre/lib/ext
+  - sudo cp dalvik-sdk/rt/lib/jfxswt.jar $JAVA_HOME/jre/lib/
+  - sudo cp dalvik-sdk/rt/lib/javafx.properties $JAVA_HOME/jre/lib
+  - sudo cp dalvik-sdk/rt/lib/javafx.platform.properties $JAVA_HOME/jre/lib
+  - sudo cp dalvik-sdk/lib/javafx-mx.jar $JAVA_HOME/lib
+  
 before_script:
   - psql -c "create user bitcoinj with password 'password';" -U postgres
   - psql -c 'create database bitcoinj_test owner bitcoinj;' -U postgres
