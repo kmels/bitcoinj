@@ -18,6 +18,7 @@
 package org.bitcoinj.net.discovery;
 
 import org.bitcoinj.params.MainNetParams;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;

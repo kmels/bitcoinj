@@ -1,6 +1,6 @@
 # configuration for https://travis-ci.org/bitcoinj/bitcoinj
 sudo: false
-dist: precise
+dist: trusty
 language: java
 addons:
   hosts:

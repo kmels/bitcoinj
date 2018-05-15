@@ -596,6 +596,8 @@ public class WalletTool {
                 }
             }
             SendRequest req = SendRequest.forTx(t);
+            if (params.getUseForkId())
+                req.setUseForkId(true);
             if (t.getOutputs().size() == 1 && t.getOutput(0).getValue().equals(wallet.getBalance())) {
                 log.info("Emptying out wallet, recipient may get less than what you expect");
                 req.emptyWallet = true;

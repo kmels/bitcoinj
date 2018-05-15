@@ -17,6 +17,7 @@
 
 package org.bitcoinj.core;
 
+import com.google.common.base.Strings;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
 import org.bitcoinj.crypto.TransactionSignature;
 import org.bitcoinj.script.Script;
@@ -27,7 +28,6 @@ import org.bitcoinj.utils.ExchangeRate;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletTransaction.Pool;
 
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
@@ -57,7 +57,7 @@ import java.math.BigInteger;
  * Whether to trust a transaction is something that needs to be decided on a case by case basis - a rule that makes
  * sense for selling MP3s might not make sense for selling cars, or accepting payments from a family member. If you
  * are building a wallet, how to present confidence to your users is something to consider carefully.</p>
- * 
+ *
  * <p>Instances of this class are not safe for use by multiple threads.</p>
  */
 public class Transaction extends ChildMessage {
@@ -112,7 +112,6 @@ public class Transaction extends ChildMessage {
      */
     public static final Coin DEFAULT_TX_FEE = Coin.valueOf(100000); // 100,000 satoshis or 1 mBTC
     public static final Coin BCC_DEFAULT_TX_FEE = Coin.valueOf(1000); // 1000 satoshis or 0.01 mBCH, (1 satoshi per byte)
-
     /**
      * Any standard (ie pay-to-address) output smaller than this value (in satoshis) will most likely be rejected by the network.
      * This is calculated by assuming a standard output will be 34 bytes, and then using the formula used in
@@ -129,6 +128,7 @@ public class Transaction extends ChildMessage {
      * Max initial size of inputs and outputs ArrayList.
      */
     public static final int MAX_INITIAL_INPUTS_OUTPUTS_SIZE = 20;
+
 
     // These are bitcoin serialized.
     private long version;
@@ -432,8 +432,6 @@ public class Transaction extends ChildMessage {
      */
     public Coin getFee() {
         Coin fee = Coin.ZERO;
-        if (inputs.isEmpty() || outputs.isEmpty()) // Incomplete transaction
-            return null;
         for (TransactionInput input : inputs) {
             if (input.getValue() == null)
                 return null;
@@ -679,6 +677,10 @@ public class Transaction extends ChildMessage {
         if (isOptInFullRBF()) {
             s.append("  opts into full replace-by-fee\n");
         }
+        if (inputs.size() == 0) {
+            s.append("  INCOMPLETE: No inputs!\n");
+            return s.toString();
+        }
         if (isCoinBase()) {
             String script;
             String script2;
@@ -690,7 +692,7 @@ public class Transaction extends ChildMessage {
                 script2 = "???";
             }
             s.append("     == COINBASE TXN (scriptSig ").append(script)
-                .append(")  (scriptPubKey ").append(script2).append(")\n");
+                    .append(")  (scriptPubKey ").append(script2).append(")\n");
             return s.toString();
         }
         if (!inputs.isEmpty()) {
@@ -719,24 +721,26 @@ public class Transaction extends ChildMessage {
                         s.append("\n          sequence:").append(Long.toHexString(in.getSequenceNumber()));
                         if (in.isOptInFullRBF())
                             s.append(", opts into full RBF");
-                        if (version >=2 && in.hasRelativeLockTime())
+                        if (version >= 2 && in.hasRelativeLockTime())
                             s.append(", has RLT");
+                    }
+                    if (in.hasSequence()) {
+                        s.append("\n          sequence:").append(Long.toHexString(in.getSequenceNumber()));
+                        if (in.isOptInFullRBF())
+                            s.append(", opts into full RBF");
                     }
                 } catch (Exception e) {
                     s.append("[exception: ").append(e.getMessage()).append("]");
                 }
                 s.append('\n');
             }
-        } else {
-            s.append("     ");
-            s.append("INCOMPLETE: No inputs!\n");
         }
         for (TransactionOutput out : outputs) {
             s.append("     ");
             s.append("out  ");
             try {
-                String scriptPubKeyStr = out.getScriptPubKey().toString();
-                s.append(!Strings.isNullOrEmpty(scriptPubKeyStr) ? scriptPubKeyStr : "<no scriptPubKey>");
+                Script scriptPubKey = out.getScriptPubKey();
+                s.append(scriptPubKey);
                 s.append(" ");
                 s.append(out.getValue().toFriendlyString());
                 if (!out.isAvailableForSpending()) {
@@ -823,7 +827,7 @@ public class Transaction extends ChildMessage {
         addInput(input);
         Sha256Hash hash = hashForSignature(inputs.size() - 1, scriptPubKey, sigHash, anyoneCanPay);
         ECKey.ECDSASignature ecSig = sigKey.sign(hash);
-        TransactionSignature txSig = new TransactionSignature(ecSig, sigHash, anyoneCanPay);
+        TransactionSignature txSig = new TransactionSignature(ecSig, sigHash, anyoneCanPay, false);
         if (scriptPubKey.isSentToRawPubKey())
             input.setScriptSig(ScriptBuilder.createInputScript(txSig));
         else if (scriptPubKey.isSentToAddress())
@@ -948,12 +952,11 @@ public class Transaction extends ChildMessage {
      * @return A newly calculated signature object that wraps the r, s and sighash components.
      */
     public TransactionSignature calculateSignature(int inputIndex, ECKey key,
-                                                                byte[] redeemScript,
-                                                                SigHash hashType, boolean anyoneCanPay) {
+                                                   byte[] redeemScript,
+                                                   SigHash hashType, boolean anyoneCanPay) {
         Sha256Hash hash = hashForSignature(inputIndex, redeemScript, hashType, anyoneCanPay);
         return new TransactionSignature(key.sign(hash), hashType, anyoneCanPay);
     }
-
     public TransactionSignature calculateWitnessSignature(
             int inputIndex,
             ECKey key,
@@ -978,12 +981,11 @@ public class Transaction extends ChildMessage {
      * @return A newly calculated signature object that wraps the r, s and sighash components.
      */
     public TransactionSignature calculateSignature(int inputIndex, ECKey key,
-                                                                 Script redeemScript,
-                                                                 SigHash hashType, boolean anyoneCanPay) {
+                                                   Script redeemScript,
+                                                   SigHash hashType, boolean anyoneCanPay) {
         Sha256Hash hash = hashForSignature(inputIndex, redeemScript.getProgram(), hashType, anyoneCanPay);
         return new TransactionSignature(key.sign(hash), hashType, anyoneCanPay);
     }
-
     public TransactionSignature calculateWitnessSignature(
             int inputIndex,
             ECKey key,
@@ -995,7 +997,6 @@ public class Transaction extends ChildMessage {
         Sha256Hash hash = hashForSignatureWitness(inputIndex, redeemScript.getProgram(), value, hashType, anyoneCanPay);
         return new TransactionSignature(key.sign(hash), hashType, anyoneCanPay, true);
     }
-
     /**
      * Calculates a signature that is valid for being inserted into the input at the given position. This is simply
      * a wrapper around calling {@link Transaction#hashForSignature(int, byte[], org.bitcoinj.core.Transaction.SigHash, boolean)}
@@ -1021,7 +1022,6 @@ public class Transaction extends ChildMessage {
         Sha256Hash hash = hashForSignature(inputIndex, redeemScript, hashType, anyoneCanPay);
         return new TransactionSignature(key.sign(hash, aesKey), hashType, anyoneCanPay);
     }
-
     public TransactionSignature calculateWitnessSignature(
             int inputIndex,
             ECKey key,
@@ -1087,7 +1087,7 @@ public class Transaction extends ChildMessage {
      * @param anyoneCanPay should be false.
      */
     public Sha256Hash hashForSignature(int inputIndex, byte[] redeemScript,
-                                                    SigHash type, boolean anyoneCanPay) {
+                                       SigHash type, boolean anyoneCanPay) {
         byte sigHashType = (byte) TransactionSignature.calcSigHashValue(type, anyoneCanPay);
         return hashForSignature(inputIndex, redeemScript, sigHashType);
     }
@@ -1107,7 +1107,7 @@ public class Transaction extends ChildMessage {
      * @param anyoneCanPay should be false.
      */
     public Sha256Hash hashForSignature(int inputIndex, Script redeemScript,
-                                                    SigHash type, boolean anyoneCanPay) {
+                                       SigHash type, boolean anyoneCanPay) {
         int sigHash = TransactionSignature.calcSigHashValue(type, anyoneCanPay);
         return hashForSignature(inputIndex, redeemScript.getProgram(), (byte) sigHash);
     }

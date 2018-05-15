@@ -1,16 +1,17 @@
-[![Build Status](https://travis-ci.org/bitcoinj/bitcoinj.png?branch=master)](https://travis-ci.org/bitcoinj/bitcoinj)   [![Coverage Status](https://coveralls.io/repos/bitcoinj/bitcoinj/badge.png?branch=master)](https://coveralls.io/r/bitcoinj/bitcoinj?branch=master) 
+[![Build Status](https://travis-ci.org/bitcoinj-cash/bitcoinj.png?branch=cash-0.14)](https://travis-ci.org/Stash-Crypto/bitcoincashj)   [![Coverage Status](https://coveralls.io/repos/github/Stash-Crypto/bitcoincashj/badge.svg?branch=release-0.14)](https://coveralls.io/github/Stash-Crypto/bitcoincashj?branch=release-0.14) [![Javadocs](http://www.javadoc.io/badge/org.bitcoincashj/bitcoincashj-core.svg)](http://www.javadoc.io/doc/org.bitcoincashj/bitcoincashj-core)
 
-[![Visit our IRC channel](https://kiwiirc.com/buttons/irc.freenode.net/bitcoinj.png)](https://kiwiirc.com/client/irc.freenode.net/bitcoinj)
+### Welcome to blockchainj
 
-### Welcome to bitcoinj
+This library is a fork of Mike Hearn's original bitcoinj library aimed at supporting the Bitcoin and Bitcoin cash eco-system.
 
-The bitcoinj library is a Java implementation of the Bitcoin protocol, which allows it to maintain a wallet and send/receive transactions without needing a local copy of Bitcoin Core. It comes with full documentation and some example apps showing how to use it.
+It allows maintaining a wallet and sending/receiving transactions without needing a full blockchain node. It comes with full documentation and some example apps showing how to use it.
+
+Release notes are [here](docs/Releases.md).
 
 ### Technologies
 
 * Java 6 for the core modules, Java 8 for everything else
 * [Maven 3+](http://maven.apache.org) - for building the project
-* [Orchid](https://github.com/subgraph/Orchid) - for secure communications over [TOR](https://www.torproject.org)
 * [Google Protocol Buffers](https://github.com/google/protobuf) - for use with serialization and hardware communications
 
 ### Getting started
@@ -56,3 +57,4 @@ more info on this technique.
 ### Where next?
 
 Now you are ready to [follow the tutorial](https://bitcoinj.github.io/getting-started).
+

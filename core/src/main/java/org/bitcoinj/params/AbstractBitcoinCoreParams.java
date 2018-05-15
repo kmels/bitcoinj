@@ -61,7 +61,7 @@ public abstract class AbstractBitcoinCoreParams extends NetworkParameters {
 
     @Override
     public void checkDifficultyTransitions(final StoredBlock storedPrev, final Block nextBlock,
-       final BlockStore blockStore) throws VerificationException, BlockStoreException {
+                                           final BlockStore blockStore) throws VerificationException, BlockStoreException {
         Block prev = storedPrev.getHeader();
 
         // Is this supposed to be a difficulty transition point?

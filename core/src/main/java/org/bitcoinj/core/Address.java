@@ -2,6 +2,7 @@
  * Copyright 2011 Google Inc.
  * Copyright 2014 Giannis Dzegoutanis
  * Copyright 2015 Andreas Schildbach
+ * Copyright 2018 the bitcoinj-cash developers
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +15,20 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * This file has been modified by the bitcoinj-cash developers for the bitcoinj-cash project.
+ * The original file was from the bitcoinj project (https://github.com/bitcoinj/bitcoinj).
  */
 
 package org.bitcoinj.core;
-
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 
 import org.bitcoinj.params.Networks;
 import org.bitcoinj.script.Script;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -192,7 +195,7 @@ public class Address extends VersionedChecksummedBytes {
     /**
      * Check if a given address version is valid given the NetworkParameters.
      */
-    private static boolean isAcceptableVersion(NetworkParameters params, int version) {
+    public static boolean isAcceptableVersion(NetworkParameters params, int version) {
         for (int v : params.getAcceptableAddressCodes()) {
             if (version == v) {
                 return true;

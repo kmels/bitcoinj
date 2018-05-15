@@ -21,6 +21,7 @@ import com.google.common.base.*;
 import com.google.common.collect.*;
 import com.google.common.util.concurrent.*;
 import org.bitcoinj.core.listeners.*;
+import org.bitcoinj.params.AbstractBitcoinCashParams;
 import org.bitcoinj.store.*;
 import org.bitcoinj.utils.*;
 import org.bitcoinj.wallet.Wallet;
@@ -485,7 +486,11 @@ public abstract class AbstractBlockChain {
             } else {
                 checkState(lock.isHeldByCurrentThread());
                 // It connects to somewhere on the chain. Not necessarily the top of the best known chain.
-                params.checkDifficultyTransitions(storedPrev, block, blockStore);
+                if (params.getUseForkId())
+                    params.checkDifficultyTransitions(storedPrev, block, blockStore, this);
+                else
+                    params.checkDifficultyTransitions(storedPrev, block, blockStore);
+
                 connectBlock(block, storedPrev, shouldVerifyTransactions(), filteredTxHashList, filteredTxn);
             }
 

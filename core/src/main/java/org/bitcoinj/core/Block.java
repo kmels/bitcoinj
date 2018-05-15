@@ -66,7 +66,7 @@ public class Block extends Message {
      * avoid somebody creating a titanically huge but valid block and forcing everyone to download/store it forever.
      */
     public static final int MAX_BLOCK_SIZE = 1 * 1000 * 1000;
-    public static final int BCC_MAX_BLOCK_SIZE = 8 * 1000 * 1000;
+    public static final int BCC_MAX_BLOCK_SIZE = 32 * 1000 * 1000;
     /**
      * A "sigop" is a signature verification operation. Because they're expensive we also impose a separate limit on
      * the number in a block to prevent somebody mining a huge block that has way more sigops than normal, so is very

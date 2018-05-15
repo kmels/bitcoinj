@@ -449,7 +449,7 @@ public class WalletTest extends TestWithWallet {
         wallet.completeTx(req);
         Transaction t3 = req.tx;
         assertNotEquals(t2.getOutput(1).getScriptPubKey().getToAddress(PARAMS),
-                        t3.getOutput(1).getScriptPubKey().getToAddress(PARAMS));
+                t3.getOutput(1).getScriptPubKey().getToAddress(PARAMS));
         assertNotNull(t3);
         wallet.commitTx(t3);
         assertTrue(wallet.isConsistent());
@@ -533,7 +533,7 @@ public class WalletTest extends TestWithWallet {
         // because it depends on the coin selection algorithm.
         assertEquals(valueOf(4, 50), wallet.getBalance(Wallet.BalanceType.ESTIMATED));
         assertFalse(wallet.getBalance(Wallet.BalanceType.AVAILABLE).equals(
-                    wallet.getBalance(Wallet.BalanceType.ESTIMATED)));
+                wallet.getBalance(Wallet.BalanceType.ESTIMATED)));
 
         // Now confirm the transaction by including it into a block.
         sendMoneyToWallet(BlockChain.NewBlockType.BEST_CHAIN, spend);

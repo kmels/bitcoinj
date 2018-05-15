@@ -1,5 +1,6 @@
 /*
  * Copyright 2013 Google Inc.
+ * Copyright 2018 the bitcoinj-cash developers
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,6 +13,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * This file has been modified by the bitcoinj-cash developers for the bitcoinj-cash project.
+ * The original file was from the bitcoinj project (https://github.com/bitcoinj/bitcoinj).
  */
 
 package org.bitcoinj.params;
@@ -24,6 +28,8 @@ import static com.google.common.base.Preconditions.checkState;
 /**
  * Parameters for the old version 2 testnet. This is not useful to you - it exists only because some unit tests are
  * based on it.
+ *
+ *
  */
 public class TestNet2Params extends AbstractBitcoinCoreParams {
     public static final int TESTNET_MAJORITY_WINDOW = 100;

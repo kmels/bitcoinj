@@ -56,7 +56,10 @@ public class TestWithPeerGroup extends TestWithNetworkConnections {
         super.setUp(blockStore);
 
         remoteVersionMessage = new VersionMessage(PARAMS, 1);
-        remoteVersionMessage.localServices = VersionMessage.NODE_NETWORK;
+        if (PARAMS.getUseForkId())
+            remoteVersionMessage.localServices = VersionMessage.NODE_NETWORK | VersionMessage.NODE_BITCOIN_CASH;
+        else
+            remoteVersionMessage.localServices = VersionMessage.NODE_NETWORK;
         remoteVersionMessage.clientVersion = NotFoundMessage.MIN_PROTOCOL_VERSION;
         blockJobs = false;
         initPeerGroup();
