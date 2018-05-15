@@ -46,6 +46,12 @@ public abstract class AbstractBitcoinCashParams extends NetworkParameters {
     /** Activation time at which the cash HF kicks in. */
     protected long cashHardForkActivationTime;
     protected int daaHeight;
+    protected String cashAddrPrefix;
+
+    // Nov, 13 2017 hard fork
+    protected int daaUpdateHeight;
+    // May, 15 2018 hard fork
+    protected long monolithActivationTime = 1526400000L;
 
     public AbstractBitcoinCashParams() {
         super();
@@ -63,7 +69,7 @@ public abstract class AbstractBitcoinCashParams extends NetworkParameters {
     @Override
     public void checkDifficultyTransitions(final StoredBlock storedPrev, final Block nextBlock,
                                            final BlockStore blockStore) throws VerificationException, BlockStoreException {
-        new Exception("This method is for Bitcoin CORE and should not be called. For cash use the other checkDifficultyTransitions method.");
+        new Exception("This method is for Bitcoin CORE (BTC) and should not be called. For cash use the other checkDifficultyTransitions method.");
     }
 
     @Override
@@ -192,6 +198,35 @@ public abstract class AbstractBitcoinCashParams extends NetworkParameters {
         if (newTargetCompact != receivedTargetCompact)
             throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
                     Long.toHexString(newTargetCompact) + " vs " + Long.toHexString(receivedTargetCompact));
+    }
+
+    /**
+     * determines whether monolith upgrade is activated based on MTP
+     * @param storedPrev The previous stored block
+     * @param store BlockStore containing at least 11 blocks
+     * @param parameters The network parameters
+     * @return
+     */
+    public static boolean isMonolithEnabled(StoredBlock storedPrev, BlockStore store, AbstractBitcoinCashParams parameters) {
+        if (storedPrev.getHeight() < 524626) { //current height at time of writing, well below the activation block height
+            return false;
+        }
+        try {
+            long mtp = BlockChain.getMedianTimestampOfRecentBlocks(storedPrev, store);
+            return isMonolithEnabled(mtp, parameters);
+        } catch (BlockStoreException e) {
+            throw new RuntimeException("Cannot determine monolith activation without BlockStore");
+        }
+    }
+
+    /**
+     * determines whether monolith upgrade is activated based on the given MTP.  Useful for overriding MTP for testing.
+     * @param medianTimePast
+     * @param parameters The network parameters
+     * @return
+     */
+    public static boolean isMonolithEnabled(long medianTimePast, AbstractBitcoinCashParams parameters) {
+        return medianTimePast >= parameters.getMonolithActivationTime();
     }
 
     /**
@@ -359,5 +394,18 @@ public abstract class AbstractBitcoinCashParams extends NetworkParameters {
     @Override
     public boolean hasMaxMoney() {
         return true;
+    }
+
+    public String getCashAddrPrefix() {
+        return cashAddrPrefix;
+    }
+
+    public int getDAAUpdateHeight(){
+        return daaUpdateHeight;
+    }
+
+    /** MTP activation time for May 15th, 2018 upgrade **/
+    public long getMonolithActivationTime() {
+        return monolithActivationTime;
     }
 }

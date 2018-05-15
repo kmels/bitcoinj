@@ -48,14 +48,14 @@ import java.util.List;
 public class PaymentProtocol {
 
     // MIME types as defined in BIP71.
-    public static final String MIMETYPE_PAYMENTREQUEST = "application/bitcoin-paymentrequest";
-    public static final String MIMETYPE_PAYMENT = "application/bitcoin-payment";
-    public static final String MIMETYPE_PAYMENTACK = "application/bitcoin-paymentack";
+    public static final String MIMETYPE_PAYMENTREQUEST = "application/bitcoincash-paymentrequest";
+    public static final String MIMETYPE_PAYMENT = "application/bitcoincash-payment";
+    public static final String MIMETYPE_PAYMENTACK = "application/bitcoincash-paymentack";
 
     /**
      * Create a payment request with one standard pay to address output. You may want to sign the request using
-     * {@link #signPaymentRequest}. Use {@link Protos.PaymentRequest.Builder#build} to get the actual payment
-     * request.
+     * {@link #signPaymentRequest}. Use {@link org.bitcoin.protocols.payments.Protos.PaymentRequest.Builder#build}
+     * to get the actual payment request.
      *
      * @param params network parameters
      * @param amount amount of coins to request, or null
@@ -74,7 +74,7 @@ public class PaymentProtocol {
 
     /**
      * Create a payment request. You may want to sign the request using {@link #signPaymentRequest}. Use
-     * {@link Protos.PaymentRequest.Builder#build} to get the actual payment request.
+     * {@link org.bitcoin.protocols.payments.Protos.PaymentRequest.Builder#build} to get the actual payment request.
      * 
      * @param params network parameters
      * @param outputs list of outputs to request coins to
@@ -157,7 +157,7 @@ public class PaymentProtocol {
      * 
      * @param paymentRequest Payment request to verify.
      * @param trustStore KeyStore of trusted root certificate authorities.
-     * @return verification data, or null if no PKI method was specified in the {@link Protos.PaymentRequest}.
+     * @return verification data, or null if no PKI method was specified in the {@link org.bitcoin.protocols.payments.Protos.PaymentRequest}.
      * @throws PaymentProtocolException if payment request could not be verified.
      */
     @Nullable
