@@ -22,7 +22,7 @@
     <parent>
         <groupId>org.bitcoincashj</groupId>
         <artifactId>bitcoincashj-parent</artifactId>
-        <version>0.14.7-bip47.3</version>
+        <version>0.14.7-bip47.4</version>
     </parent>
 
     <artifactId>bitcoincashj-core</artifactId>
@@ -32,7 +32,7 @@
 
     <packaging>jar</packaging>
 
-    <url>https://bitcoinj.cash</url>
+    <url>https://github.com/Stash-Crypto/bitcoincashj/</url>
 
     <licenses>
         <license>
@@ -45,8 +45,8 @@
     <!-- Dummy block to make Maven Central happy: authors list is in AUTHORS -->
     <developers>
         <developer>
-            <name>The bitcoinj.cash team</name>
-            <email>bitcoinj-cash@googlegroups.com</email>
+            <name>Stash-Crypto</name>
+            <email></email>
         </developer>
     </developers>
 

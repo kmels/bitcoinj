@@ -4,7 +4,7 @@
 
     <groupId>org.bitcoincashj</groupId>
     <artifactId>bitcoincashj-parent</artifactId>
-    <version>0.14.7-bip47.3</version>
+    <version>0.14.7-bip47.4</version>
     <packaging>pom</packaging>
 
     <modules>
@@ -20,8 +20,8 @@
     </parent>
 
     <scm>
-        <connection>scm:git:https://github.com/bitcoincash-wallet/bitcoincashj</connection>
-        <developerConnection>scm:git:https://github.com/bitcoincash-wallet/bitcoincashj</developerConnection>
+        <connection>scm:git:https://github.com/Stash-Crypto/bitcoincashj</connection>
+        <developerConnection>scm:git:https://github.com/Stash-Crypto/bitcoincashj</developerConnection>
         <url>scm:git:https://github.com/Stash-Crypto/bitcoincashj</url>
     </scm>
 
