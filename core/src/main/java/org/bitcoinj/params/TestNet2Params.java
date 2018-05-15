@@ -39,7 +39,7 @@ public class TestNet2Params extends AbstractBitcoinCoreParams {
     public TestNet2Params() {
         super();
         id = ID_TESTNET;
-        packetMagic = 0xdab5bffaL;
+        packetMagic = 0xfabfb5daL;
         port = 18333;
         addressHeader = 111;
         p2shHeader = 196;
