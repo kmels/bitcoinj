@@ -118,7 +118,7 @@
             </build>
         </profile>
         <profile>
-            <id>travis</id> <!-- profile for travis CI testing -->
+            <id>no-network</id> <!-- profile for travis CI testing -->
             <build>
                 <plugins>
                     <plugin>
@@ -129,12 +129,7 @@
                                 <exclude>**/core/PeerTest.java</exclude>
                                 <exclude>**/core/TransactionBroadcastTest.java</exclude>
                             </excludes>
-                            <skipTests>${skipUnitTests}</skipTests>
                         </configuration>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-failsafe-plugin</artifactId>
                     </plugin>
                 </plugins>
             </build>
@@ -488,6 +483,12 @@
             <artifactId>logback-classic</artifactId>
             <version>1.2.3</version>
             <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
