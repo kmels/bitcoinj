@@ -373,7 +373,7 @@ public class BIP47AppKit {
         }
 
         log.debug("Stopping peergroup");
-        vPeerGroup.stop();
+        vPeerGroup.stopAsync();
         try {
             log.debug("Saving wallet");
             vWallet.saveToFile(vWalletFile);
