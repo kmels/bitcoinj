@@ -3924,9 +3924,11 @@ public class Wallet extends BaseTaggableObject
         lock.lock();
         try {
             checkArgument(!req.completed, "Given SendRequest has already been completed.");
-            // set version
-            if(req.getUseForkId() || getParams().getUseForkId())
+
+            if(req.getUseForkId() || getParams().getUseForkId()) {
                 req.tx.setVersion(Transaction.CURRENT_VERSION);
+                req.setUseForkId(true);
+            }
 
             // Calculate the amount of value we need to import.
             Coin value = Coin.ZERO;
@@ -4037,6 +4039,9 @@ public class Wallet extends BaseTaggableObject
      * transaction will be complete in the end.</p>
      */
     public void signTransaction(SendRequest req) {
+        if(req.getUseForkId() || getParams().getUseForkId()) {
+            req.setUseForkId(true);
+        }
         lock.lock();
         try {
             Transaction tx = req.tx;
@@ -4059,10 +4064,11 @@ public class Wallet extends BaseTaggableObject
                     // We assume if its already signed, its hopefully got a SIGHASH type that will not invalidate when
                     // we sign missing pieces (to check this would require either assuming any signatures are signing
                     // standard output types or a way to get processed signatures out of script execution)
-                    if (getParams().getUseForkId())
-                        txIn.getScriptSig().correctlySpends(tx, i, txIn.getConnectedOutput().getScriptPubKey(), txIn.getConnectedOutput().getValue());
-                    else
+                    if (getParams().getUseForkId()) {
+	                txIn.getScriptSig().correctlySpends(tx, i, txIn.getConnectedOutput().getScriptPubKey(), txIn.getConnectedOutput().getValue(), Script.ALL_VERIFY_FLAGS);
+		    } else {
                         txIn.getScriptSig().correctlySpends(tx, i, txIn.getConnectedOutput().getScriptPubKey());
+		    }
                     log.warn("Input {} already correctly spends output, assuming SIGHASH type used will be safe and skipping signing.", i);
                     continue;
                 } catch (ScriptException e) {

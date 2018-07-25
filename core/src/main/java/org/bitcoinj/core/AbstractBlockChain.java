@@ -1,6 +1,7 @@
 /*
  * Copyright 2012 Google Inc.
  * Copyright 2014 Andreas Schildbach
+ * Copyright 2018 the bitcoinj-cash developers
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,6 +14,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * This file has been modified by the bitcoinj-cash developers for the bitcoinj-cash project.
+ * The original file was from the bitcoinj project (https://github.com/bitcoinj/bitcoinj).
  */
 
 package org.bitcoinj.core;
@@ -21,7 +25,9 @@ import com.google.common.base.*;
 import com.google.common.collect.*;
 import com.google.common.util.concurrent.*;
 import org.bitcoinj.core.listeners.*;
-import org.bitcoinj.params.AbstractBitcoinCashParams;
+import org.bitcoinj.pow.AbstractPowRulesChecker;
+import org.bitcoinj.pow.AbstractRuleCheckerFactory;
+import org.bitcoinj.pow.factory.RuleCheckerFactory;
 import org.bitcoinj.store.*;
 import org.bitcoinj.utils.*;
 import org.bitcoinj.wallet.Wallet;
@@ -102,6 +108,7 @@ public abstract class AbstractBlockChain {
     private final Object chainHeadLock = new Object();
 
     protected final NetworkParameters params;
+    protected final AbstractRuleCheckerFactory ruleCheckerFactory;
     private final CopyOnWriteArrayList<ListenerRegistration<NewBestBlockListener>> newBestBlockListeners;
     private final CopyOnWriteArrayList<ListenerRegistration<ReorganizeListener>> reorganizeListeners;
     private final CopyOnWriteArrayList<ListenerRegistration<TransactionReceivedInBlockListener>> transactionReceivedListeners;
@@ -150,6 +157,7 @@ public abstract class AbstractBlockChain {
         chainHead = blockStore.getChainHead();
         log.info("chain head is at height {}:\n{}", chainHead.getHeight(), chainHead.getHeader());
         this.params = context.getParams();
+        this.ruleCheckerFactory = RuleCheckerFactory.create(this.params);
 
         this.newBestBlockListeners = new CopyOnWriteArrayList<ListenerRegistration<NewBestBlockListener>>();
         this.reorganizeListeners = new CopyOnWriteArrayList<ListenerRegistration<ReorganizeListener>>();
@@ -486,11 +494,12 @@ public abstract class AbstractBlockChain {
             } else {
                 checkState(lock.isHeldByCurrentThread());
                 // It connects to somewhere on the chain. Not necessarily the top of the best known chain.
-                if (params.getUseForkId())
-                    params.checkDifficultyTransitions(storedPrev, block, blockStore, this);
-                else
+		if (params.getUseForkId()) {
+		    AbstractPowRulesChecker rulesChecker = ruleCheckerFactory.getRuleChecker(storedPrev, block);
+		    rulesChecker.checkRules(storedPrev, block, blockStore, this);
+		} else {
                     params.checkDifficultyTransitions(storedPrev, block, blockStore);
-
+		}
                 connectBlock(block, storedPrev, shouldVerifyTransactions(), filteredTxHashList, filteredTxn);
             }
 
