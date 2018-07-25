@@ -55,12 +55,6 @@ public abstract class AbstractBitcoinCoreParams extends NetworkParameters {
 
     @Override
     public void checkDifficultyTransitions(final StoredBlock storedPrev, final Block nextBlock,
-                                           final BlockStore blockStore, AbstractBlockChain blockChain) throws VerificationException, BlockStoreException {
-        new Exception("This method is for Bitcoin CASH and should not be called. For core use the other checkDifficultyTransitions method.");
-    }
-
-    @Override
-    public void checkDifficultyTransitions(final StoredBlock storedPrev, final Block nextBlock,
                                            final BlockStore blockStore) throws VerificationException, BlockStoreException {
         Block prev = storedPrev.getHeader();
 

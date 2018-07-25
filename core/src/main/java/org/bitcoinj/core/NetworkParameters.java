@@ -18,24 +18,25 @@
 package org.bitcoinj.core;
 
 import com.google.common.base.Objects;
-import org.bitcoinj.core.Block;
-import org.bitcoinj.core.StoredBlock;
-import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.net.discovery.*;
+import org.bitcoinj.net.discovery.HttpDiscovery;
 import org.bitcoinj.params.*;
-import org.bitcoinj.script.*;
+import org.bitcoinj.script.Script;
+import org.bitcoinj.script.ScriptOpCodes;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 
 import org.bitcoinj.utils.MonetaryFormat;
-
-import javax.annotation.*;
-import java.io.*;
-import java.math.*;
-import java.util.*;
-
-import static org.bitcoinj.core.Coin.*;
 import org.bitcoinj.utils.VersionTally;
+
+import javax.annotation.Nullable;
+import java.io.ByteArrayOutputStream;
+import java.math.BigInteger;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.bitcoinj.core.Coin.COIN;
+import static org.bitcoinj.core.Coin.FIFTY_COINS;
 
 /**
  * <p>NetworkParameters contains the data needed for working with an instantiation of a Bitcoin chain.</p>
@@ -254,16 +255,9 @@ public abstract class NetworkParameters {
      *
      * @throws VerificationException if the block's difficulty is not correct.
      */
-    public abstract void checkDifficultyTransitions(StoredBlock storedPrev, Block next, final BlockStore blockStore) throws VerificationException, BlockStoreException;
-
+    public abstract void checkDifficultyTransitions(final StoredBlock storedPrev, final Block next, final BlockStore blockStore) throws VerificationException, BlockStoreException;
     /**
-     * Throws an exception if the block's difficulty is not correct.
-     *
-     * @throws VerificationException if the block's difficulty is not correct.
-     */
-    public abstract void checkDifficultyTransitions(StoredBlock storedPrev, Block next, final BlockStore blockStore, AbstractBlockChain blockChain) throws VerificationException, BlockStoreException;
 
-    /**
      * Returns true if the block height is either not a checkpoint, or is a checkpoint and the hash matches.
      */
     public boolean passesCheckpoint(int height, Sha256Hash hash) {
@@ -429,7 +423,7 @@ public abstract class NetworkParameters {
 
     /**
      * Return the default serializer for this network. This is a shared serializer.
-     * @return
+     * @return the default serializer
      */
     public final MessageSerializer getDefaultSerializer() {
         // Construct a default serializer if we don't have one
