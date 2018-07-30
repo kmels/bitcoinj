@@ -346,11 +346,11 @@ public class CashAddress {
         for (int i = 0; i < hash.length; i++) {
             hashByteArray[i] = (byte) hash[i];
         }
-
+        
         if (versionByte == 1)
-            return new LegacyAddress(networkParameters, false, hashByteArray);
-        else
             return new LegacyAddress(networkParameters, true, hashByteArray);
+        else
+            return new LegacyAddress(networkParameters, false, hashByteArray);
 
     }
 
