@@ -234,7 +234,7 @@ public class BitcoinSerializer extends MessageSerializer {
         } else if (command.equals("getutxos")) {
             return new GetUTXOsMessage(params, payloadBytes);
         } else if (command.equals("sendheaders")) {
-            return new SendHeadersMessage(params, payloadBytes);
+            return new SendHeadersMessage(params);
         } else if (command.equals("feefilter")) {
             return new FeeFilterMessage(params);
         } else {

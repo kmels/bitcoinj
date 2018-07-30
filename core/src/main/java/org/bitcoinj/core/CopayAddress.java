@@ -11,7 +11,8 @@ public class CopayAddress {
 
     public String encode() {
         if (mAddress.getParameters().getId().equals(NetworkParameters.ID_TESTNET)) {
-            return mAddress.toBase58();
+
+            return Base58.encodeChecked(mAddress.getVersion(), mAddress.getHash());
         } else {
             int version;
             if (mAddress.isP2SHAddress()) {
@@ -26,29 +27,25 @@ public class CopayAddress {
         }
     }
 
-    /*public static Address decode(NetworkParameters networkParameters, String address) {
-        Address addr = Address.fromString(networkParameters, address);
-        if (networkParameters.getId().equals(NetworkParameters.ID_TESTNET)) {
+    public static Address decode(NetworkParameters params, String address) {
+        Address addr = Address.fromString(params, address);
+        if (params.getId().equals(NetworkParameters.ID_TESTNET)) {
             return addr;
         } else {
             int version;
             if (addr.getVersion() == BCCMainNetParams.COPAY_ADDRESS_HEADER) {
-                version = networkParameters.addressHeader;
+                version = params.addressHeader;
             } else if (addr.getVersion() == BCCMainNetParams.COPAY_P2SH_HEADER) {
-                version = networkParameters.p2shHeader;
+                version = params.p2shHeader;
             } else {
                 throw new AddressFormatException("Wrong version");
             }
 
             if (version == params.getAddressHeader())
-                return new LegacyAddress(params, false, bytes);
+                return new LegacyAddress(params, false, addr.getHash());
             else if (version == params.getP2SHHeader())
-                return new LegacyAddress(params, true, bytes);
+                return new LegacyAddress(params, true, addr.getHash());
             throw new AddressFormatException.WrongNetwork(version);
-
-            byte[] bytes = Base58.decodeChecked(address);
-            return new LegacyAddress(networkParameters, bytes);
-            //return new Address(networkParameters, version, addr.getHash());
         }
-    }*/
+    }
 }

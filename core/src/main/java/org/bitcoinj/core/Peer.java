@@ -569,7 +569,7 @@ public class Peer extends PeerSocketHandler {
             return;
         }
 
-	bool bchDisabled = (vPeerVersionMessage.localServices & VersionMessage.NODE_BITCOIN_CASH) == VersionMessage.NODE_BITCOIN_CASH;
+	    Boolean bchDisabled = (vPeerVersionMessage.localServices & VersionMessage.NODE_BITCOIN_CASH) == VersionMessage.NODE_BITCOIN_CASH;
         if (!params.getUseForkId() && bchDisabled) {
             log.info("{}: Peer follows an incompatible block chain.", this);
             // Shut down the channel gracefully.

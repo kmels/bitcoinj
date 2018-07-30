@@ -1246,14 +1246,14 @@ public class Wallet extends BaseTaggableObject
      *
      * (This is a convenience method - the encryption type is actually stored in the keyCrypter).
      */
-    public EncryptionType getEncryptionType() {
+    public Protos.Wallet.EncryptionType getEncryptionType() {
         keyChainGroupLock.lock();
         try {
             KeyCrypter crypter = keyChainGroup.getKeyCrypter();
             if (crypter != null)
                 return crypter.getUnderstoodEncryptionType();
             else
-                return EncryptionType.UNENCRYPTED;
+                return Protos.Wallet.EncryptionType.UNENCRYPTED;
         } finally {
             keyChainGroupLock.unlock();
         }
@@ -1261,7 +1261,7 @@ public class Wallet extends BaseTaggableObject
 
     /** Returns true if the wallet is encrypted using any scheme, false if not. */
     public boolean isEncrypted() {
-        return getEncryptionType() != EncryptionType.UNENCRYPTED;
+        return getEncryptionType() != Protos.Wallet.EncryptionType.UNENCRYPTED;
     }
 
     /** Changes wallet encryption password, this is atomic operation. */

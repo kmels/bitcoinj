@@ -904,13 +904,13 @@ public class Transaction extends ChildMessage {
         addInput(input);
         Sha256Hash hash = hashForSignature(inputs.size() - 1, scriptPubKey, sigHash, anyoneCanPay);
         ECKey.ECDSASignature ecSig = sigKey.sign(hash);
-	TransactionSignature txSig = new TransactionSignature(ecSig, sigHash, anyoneCanPay, false);
+	    TransactionSignature txSig = new TransactionSignature(ecSig, sigHash, anyoneCanPay, false);
         if (ScriptPattern.isPayToPubKey(scriptPubKey))
             input.setScriptSig(ScriptBuilder.createInputScript(txSig));
         else if (ScriptPattern.isPayToPubKeyHash(scriptPubKey))
             input.setScriptSig(ScriptBuilder.createInputScript(txSig, sigKey));
         else
-            throw new ScriptException("Don't know how to sign for this kind of scriptPubKey: " + scriptPubKey);
+            throw new ScriptException(ScriptError.SCRIPT_ERR_UNKNOWN_ERROR, "Don't know how to sign for this kind of scriptPubKey: " + scriptPubKey);
         return input;
     }
     /**

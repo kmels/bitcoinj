@@ -15,6 +15,7 @@ import com.google.gson.reflect.TypeToken;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.bip47.*;
 import org.bitcoinj.crypto.BIP47SecretPoint;
+import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.wallet.*;
 import org.bitcoinj.utils.BIP47Util;
 import org.bitcoinj.wallet.bip47.NotSecp256k1Exception;
@@ -53,6 +54,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.commons.lang3.StringUtils.join;
 
 /**
  * Created by jimmy on 9/28/17.
@@ -201,8 +203,8 @@ public class BIP47AppKit {
         // add Stash-Crypto dedicated nodes for BCH and tBCH
         if (coinName.equals("BCH")) {
             vPeerGroup.setMaxConnections(vPeerGroup.DEFAULT_CONNECTIONS);
-            vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("158.69.119.35"), 8333));
-            vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("144.217.73.86"), 8333));
+            vPeerGroup.addAddress(new PeerAddress(params, InetAddresses.forString("158.69.119.35"), 8333));
+            vPeerGroup.addAddress(new PeerAddress(params, InetAddresses.forString("144.217.73.86"), 8333));
             // bitcoin abc from shodan.io
             //vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("106.14.105.56"), 8333));
             //vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("52.211.14.233"), 8333));
@@ -214,8 +216,8 @@ public class BIP47AppKit {
         } else if (coinName.equals("tBCH")) {
             vPeerGroup.setMaxConnections(vPeerGroup.DEFAULT_CONNECTIONS);
             // stash crypto
-            vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("158.69.119.35"), 18333));
-            vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("144.217.73.86"), 18333));
+            vPeerGroup.addAddress(new PeerAddress(params, InetAddresses.forString("158.69.119.35"), 18333));
+            vPeerGroup.addAddress(new PeerAddress(params, InetAddresses.forString("144.217.73.86"), 18333));
             // bitcoin abc from shodan.io
             //vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("61.100.182.189"), 18333));
             //vPeerGroup.addAddress(new PeerAddress(InetAddresses.forString("47.74.186.127"), 18333));
@@ -525,7 +527,7 @@ public class BIP47AppKit {
     public boolean isToBIP47Address(Transaction transaction) {
         List<ECKey> keys = vWallet.getImportedKeys();
         for (ECKey key : keys) {
-            Address address = key.toAddress(getParams());
+            Address address = LegacyAddress.fromKey(getParams(), key);
             if (address == null) {
                 continue;
             }
@@ -615,7 +617,7 @@ public class BIP47AppKit {
     }
 
     public Address getAddressOfKey(ECKey key) {
-        return key.toAddress(getParams());
+        return LegacyAddress.fromKey(getParams(), key);
     }
 
     public void importKey(ECKey key) {
@@ -762,7 +764,7 @@ public class BIP47AppKit {
     }
 
     public Address getAddressFromBase58(String addr) {
-        return Address.fromBase58(getParams(), addr);
+        return LegacyAddress.fromBase58(getParams(), addr);
     }
 
     /** <p>Returns true if the given address is a valid payment code or a valid address in the
@@ -778,7 +780,7 @@ public class BIP47AppKit {
         }
 
         try {
-            Address.fromBase58(getParams(), address);
+            LegacyAddress.fromBase58(getParams(), address);
             return true;
         } catch (AddressFormatException e) {
             try {
@@ -793,7 +795,7 @@ public class BIP47AppKit {
     public Transaction createSend(String strAddr, long amount) throws InsufficientMoneyException {
         Address address;
         try {
-            address = Address.fromBase58(getParams(), strAddr);
+            address = LegacyAddress.fromBase58(getParams(), strAddr);
         } catch (AddressFormatException e1) {
             try {
                 address = CashAddress.decode(strAddr);
@@ -931,7 +933,7 @@ public class BIP47AppKit {
     public String getCurrentOutgoingAddress(BIP47Channel BIP47Channel) {
         try {
             ECKey key = org.bitcoinj.core.bip47.BIP47Util.getSendAddress(this, new BIP47PaymentCode(BIP47Channel.getPaymentCode()), BIP47Channel.getCurrentOutgoingIndex()).getSendECKey();
-            return key.toAddress(getParams()).toString();
+            return LegacyAddress.fromKey(getParams(), key).toString();
         } catch (InvalidKeyException | InvalidKeySpecException | NotSecp256k1Exception | NoSuchProviderException | NoSuchAlgorithmException e) {
             e.printStackTrace();
         }
@@ -978,7 +980,7 @@ public class BIP47AppKit {
         List<DeterministicKey> deterministicKeys = vWallet.getActiveKeyChain().getLeafKeys();
         List<String> addresses = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
-            addresses.add(deterministicKeys.get(i).toAddress(getParams()).toBase58());
+            addresses.add(LegacyAddress.fromKey(getParams(), deterministicKeys.get(i)).toBase58());
         }
         return addresses;
     }

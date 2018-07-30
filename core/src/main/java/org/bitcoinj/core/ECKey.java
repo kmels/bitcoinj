@@ -27,6 +27,7 @@ import com.google.common.primitives.UnsignedBytes;
 import org.bitcoin.NativeSecp256k1;
 import org.bitcoin.NativeSecp256k1Util;
 import org.bitcoin.Secp256k1Context;
+import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.Wallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1165,10 +1166,9 @@ public class ECKey implements EncryptableItem {
     }
 
     @Nullable
-    @Override
-    /*public Protos.Wallet.EncryptionType getEncryptionType() {
+    public Protos.Wallet.EncryptionType getEncryptionType() {
         return keyCrypter != null ? keyCrypter.getUnderstoodEncryptionType() : Protos.Wallet.EncryptionType.UNENCRYPTED;
-    }*/
+    }
 
     /**
      * A wrapper for {@link #getPrivKeyBytes()} that returns null if the private key bytes are missing or would have

@@ -12,8 +12,10 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.BIP47SecretPoint;
+import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptChunk;
 import org.bitcoinj.kits.BIP47AppKit;
+import org.bitcoinj.script.ScriptPattern;
 import org.bitcoinj.wallet.bip47.NotSecp256k1Exception;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,7 +70,11 @@ public class BIP47Util {
     /* Extract the payment code from an incoming notification transaction */
     public static BIP47PaymentCode getPaymentCodeInNotificationTransaction(byte[] privKeyBytes, Transaction tx) {
         log.debug( "Getting pub key");
-        byte[] pubKeyBytes = tx.getInput(0).getScriptSig().getPubKey();
+        Script sigScript = tx.getInput(0).getScriptSig();
+        if (!ScriptPattern.isPayToPubKey(sigScript)) {
+            return null;
+        }
+        byte[] pubKeyBytes = ScriptPattern.extractKeyFromPayToPubKey(sigScript);
 
         log.debug( "Private Key: "+ Utils.HEX.encode(privKeyBytes));
         log.debug( "Public Key: "+Utils.HEX.encode(pubKeyBytes));

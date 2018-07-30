@@ -6,6 +6,7 @@ package org.bitcoinj.core.bip47;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.LegacyAddress;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicKey;
@@ -72,7 +73,8 @@ public class BIP47Account {
 
     /** Returns the P2PKH address associated with the 0th public key  */
     public Address getNotificationAddress() {
-        return HDKeyDerivation.deriveChildKey(mKey, ChildNumber.ZERO).toAddress(mNetworkParameters);
+        ECKey key = HDKeyDerivation.deriveChildKey(mKey, ChildNumber.ZERO);
+        return LegacyAddress.fromKey(mNetworkParameters, key);
     }
 
     /** Returns the 0th derivation key */

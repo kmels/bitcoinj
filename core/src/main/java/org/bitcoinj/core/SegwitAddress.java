@@ -112,6 +112,10 @@ public class SegwitAddress extends Address {
         return bytes[0] & 0xff;
     }
 
+    @Override
+    public int getVersion(){
+        return getWitnessVersion();
+    }
     /**
      * Returns the witness program in decoded form.
      * 

@@ -28,20 +28,7 @@ import java.util.concurrent.TimeUnit;
 import java.io.*;
 import java.nio.ByteBuffer;
 
-import org.bitcoinj.core.Address;
-import org.bitcoinj.core.AddressFormatException;
-import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.LegacyAddress;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.StoredBlock;
-import org.bitcoinj.core.StoredUndoableBlock;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionOutputChanges;
-import org.bitcoinj.core.UTXO;
-import org.bitcoinj.core.UTXOProviderException;
-import org.bitcoinj.core.Utils;
-import org.bitcoinj.core.VerificationException;
+import org.bitcoinj.core.*;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptException;
 import org.iq80.leveldb.*;
@@ -913,12 +900,12 @@ public class LevelDBFullPrunedBlockStore implements FullPrunedBlockStore {
                 try {
                     a = CashAddress.decode(out.getAddress());
 
-                    hashBytes = a.getHash160();
+                    hashBytes = a.getHash();
                 }  catch (AddressFormatException e2) {
                     try {
                         a = CopayAddress.decode(getParams(), out.getAddress());
 
-                        hashBytes = a.getHash160();
+                        hashBytes = a.getHash();
                     }  catch (AddressFormatException e3) {
                         if (instrument)
                             endMethod("removeUnspentTransactionOutput");

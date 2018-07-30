@@ -19,6 +19,7 @@ package org.bitcoinj.net.discovery;
 
 import com.google.common.annotations.*;
 import com.google.protobuf.*;
+import org.bitcoin.crawler.*;
 import org.bitcoinj.core.*;
 import org.slf4j.*;
 
@@ -112,7 +113,7 @@ public class HttpDiscovery implements PeerDiscovery {
         }
     }
 
-    /*@VisibleForTesting
+    @VisibleForTesting
     public InetSocketAddress[] protoToAddrs(PeerSeedProtos.SignedPeerSeeds proto) throws PeerDiscoveryException, InvalidProtocolBufferException, SignatureException {
         if (details.pubkey != null) {
             if (!Arrays.equals(proto.getPubkey().toByteArray(), details.pubkey.getPubKey()))
@@ -130,7 +131,7 @@ public class HttpDiscovery implements PeerDiscovery {
         for (PeerSeedProtos.PeerSeedData data : seeds.getSeedList())
             results[i++] = new InetSocketAddress(data.getIpAddress(), data.getPort());
         return results;
-    }*/
+    }
 
     @Override
     public void shutdown() {

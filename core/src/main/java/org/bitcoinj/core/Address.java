@@ -27,6 +27,8 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
+import org.bitcoinj.params.Networks;
+import org.bitcoinj.script.Script;
 import org.bitcoinj.script.Script.ScriptType;
 
 /**
@@ -40,13 +42,15 @@ import org.bitcoinj.script.Script.ScriptType;
  * </p>
  */
 public abstract class Address extends PrefixedChecksummedBytes {
+    private int type = 0;
+
     public Address(NetworkParameters params, byte[] bytes) {
         super(params, bytes);
     }
 
     /**
      * Construct an address from its textual form.
-     * 
+     *
      * @param params
      *            the expected network this address is valid for, or null if the network should be derived from the
      *            textual form
@@ -60,12 +64,12 @@ public abstract class Address extends PrefixedChecksummedBytes {
      *             if the given string is valid but not for the expected network (eg testnet vs mainnet)
      */
     /** @deprecated Use {@link #fromBase58(NetworkParameters, String)} */
-    @Deprecated
-    /*public Address(@Nullable NetworkParameters params, String address) throws AddressFormatException {
+    /*@Deprecated
+    public Address(@Nullable NetworkParameters params, String address) throws AddressFormatException {
         super(address);
         if (params != null) {
             if (!isAcceptableVersion(params, version)) {
-                throw new WrongNetworkException(version, params.getAcceptableAddressCodes());
+                throw new AddressFormatException(version, params.getAcceptableAddressCodes());
             }
             this.params = params;
         } else {
@@ -81,7 +85,7 @@ public abstract class Address extends PrefixedChecksummedBytes {
 
             this.params = paramsFound;
         }
-    */
+    }*/
 
     public String toCashAddress() {
         try {
@@ -123,14 +127,14 @@ public abstract class Address extends PrefixedChecksummedBytes {
      * 
      * @return hash that is encoded in the address
      */
-	/*public static boolean isAcceptableVersion(NetworkParameters params, int version) {
+	public static boolean isAcceptableVersion(NetworkParameters params, int version) {
         for (int v : params.getAcceptableAddressCodes()) {
             if (version == v) {
                 return true;
             }
         }
         return false;
-	}*/
+	}
 
     public abstract byte[] getHash();
 
@@ -154,7 +158,7 @@ public abstract class Address extends PrefixedChecksummedBytes {
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
         in.defaultReadObject();
         params = NetworkParameters.fromID(in.readUTF());
-    }
+    }*/
 
     public int getType() {
         return type;
@@ -178,7 +182,14 @@ public abstract class Address extends PrefixedChecksummedBytes {
         } else {
             return super.toString();
         }
-	}*/
+	}
 
     public abstract ScriptType getOutputScriptType();
+
+    public boolean isP2SHAddress(){
+        return getOutputScriptType() == Script.ScriptType.P2SH ||
+                getOutputScriptType() == Script.ScriptType.P2WPKH;
+    }
+
+    public abstract int getVersion();
 }

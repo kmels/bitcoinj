@@ -102,7 +102,7 @@ public abstract class NetworkParameters {
     protected int spendableCoinbaseDepth;
     protected int subsidyDecreaseBlockCount;
 
-    // protected int[] acceptableAddressCodes;
+    protected int[] acceptableAddressCodes;
 
     protected String[] dnsSeeds;
     protected int[] addrSeeds;
@@ -346,6 +346,15 @@ public abstract class NetworkParameters {
      */
     public int getTargetTimespan() {
         return targetTimespan;
+    }
+
+    /**
+     * The version codes that prefix addresses which are acceptable on this network. Although Satoshi intended these to
+     * be used for "versioning", in fact they are today used to discriminate what kind of data is contained in the
+     * address and to prevent accidentally sending coins across chains which would destroy them.
+     */
+    public int[] getAcceptableAddressCodes() {
+        return acceptableAddressCodes;
     }
 
     /**

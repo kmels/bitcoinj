@@ -61,7 +61,7 @@ public class CashAddress {
 
     public CashAddress(Address address) {
         mNetworkParameters = address.getParameters();
-        byte[] hash160 = address.getHash160();
+        byte[] hash160 = address.getHash();
         mPayload = new int[hash160.length];
         for (int i = 0; i < hash160.length; i++) {
             mPayload[i] = hash160[i] & 0xFF;
@@ -348,19 +348,19 @@ public class CashAddress {
         }
 
         if (versionByte == 1)
-            return new Address(networkParameters, networkParameters.p2shHeader, hashByteArray);
+            return new LegacyAddress(networkParameters, false, hashByteArray);
         else
-            return new Address(networkParameters, networkParameters.addressHeader, hashByteArray);
+            return new LegacyAddress(networkParameters, true, hashByteArray);
 
     }
 
     public static void main(String[] args) {
         try {
-            Address address1 = Address.fromBase58(BCCMainNetParams.get(), "1F18bHRRkTFKrbjDbjY7EwaXesGLQ261n5");
+            Address address1 = LegacyAddress.fromBase58(BCCMainNetParams.get(), "1F18bHRRkTFKrbjDbjY7EwaXesGLQ261n5");
             System.out.println("address1.toCashAddress() = " + address1.toCashAddress());
 
             Address address2 = CashAddress.decode("bitcoincash:qzvesxgz06gwpg2qg4zhqj2vu2yh9v8dcue88wnxm7");
-            System.out.println(address2.toBase58());
+            System.out.println(address2.toCashAddress());
         } catch (Exception e) {
             e.printStackTrace();
         }

@@ -33,6 +33,9 @@ import static com.google.common.base.Preconditions.checkState;
  * and testing of applications and new Bitcoin versions.
  */
 public class BCCTestNet3Params extends AbstractBitcoinCashParams {
+    public static final int TESTNET_MAJORITY_WINDOW = 100;
+    public static final int TESTNET_MAJORITY_REJECT_BLOCK_OUTDATED = 75;
+    public static final int TESTNET_MAJORITY_ENFORCE_BLOCK_UPGRADE = 51;
 
     /**
      * Scheme part for Bitcoin Cash TestNet URIs.
@@ -71,9 +74,9 @@ public class BCCTestNet3Params extends AbstractBitcoinCashParams {
         bip32HeaderPub = 0x043587CF;
         bip32HeaderPriv = 0x04358394;
 
-        majorityEnforceBlockUpgrade = TestNet2Params.TESTNET_MAJORITY_ENFORCE_BLOCK_UPGRADE;
-        majorityRejectBlockOutdated = TestNet2Params.TESTNET_MAJORITY_REJECT_BLOCK_OUTDATED;
-        majorityWindow = TestNet2Params.TESTNET_MAJORITY_WINDOW;
+        majorityEnforceBlockUpgrade = TESTNET_MAJORITY_ENFORCE_BLOCK_UPGRADE;
+        majorityRejectBlockOutdated = TESTNET_MAJORITY_REJECT_BLOCK_OUTDATED;
+        majorityWindow = TESTNET_MAJORITY_WINDOW;
 
         // Aug, 1 hard fork
         uahfHeight = 1155876;
