@@ -24,6 +24,7 @@ import org.junit.Test;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -31,6 +32,7 @@ import java.util.List;
 import static org.bitcoinj.core.Utils.toByteArray;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class UtilsTest {
 
@@ -230,15 +232,16 @@ public class UtilsTest {
 
     @Test
     public void testReadInt64() {
-        assertEquals(Utils.readInt64(BaseEncoding.base16().decode("0000000000000000"),0), 0L);
-        assertEquals(Utils.readInt64(BaseEncoding.base16().decode("FF00000000000000"),0), (long)Math.pow(2,8)-1);
-        assertEquals(Utils.readInt64(BaseEncoding.base16().decode("FFFF000000000000"),0), (long)Math.pow(2,16)-1);
-        assertEquals(Utils.readInt64(BaseEncoding.base16().decode("FFFFFF0000000000"),0), (long)Math.pow(2,24)-1);
-        assertEquals(Utils.readInt64(BaseEncoding.base16().decode("FFFFFFFF00000000"),0), (long)Math.pow(2,32)-1);
-        assertEquals(Utils.readInt64(BaseEncoding.base16().decode("FFFFFFFFFF000000"),0), (long)Math.pow(2,40)-1);
-        assertEquals(Utils.readInt64(BaseEncoding.base16().decode("FFFFFFFFFFFF0000"),0), (long)Math.pow(2,48)-1);
-        assertEquals(Utils.readInt64(BaseEncoding.base16().decode("FFFFFFFFFFFFFF00"),0), (long)Math.pow(2,56)-1);
-        assertEquals(Utils.readInt64(BaseEncoding.base16().decode("FFFFFFFFFFFFFFFF"),0), -1L);
+        assertEquals(Utils.readInt64(BaseEncoding.base16().decode("0000000000000000"), 0), 0L);
+        assertEquals(Utils.readInt64(BaseEncoding.base16().decode("FF00000000000000"), 0), (long) Math.pow(2, 8) - 1);
+        assertEquals(Utils.readInt64(BaseEncoding.base16().decode("FFFF000000000000"), 0), (long) Math.pow(2, 16) - 1);
+        assertEquals(Utils.readInt64(BaseEncoding.base16().decode("FFFFFF0000000000"), 0), (long) Math.pow(2, 24) - 1);
+        assertEquals(Utils.readInt64(BaseEncoding.base16().decode("FFFFFFFF00000000"), 0), (long) Math.pow(2, 32) - 1);
+        assertEquals(Utils.readInt64(BaseEncoding.base16().decode("FFFFFFFFFF000000"), 0), (long) Math.pow(2, 40) - 1);
+        assertEquals(Utils.readInt64(BaseEncoding.base16().decode("FFFFFFFFFFFF0000"), 0), (long) Math.pow(2, 48) - 1);
+        assertEquals(Utils.readInt64(BaseEncoding.base16().decode("FFFFFFFFFFFFFF00"), 0), (long) Math.pow(2, 56) - 1);
+        assertEquals(Utils.readInt64(BaseEncoding.base16().decode("FFFFFFFFFFFFFFFF"), 0), -1L);
+    }
 
     @Test(expected = IllegalArgumentException.class)
     public void bigIntegerToBytes_convertNegativeNumber() {

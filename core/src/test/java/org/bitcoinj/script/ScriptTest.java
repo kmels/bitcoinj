@@ -538,7 +538,7 @@ public class ScriptTest {
         LinkedList<byte[]> stack = new LinkedList<byte[]>();
         EnumSet<VerifyFlag> verifyFlags = EnumSet.noneOf(VerifyFlag.class);
         verifyFlags.add(VerifyFlag.MONOLITH_OPCODES);
-        Script.executeScript(new Transaction(PARAMS), 0, script, stack, Coin.ZERO, verifyFlags);
+        Script.executeScript(new Transaction(TESTNET), 0, script, stack, Coin.ZERO, verifyFlags);
         return stack.peekLast();
     }
 

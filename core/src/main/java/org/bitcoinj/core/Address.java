@@ -48,45 +48,6 @@ public abstract class Address extends PrefixedChecksummedBytes {
         super(params, bytes);
     }
 
-    /**
-     * Construct an address from its textual form.
-     *
-     * @param params
-     *            the expected network this address is valid for, or null if the network should be derived from the
-     *            textual form
-     * @param str
-     *            the textual form of the address, such as "17kzeh4N8g49GFvdDzSf8PjaPfyoD1MndL" or
-     *            "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4"
-     * @return constructed address
-     * @throws AddressFormatException
-     *             if the given string doesn't parse or the checksum is invalid
-     * @throws AddressFormatException.WrongNetwork
-     *             if the given string is valid but not for the expected network (eg testnet vs mainnet)
-     */
-    /** @deprecated Use {@link #fromBase58(NetworkParameters, String)} */
-    /*@Deprecated
-    public Address(@Nullable NetworkParameters params, String address) throws AddressFormatException {
-        super(address);
-        if (params != null) {
-            if (!isAcceptableVersion(params, version)) {
-                throw new AddressFormatException(version, params.getAcceptableAddressCodes());
-            }
-            this.params = params;
-        } else {
-            NetworkParameters paramsFound = null;
-            for (NetworkParameters p : Networks.get()) {
-                if (isAcceptableVersion(p, version)) {
-                    paramsFound = p;
-                    break;
-                }
-            }
-            if (paramsFound == null)
-                throw new AddressFormatException("No network found for " + address);
-
-            this.params = paramsFound;
-        }
-    }*/
-
     public String toCashAddress() {
         try {
             return new CashAddress(this).encode();

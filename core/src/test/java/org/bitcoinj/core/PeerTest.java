@@ -96,7 +96,7 @@ public class PeerTest extends TestWithNetworkConnections {
     }
 
     private void connect() throws Exception {
-        if (PARAMS.getUseForkId())
+        if (TESTNET.getUseForkId())
             connectWithVersion(70001, VersionMessage.NODE_NETWORK | VersionMessage.NODE_BITCOIN_CASH);
         else
             connectWithVersion(70001, VersionMessage.NODE_NETWORK);
@@ -295,7 +295,7 @@ public class PeerTest extends TestWithNetworkConnections {
         VersionMessage peerVersion = new VersionMessage(UNITTEST, OTHER_PEER_CHAIN_HEIGHT);
         peerVersion.clientVersion = 70001;
 
-        if (PARAMS.getUseForkId())
+        if (UNITTEST.getUseForkId())
             peerVersion.localServices = VersionMessage.NODE_NETWORK | VersionMessage.NODE_BITCOIN_CASH;
         else
             peerVersion.localServices = VersionMessage.NODE_NETWORK;
@@ -839,7 +839,7 @@ public class PeerTest extends TestWithNetworkConnections {
                 disconnectedFuture.set(null);
             }
         });
-        if (PARAMS.getUseForkId())
+        if (UNITTEST.getUseForkId())
             connectWithVersion(500, VersionMessage.NODE_NETWORK | VersionMessage.NODE_BITCOIN_CASH);
         else
             connectWithVersion(500, VersionMessage.NODE_NETWORK);
@@ -901,7 +901,7 @@ public class PeerTest extends TestWithNetworkConnections {
     public void getUTXOs() throws Exception {
         // Basic test of support for BIP 64: getutxos support. The Lighthouse unit tests exercise this stuff more
         // thoroughly.
-        if (PARAMS.getUseForkId())
+        if (UNITTEST.getUseForkId())
             connectWithVersion(GetUTXOsMessage.MIN_PROTOCOL_VERSION, VersionMessage.NODE_NETWORK | VersionMessage.NODE_GETUTXOS | VersionMessage.NODE_BITCOIN_CASH);
         else
             connectWithVersion(GetUTXOsMessage.MIN_PROTOCOL_VERSION, VersionMessage.NODE_NETWORK | VersionMessage.NODE_GETUTXOS);

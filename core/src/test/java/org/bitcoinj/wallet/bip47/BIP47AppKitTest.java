@@ -20,6 +20,7 @@ import java.security.SecureRandom;
 import java.security.Security;
 import java.util.List;
 
+import static org.apache.commons.lang3.StringUtils.join;
 import static org.bitcoinj.core.Utils.HEX;
 import static org.junit.Assert.*;
 
@@ -69,7 +70,7 @@ public class BIP47AppKitTest extends TestWithBIP47AppKit {
     private final String CARLOS_BIP39_MNEMONIC = "fetch genuine seek want smile sea orient elbow basic where arrange display mask country walnut shuffle usage airport juice price grant scan wild alone";
     private final String CARLOS_PAYMENT_CODE = "PM8TJaWSfZYLLuJnXctJ8npNYrUr5UCeT6KGmayJ4ENDSqj7VZr7uyX9exCo5JA8mFLkeXPaHoCBKuMDpYFs3tdxP2UxNiHSsZtb1KkKSVQyiwFhdLTZ";
 
-    private final Address OTHER_ADDRESS = new ECKey().toAddress(PARAMS);
+    private final Address OTHER_ADDRESS = LegacyAddress.fromKey(UNITTEST, new ECKey());
 
 
     //  - blockchains to test
@@ -114,7 +115,7 @@ public class BIP47AppKitTest extends TestWithBIP47AppKit {
         byte[] entropy = mc.toEntropy(MnemonicCodeTest.split(ALICE_BIP39_MNEMONIC));
 
         assertEquals(ALICE_BIP39_RAW_ENTROPY, HEX.encode(entropy));
-        assertEquals(ALICE_BIP39_MNEMONIC, Utils.join(code));
+        assertEquals(ALICE_BIP39_MNEMONIC, join(code));
         assertEquals(ALICE_BIP32_SEED, HEX.encode(seed));
 
         File workingDir = new File("alice");
@@ -159,7 +160,7 @@ public class BIP47AppKitTest extends TestWithBIP47AppKit {
         byte[] seed = MnemonicCode.toSeed(code,"");
         byte[] entropy = mc.toEntropy(MnemonicCodeTest.split(BOB_BIP39_MNEMONIC));
         assertEquals(BOB_BIP39_RAW_ENTROPY, HEX.encode(entropy));
-        assertEquals(BOB_BIP39_MNEMONIC, Utils.join(code));
+        assertEquals(BOB_BIP39_MNEMONIC, join(code));
         assertEquals(BOB_BIP32_SEED, HEX.encode(seed));
 
         File workingDir = new File("bob");

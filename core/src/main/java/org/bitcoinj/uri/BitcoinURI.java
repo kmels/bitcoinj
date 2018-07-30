@@ -82,7 +82,7 @@ public class BitcoinURI {
     public static final String FIELD_PAYMENT_REQUEST_URL = "r";
 
     /**
-     * URI for Bitcoin network. Use {@link AbstractBitcoinNetParams#BITCOIN_SCHEME} if you specifically
+     * URI for Bitcoin network. Use {@link AbstractBitcoinCoreParams#BITCOIN_SCHEME} if you specifically
      * need Bitcoin, or use {@link NetworkParameters#getUriScheme} to get the scheme
      * from network parameters.
      */

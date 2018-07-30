@@ -18,6 +18,8 @@
 package org.bitcoinj.crypto;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.collect.Lists;

@@ -109,12 +109,13 @@ public class Utils {
         out[offset + 3] = (byte) (0xFF & (val >> 24));
     }
 
-    /*public static byte[] uint32ToByteArrayBE(long val) {
+    public static byte[] uint32ToByteArrayBE(long val) {
         byte[] out = new byte[4];
         uint32ToByteArrayBE(val, out, 0);
         return out;
     }
 
+    /** Write 4 bytes to the byte array (starting at the offset) as unsigned 32-bit integer in big endian format. */
     public static void uint32ToByteArrayBE(long val, byte[] out, int offset) {
         out[offset] = (byte) (0xFF & (val >> 24));
         out[offset + 1] = (byte) (0xFF & (val >> 16));
@@ -128,13 +129,21 @@ public class Utils {
         return out;
    }
 
-   public static void uint64ToByteArrayLE(long val, byte[] out, int offset) {*/
-    /** Write 4 bytes to the byte array (starting at the offset) as unsigned 32-bit integer in big endian format. */
-    public static void uint32ToByteArrayBE(long val, byte[] out, int offset) {
-        out[offset] = (byte) (0xFF & (val >> 24));
-        out[offset + 1] = (byte) (0xFF & (val >> 16));
-        out[offset + 2] = (byte) (0xFF & (val >> 8));
-        out[offset + 3] = (byte) (0xFF & val);
+    public static byte[] uint64ToByteArrayLE(long val) {
+        byte[] out = new byte[8];
+        uint64ToByteArrayLE(val, out, 0);
+        return out;
+    }
+
+    public static void uint64ToByteArrayLE(long val, byte[] out, int offset) {
+        out[offset] = (byte) (0xFF & val);
+        out[offset + 1] = (byte) (0xFF & (val >> 8));
+        out[offset + 2] = (byte) (0xFF & (val >> 16));
+        out[offset + 3] = (byte) (0xFF & (val >> 24));
+        out[offset + 4] = (byte) (0xFF & (val >> 32));
+        out[offset + 5] = (byte) (0xFF & (val >> 40));
+        out[offset + 6] = (byte) (0xFF & (val >> 48));
+        out[offset + 7] = (byte) (0xFF & (val >> 56));
     }
 
     /** Write 8 bytes to the byte array (starting at the offset) as signed 64-bit integer in little endian format. */
@@ -275,6 +284,27 @@ public class Utils {
         for (int i = 0; i < bytes.length; i++)
             buf[i] = bytes[bytes.length - 1 - i];
         return buf;
+    }
+
+    /**
+     * Returns a copy of the given byte array with the bytes of each double-word (4 bytes) reversed.
+     *
+     * @param bytes length must be divisible by 4.
+     * @param trimLength trim output to this length.  If positive, must be divisible by 4.
+     */
+    public static byte[] reverseDwordBytes(byte[] bytes, int trimLength) {
+        checkArgument(bytes.length % 4 == 0);
+        checkArgument(trimLength < 0 || trimLength % 4 == 0);
+
+        byte[] rev = new byte[trimLength >= 0 && bytes.length > trimLength ? trimLength : bytes.length];
+
+        for (int i = 0; i < rev.length; i += 4) {
+            System.arraycopy(bytes, i, rev, i , 4);
+            for (int j = 0; j < 4; j++) {
+                rev[i + j] = bytes[i + 3 - j];
+            }
+        }
+        return rev;
     }
 
     /**
