@@ -86,9 +86,12 @@ public class ScriptOpCodes {
 
     // splice ops
     public static final int OP_CAT = 0x7e;
-    public static final int OP_SPLIT = 0x7f;
-    public static final int OP_NUM2BIN = 0x80;
-    public static final int OP_BIN2NUM = 0x81;
+    public static final int OP_SUBSTR = 0x7f; // OP_SPLIT
+    public static final int OP_SPLIT = 0x7f; // OP_SUBSTR
+    public static final int OP_LEFT = 0x80; // OP_NUM2BIN
+    public static final int OP_NUM2BIN = 0x80; // OP_LEFT
+    public static final int OP_RIGHT = 0x81; // OP_BIN2NUM
+    public static final int OP_BIN2NUM = 0x81; // OP_RIGHT
     public static final int OP_SIZE = 0x82;
 
     // bit logic

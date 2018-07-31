@@ -35,6 +35,7 @@ public class CheckpointManagerTest {
     @Test(expected = NullPointerException.class)
     public void shouldThrowNullPointerExceptionWhenCheckpointsNotFound() throws IOException {
         expect(params.getId()).andReturn("org/bitcoinj/core/checkpointmanagertest/notFound");
+        expect(params.getUseForkId()).andReturn(false);
         replay(params);
         new CheckpointManager(params, null);
     }
@@ -42,6 +43,7 @@ public class CheckpointManagerTest {
     @Test(expected = IOException.class)
     public void shouldThrowNullPointerExceptionWhenCheckpointsInUnknownFormat() throws IOException {
         expect(params.getId()).andReturn("org/bitcoinj/core/checkpointmanagertest/unsupportedFormat");
+        expect(params.getUseForkId()).andReturn(false);
         replay(params);
         new CheckpointManager(params, null);
     }
@@ -49,6 +51,7 @@ public class CheckpointManagerTest {
     @Test(expected = IllegalStateException.class)
     public void shouldThrowIllegalStateExceptionWithNoCheckpoints() throws IOException {
         expect(params.getId()).andReturn("org/bitcoinj/core/checkpointmanagertest/noCheckpoints");
+        expect(params.getUseForkId()).andReturn(false);
         replay(params);
         new CheckpointManager(params, null);
     }
@@ -60,6 +63,7 @@ public class CheckpointManagerTest {
                 new BitcoinSerializer(params, false));
         expect(params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT))
                 .andReturn(NetworkParameters.ProtocolVersion.CURRENT.getBitcoinProtocolVersion());
+        expect(params.getUseForkId()).andReturn(false);
         replay(params);
         new CheckpointManager(params, null);
     }

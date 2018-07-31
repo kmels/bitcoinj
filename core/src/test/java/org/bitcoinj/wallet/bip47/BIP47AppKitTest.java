@@ -115,7 +115,7 @@ public class BIP47AppKitTest extends TestWithBIP47AppKit {
         byte[] entropy = mc.toEntropy(MnemonicCodeTest.split(ALICE_BIP39_MNEMONIC));
 
         assertEquals(ALICE_BIP39_RAW_ENTROPY, HEX.encode(entropy));
-        assertEquals(ALICE_BIP39_MNEMONIC, join(code));
+        assertEquals(ALICE_BIP39_MNEMONIC, join(code, " "));
         assertEquals(ALICE_BIP32_SEED, HEX.encode(seed));
 
         File workingDir = new File("alice");
@@ -160,7 +160,7 @@ public class BIP47AppKitTest extends TestWithBIP47AppKit {
         byte[] seed = MnemonicCode.toSeed(code,"");
         byte[] entropy = mc.toEntropy(MnemonicCodeTest.split(BOB_BIP39_MNEMONIC));
         assertEquals(BOB_BIP39_RAW_ENTROPY, HEX.encode(entropy));
-        assertEquals(BOB_BIP39_MNEMONIC, join(code));
+        assertEquals(BOB_BIP39_MNEMONIC, join(code, " "));
         assertEquals(BOB_BIP32_SEED, HEX.encode(seed));
 
         File workingDir = new File("bob");

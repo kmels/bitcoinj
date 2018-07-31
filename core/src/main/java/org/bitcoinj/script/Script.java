@@ -767,7 +767,7 @@ public class Script {
          executeScript(txContainingThis, index, script, stack, Coin.ZERO, verifyFlags);
     }
 
-    private static boolean isOpcodeDisabled(int opcode, Set<VerifyFlag> verifyFlags) {
+    private static boolean isOpcodeDisabled(int opcode, Set<VerifyFlag> verifyFlags, boolean useForkId) {
 
 
         switch (opcode) {
@@ -798,8 +798,13 @@ public class Script {
                 break;
         }
 
-
-
+        if (!useForkId) {
+            if (opcode == OP_CAT || opcode == OP_SPLIT || opcode == OP_NUM2BIN || opcode == OP_BIN2NUM ||
+                    opcode == OP_INVERT || opcode == OP_AND || opcode == OP_OR || opcode == OP_XOR ||
+                    opcode == OP_2MUL || opcode == OP_2DIV || opcode == OP_MUL || opcode == OP_DIV ||
+                    opcode == OP_MOD || opcode == OP_LSHIFT || opcode == OP_RSHIFT)
+                return true;
+        }
         return false;
 
     }
@@ -884,7 +889,7 @@ public class Script {
 	    }
 
 	    // Disabled opcodes.
-	    if (isOpcodeDisabled(opcode, verifyFlags)) {
+	    if (isOpcodeDisabled(opcode, verifyFlags, txContainingThis.getParams().getUseForkId())) {
     		throw new ScriptException(ScriptError.SCRIPT_ERR_DISABLED_OPCODE, "Script included a disabled Script Op.");
 	    }
 

@@ -314,6 +314,34 @@ public class ScriptTest {
         }
     }
 
+    @Test
+    public void dataDrivenCashScripts() throws Exception {
+        JsonNode json = new ObjectMapper()
+                .readTree(new InputStreamReader(getClass().getResourceAsStream("script_tests.cashfork.json"), StandardCharsets.UTF_8));
+        for (JsonNode test : json) {
+            if (test.size() == 1)
+                continue; // skip comment
+            Set<VerifyFlag> verifyFlags = parseVerifyFlags(test.get(2).asText());
+            ScriptError expectedError = ScriptError.fromMnemonic(test.get(3).asText());
+            try {
+                Script scriptSig = parseScriptString(test.get(0).asText());
+                Script scriptPubKey = parseScriptString(test.get(1).asText());
+                Transaction txCredit = buildCreditingTransaction(scriptPubKey);
+                Transaction txSpend = buildSpendingTransaction(txCredit, scriptSig);
+                scriptSig.correctlySpends(txSpend, 0, scriptPubKey, verifyFlags);
+                if (!expectedError.equals(ScriptError.SCRIPT_ERR_OK))
+                    fail(test + " is expected to fail");
+            } catch (ScriptException e) {
+                if (!e.getError().equals(expectedError)) {
+                    System.err.println(test);
+                    e.printStackTrace();
+                    System.err.flush();
+                    throw e;
+                }
+            }
+        }
+    }
+
     private Map<TransactionOutPoint, Script> parseScriptPubKeys(JsonNode inputs) throws IOException {
         Map<TransactionOutPoint, Script> scriptPubKeys = new HashMap<>();
         for (JsonNode input : inputs) {

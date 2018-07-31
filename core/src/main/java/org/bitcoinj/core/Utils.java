@@ -39,6 +39,7 @@ import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Ints;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 
 /**
@@ -82,6 +83,8 @@ public class Utils {
      * @return numBytes byte long array.
      */
     public static byte[] bigIntegerToBytes(BigInteger b, int numBytes) {
+        if (b == null)
+            return null;
         checkArgument(b.signum() >= 0, "b must be positive or zero");
         checkArgument(numBytes > 0, "numBytes must be positive");
         byte[] src = b.toByteArray();
