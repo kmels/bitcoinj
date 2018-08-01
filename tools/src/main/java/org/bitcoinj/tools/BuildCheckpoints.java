@@ -17,11 +17,9 @@
 
 package org.bitcoinj.tools;
 
-import org.bitcoinj.core.listeners.NewBestBlockListener;
+import org.bitcoinj.core.listeners.*;
 import org.bitcoinj.core.*;
-import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.params.RegTestParams;
-import org.bitcoinj.params.TestNet3Params;
+import org.bitcoinj.params.*;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.MemoryBlockStore;
 import org.bitcoinj.utils.BriefLogFormatter;
@@ -32,6 +30,7 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
+import javax.annotation.*;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -63,6 +62,9 @@ public class BuildCheckpoints {
         parser.accepts("help");
         OptionSpec<NetworkEnum> netFlag = parser.accepts("net").withRequiredArg().ofType(NetworkEnum.class).defaultsTo(NetworkEnum.MAIN);
         parser.accepts("peer").withRequiredArg();
+
+        OptionSpec<Integer> portFlag = parser.accepts("port").withRequiredArg().ofType(Integer.class).defaultsTo(8333);
+
         OptionSpec<Integer> daysFlag = parser.accepts("days").withRequiredArg().ofType(Integer.class).defaultsTo(30);
         OptionSet options = parser.parse(args);
 
@@ -78,9 +80,17 @@ public class BuildCheckpoints {
                 params = MainNetParams.get();
                 suffix = "";
                 break;
+            case MAIN_CASH:
+                params = BCCMainNetParams.get();
+                suffix = ".cash";
+                break;
             case TEST:
                 params = TestNet3Params.get();
                 suffix = "-testnet";
+                break;
+            case TEST_CASH:
+                params = BCCTestNet3Params.get();
+                suffix = "-testnet.cash";
                 break;
             case REGTEST:
                 params = RegTestParams.get();
@@ -103,7 +113,12 @@ public class BuildCheckpoints {
         } else {
             ipAddress = InetAddress.getLocalHost();
         }
-        final PeerAddress peerAddress = new PeerAddress(ipAddress, params.getPort());
+
+        Integer port = options.valueOf(portFlag);
+        if (port < 0)
+            port = params.getPort();
+
+        final PeerAddress peerAddress = new PeerAddress(ipAddress, port);
 
         // Sorted map of block height to StoredBlock object.
         final TreeMap<Integer, StoredBlock> checkpoints = new TreeMap<Integer, StoredBlock>();
@@ -114,6 +129,7 @@ public class BuildCheckpoints {
         final BlockChain chain = new BlockChain(params, store);
         final PeerGroup peerGroup = new PeerGroup(params, chain);
         System.out.println("Connecting to " + peerAddress + "...");
+
         peerGroup.addAddress(peerAddress);
         long now = new Date().getTime() / 1000;
         peerGroup.setFastCatchupTimeSecs(now);
@@ -135,7 +151,6 @@ public class BuildCheckpoints {
 
         peerGroup.start();
         peerGroup.downloadBlockChain();
-
         checkState(checkpoints.size() > 0);
 
         final File plainFile = new File("checkpoints" + suffix);
