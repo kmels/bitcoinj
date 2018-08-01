@@ -80,7 +80,7 @@ public class VersionMessage extends Message {
     public boolean relayTxesBeforeFilter;
 
     /** The version of this library release, as a string. */
-    public static final String BITCOINJ_VERSION = "0.14.7-bip47.5";
+    public static final String BITCOINJ_VERSION = "0.14.8";
     /** The value that is prepended to the subVer field of this application. */
     public static final String LIBRARY_SUBVER = "/bitcoincashj:" + BITCOINJ_VERSION + "/";
 

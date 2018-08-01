@@ -108,7 +108,10 @@ public class CheckpointManager {
 
     /** Returns a checkpoints stream pointing to inside the bitcoinj JAR */
     public static InputStream openStream(NetworkParameters params) {
-        return CheckpointManager.class.getResourceAsStream("/" + params.getId() + ".checkpoints.txt");
+        return CheckpointManager.class.getResourceAsStream("/"
+                + params.getId()
+                + (params.getUseForkId() ? ".cash" : "")
+                + ".checkpoints.txt");
     }
 
     private Sha256Hash readBinary(InputStream inputStream) throws IOException {
