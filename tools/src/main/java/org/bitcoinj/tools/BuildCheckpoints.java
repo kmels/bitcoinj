@@ -63,7 +63,7 @@ public class BuildCheckpoints {
         OptionSpec<NetworkEnum> netFlag = parser.accepts("net").withRequiredArg().ofType(NetworkEnum.class).defaultsTo(NetworkEnum.MAIN);
         parser.accepts("peer").withRequiredArg();
 
-        OptionSpec<Integer> portFlag = parser.accepts("port").withRequiredArg().ofType(Integer.class).defaultsTo(8333);
+        OptionSpec<Integer> portFlag = parser.accepts("port").withRequiredArg().ofType(Integer.class).defaultsTo(-1);
 
         OptionSpec<Integer> daysFlag = parser.accepts("days").withRequiredArg().ofType(Integer.class).defaultsTo(30);
         OptionSet options = parser.parse(args);
