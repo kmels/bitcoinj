@@ -1,8 +1,8 @@
-[![Build Status](https://travis-ci.org/bitcoinj-cash/bitcoinj.png?branch=cash-0.14)](https://travis-ci.org/Stash-Crypto/bitcoincashj)   [![Coverage Status](https://coveralls.io/repos/github/Stash-Crypto/bitcoincashj/badge.svg?branch=release-0.14)](https://coveralls.io/github/Stash-Crypto/bitcoincashj?branch=release-0.14) [![Javadocs](http://www.javadoc.io/badge/org.bitcoincashj/bitcoincashj-core.svg)](http://www.javadoc.io/doc/org.bitcoincashj/bitcoincashj-core)
+[![Build Status](https://travis-ci.org/Stash-Crypto/blockchainj.png?branch=master)](https://travis-ci.org/Stash-Crypto/blockchainj)   [![Coverage Status](https://coveralls.io/repos/github/Stash-Crypto/blockchainj/badge.svg?branch=master)](https://coveralls.io/github/Stash-Crypto/bitcoincashj?branch=release-0.14) [![Javadocs](http://www.javadoc.io/badge/org.bitcoincashj/bitcoincashj-core.svg)](http://www.javadoc.io/doc/org.stash/blockchainj-core)
 
-### Welcome to blockchainj
+### Welcome to BlockChainJ
 
-This library is a fork of Mike Hearn's original bitcoinj library aimed at supporting the Bitcoin and Bitcoin cash eco-system.
+This library is a fork of Mike Hearn's original bitcoinj library aimed at supporting the Bitcoin and Bitcoin Cash eco-system.
 
 It allows maintaining a wallet and sending/receiving transactions without needing a full blockchain node. It comes with full documentation and some example apps showing how to use it.
 
