@@ -31,6 +31,7 @@ import org.bitcoinj.crypto.*;
 import org.bitcoinj.net.*;
 import org.bitcoinj.net.discovery.*;
 import org.bitcoinj.script.*;
+import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.*;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
@@ -86,7 +87,7 @@ public class PeerGroup implements TransactionBroadcaster {
     public static final int DEFAULT_CONNECTIONS = 12;
     private static final int TOR_TIMEOUT_SECONDS = 60;
     private volatile int vMaxPeersToDiscoverCount = 100;
-    private static final long DEFAULT_PEER_DISCOVERY_TIMEOUT_MILLIS = 5000;
+    private static final long DEFAULT_PEER_DISCOVERY_TIMEOUT_MILLIS = 60000;
     private volatile long vPeerDiscoveryTimeoutMillis = DEFAULT_PEER_DISCOVERY_TIMEOUT_MILLIS;
 
     protected final ReentrantLock lock = Threading.lock("peergroup");
@@ -1183,7 +1184,7 @@ public class PeerGroup implements TransactionBroadcaster {
             @Override
             public void run() {
                 try {
-                    log.info("Stopping ...");
+                    log.info("Stopping {}...", params.getClass().getName());
                     // Blocking close of all sockets.
                     channels.stopAsync();
                     channels.awaitTerminated();
@@ -1194,7 +1195,7 @@ public class PeerGroup implements TransactionBroadcaster {
                         torClient.stop();
                     }
                     vRunning = false;
-                    log.info("Stopped.");
+                    log.info("Stopped {}.", params.getClass().getName());
                 } catch (Throwable e) {
                     log.error("Exception when shutting down", e);  // The executor swallows exceptions :(
                 }
@@ -2002,6 +2003,7 @@ public class PeerGroup implements TransactionBroadcaster {
 
             // startBlockChainDownload will setDownloadData(true) on itself automatically.
             peer.startBlockChainDownload();
+
         } finally {
             lock.unlock();
         }
