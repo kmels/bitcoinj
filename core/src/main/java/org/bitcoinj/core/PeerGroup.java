@@ -510,7 +510,7 @@ public class PeerGroup implements TransactionBroadcaster {
             try {
                 go();
             } catch (Throwable e) {
-                log.error("Exception when trying to build connections", e);  // The executor swallows exceptions :(
+                log.error(String.format("Exception when trying to build connections (Net: {})", params.getClass().getName()), e);  // The executor swallows exceptions :(
             }
         }
 

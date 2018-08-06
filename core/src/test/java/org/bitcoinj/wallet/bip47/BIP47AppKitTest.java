@@ -329,7 +329,7 @@ public class BIP47AppKitTest extends TestWithBIP47AppKit {
         Charly.getvWallet().saveToFile(Charly.getvWalletFile());
 
         // persist
-
+        assertEquals(null, Charly.getBip47MetaForPaymentCode(BOB_PAYMENT_CODE_V1));
         Charly.putPaymenCodeStatusSent(BOB_PAYMENT_CODE_V1, ntxRequest.tx);
         assertNotEquals(null, Charly.getBip47MetaForPaymentCode(BOB_PAYMENT_CODE_V1));
         BIP47Channel channel = Charly.getBip47MetaForPaymentCode(BOB_PAYMENT_CODE_V1);

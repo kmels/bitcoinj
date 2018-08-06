@@ -143,12 +143,9 @@ public class BuildCheckpoints {
                 int height = block.getHeight();
                 // checkpoint every 2.8 days
                 if (height % (params.getInterval()/10) == 0 && block.getHeader().getTimeSeconds() <= timeAgo) {
-                    System.out.println(String.format(params.getInterval() + " Checkpointing block %s at height %d, time %s",
+                    System.out.println(String.format("Checkpointing block %s at height %d, time %s",
                             block.getHeader().getHash(), block.getHeight(), Utils.dateTimeFormat(block.getHeader().getTime())));
                     checkpoints.put(height, block);
-                } else if (block.getHeader().getTimeSeconds() > timeAgo) {
-                    //System.out.println(String.format("After block %s at height %d, time %s",
-                    //        block.getHeader().getHash(), block.getHeight(), Utils.dateTimeFormat(block.getHeader().getTime())));
                 }
             }
         });
@@ -156,8 +153,6 @@ public class BuildCheckpoints {
         peerGroup.start();
         peerGroup.downloadBlockChain();
         checkState(checkpoints.size() > 0);
-
-
 
         final File plainFile = new File("checkpoints" + suffix + "_" + options.valueOf("days"));
         final File textFile = new File("checkpoints" + suffix + "_" + options.valueOf("days") + "d.txt");

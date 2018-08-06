@@ -177,10 +177,8 @@ public class BIP47AppKit {
     protected void deriveBlockStore(DeterministicSeed restoreFromSeed, File chainFile) throws BlockStoreException, IOException {
 
         // If wallet is "new" and chain file exists, it will reuse the blockstore.
+        // if wallet is restored, it needs to rescan from scratch so we will clean the blockstore.
         vStore = new SPVBlockStore(params, chainFile);
-        checkpoints = CheckpointManager.openStream(params);
-
-        // if wallet is restored, create a fresh blockstore file before restoring a wallet
         if (restoreFromSeed != null && chainFile.exists()) {
             log.info( "Deleting the chain file in preparation from restore.");
             vStore.close();
@@ -188,6 +186,8 @@ public class BIP47AppKit {
                 log.warn("start: ", new IOException("Failed to delete chain file in preparation for restore."));
             vStore = new SPVBlockStore(params, chainFile);
         }
+
+        checkpoints = CheckpointManager.openStream(params);
 
         if (!chainFile.exists() || restoreFromSeed != null) {
 
