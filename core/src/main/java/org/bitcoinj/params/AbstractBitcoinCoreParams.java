@@ -29,6 +29,8 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Stopwatch;
 
+import static com.google.common.base.Preconditions.checkState;
+
 /**
  * Parameters for Bitcoin-like networks.
  */
@@ -46,20 +48,20 @@ public abstract class AbstractBitcoinCoreParams extends NetworkParameters {
 
     /**
      * Checks if we are at a difficulty transition point.
-     * @param storedPrev The previous stored block
+     * @param height The height of the previous stored block
      * @return If this is a difficulty transition point
      */
-    protected boolean isDifficultyTransitionPoint(StoredBlock storedPrev) {
-        return ((storedPrev.getHeight() + 1) % this.getInterval()) == 0;
+    public final boolean isDifficultyTransitionPoint(final int height) {
+        return ((height + 1) % this.getInterval()) == 0;
     }
 
     @Override
     public void checkDifficultyTransitions(final StoredBlock storedPrev, final Block nextBlock,
                                            final BlockStore blockStore) throws VerificationException, BlockStoreException {
-        Block prev = storedPrev.getHeader();
+        final Block prev = storedPrev.getHeader();
 
         // Is this supposed to be a difficulty transition point?
-        if (!isDifficultyTransitionPoint(storedPrev)) {
+        if (!isDifficultyTransitionPoint(storedPrev.getHeight())) {
 
             // No ... so check the difficulty didn't actually change.
             if (nextBlock.getDifficultyTarget() != prev.getDifficultyTarget())
@@ -72,15 +74,20 @@ public abstract class AbstractBitcoinCoreParams extends NetworkParameters {
         // We need to find a block far back in the chain. It's OK that this is expensive because it only occurs every
         // two weeks after the initial block chain download.
         final Stopwatch watch = Stopwatch.createStarted();
-        StoredBlock cursor = blockStore.get(prev.getHash());
-        for (int i = 0; i < this.getInterval() - 1; i++) {
+        Sha256Hash hash = prev.getHash();
+        StoredBlock cursor = null;
+        final int interval = this.getInterval();
+        for (int i = 0; i < interval; i++) {
+            cursor = blockStore.get(hash);
             if (cursor == null) {
                 // This should never happen. If it does, it means we are following an incorrect or busted chain.
                 throw new VerificationException(
-                        "Difficulty transition point but we did not find a way back to the genesis block.");
+                        "Difficulty transition point but we did not find a way back to the last transition point. Not found: " + hash);
             }
-            cursor = blockStore.get(cursor.getHeader().getPrevBlockHash());
+            hash = cursor.getHeader().getPrevBlockHash();
         }
+        checkState(cursor != null && isDifficultyTransitionPoint(cursor.getHeight() - 1),
+                "Didn't arrive at a transition point.");
         watch.stop();
         if (watch.elapsed(TimeUnit.MILLISECONDS) > 50)
             log.info("Difficulty transition traversal took {}", watch);
