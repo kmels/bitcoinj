@@ -1447,10 +1447,10 @@ public class Peer extends PeerSocketHandler {
         Sha256Hash chainHeadHash = chainHead.getHeader().getHash();
         // Did we already make this request? If so, don't do it again.
         if (Objects.equal(lastGetBlocksBegin, chainHeadHash) && Objects.equal(lastGetBlocksEnd, toHash)) {
-            log.info("blockChainDownloadLocked({}): ignoring duplicated request: {}", toHash, chainHeadHash);
+            log.debug("blockChainDownloadLocked({}): ignoring duplicated request: {}", toHash, chainHeadHash);
             for (Sha256Hash hash : pendingBlockDownloads)
-                log.info("Pending block download: {}", hash);
-            log.info(Throwables.getStackTraceAsString(new Throwable()));
+                log.info("{} peer pending block download: {}", params.getClass().getName().toString(), hash);
+            log.debug(Throwables.getStackTraceAsString(new Throwable()));
             return;
         }
         if (log.isDebugEnabled())

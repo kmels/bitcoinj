@@ -155,8 +155,8 @@ public abstract class AbstractBlockChain {
                               BlockStore blockStore) throws BlockStoreException {
         this.blockStore = blockStore;
         chainHead = blockStore.getChainHead();
-        log.info("chain head is at height {}:\n{}", chainHead.getHeight(), chainHead.getHeader());
         this.params = context.getParams();
+        log.info("chain head of {} is at height {}:\n{}", this.params.getClass().getName(), chainHead.getHeight(), chainHead.getHeader());
         this.ruleCheckerFactory = RuleCheckerFactory.create(this.params);
 
         this.newBestBlockListeners = new CopyOnWriteArrayList<ListenerRegistration<NewBestBlockListener>>();
@@ -368,7 +368,7 @@ public abstract class AbstractBlockChain {
             } catch (BlockStoreException e1) {
                 throw new RuntimeException(e1);
             }
-            throw new VerificationException("Could not verify block:\n" +
+            throw new VerificationException("Could not verify block in net " + this.params.getClass().getName() + ":\n" +
                     block.toString(), e);
         }
     }
