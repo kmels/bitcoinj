@@ -176,30 +176,33 @@ public class BIP47AppKit {
     // reload the block headers from file
     protected void deriveBlockStore(DeterministicSeed restoreFromSeed, File chainFile) throws BlockStoreException, IOException {
 
-        // If wallet is "new" and chain file exists, it will reuse the blockstore.
-        // if wallet is restored, it needs to rescan from scratch so we will clean the blockstore.
-        vStore = new SPVBlockStore(params, chainFile);
-        if (restoreFromSeed != null && chainFile.exists()) {
-            log.info( "Deleting the chain file in preparation from restore.");
-            vStore.close();
+        final boolean chainFileExists = chainFile.exists();
+        final boolean shouldRescanChain = restoreFromSeed != null;
+
+        // If chain file exists, it should remove the file if it's creating from seed.
+        if (shouldRescanChain && chainFileExists) {
+            if (vStore != null)
+                vStore.close();
             if (!chainFile.delete())
                 log.warn("start: ", new IOException("Failed to delete chain file in preparation for restore."));
+            vStore = new SPVBlockStore(params, chainFile); //file is created
+        }
+
+        // if the chain already existed in the first place,
+        // it shouldn't load checkpoints, only if wallet is created for the first time
+        final boolean isWalletNew = !chainFileExists || shouldRescanChain;
+
+        if (isWalletNew) {
+            if (vStore == null)
+                vStore = new SPVBlockStore(params, chainFile);
+            checkpoints = CheckpointManager.openStream(params);
+            long time = vWallet.getEarliestKeyCreationTime();
+            if (time > 0)
+                CheckpointManager.checkpoint(params, checkpoints, vStore, time);
+            else
+                log.warn("Creating a new uncheckpointed block store due to a wallet with a creation time of zero: this will result in a very slow chain sync");
+        } else if (vStore == null)
             vStore = new SPVBlockStore(params, chainFile);
-        }
-
-        checkpoints = CheckpointManager.openStream(params);
-
-        if (!chainFile.exists() || restoreFromSeed != null) {
-
-            if (checkpoints != null) {
-                long time = vWallet.getEarliestKeyCreationTime();
-                if (time > 0)
-                    CheckpointManager.checkpoint(params, checkpoints, vStore, time);
-                else
-                    log.warn("Creating a new uncheckpointed block store due to a wallet with a creation time of zero: this will result in a very slow chain sync");
-            }
-        }
-
     }
 
     // create peergroup for the blockchain
