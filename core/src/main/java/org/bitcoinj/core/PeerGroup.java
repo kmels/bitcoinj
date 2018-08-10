@@ -153,7 +153,7 @@ public class PeerGroup implements TransactionBroadcaster {
     private volatile int vMinRequiredProtocolVersion;
 
     /** How many milliseconds to wait after receiving a pong before sending another ping. */
-    public static final long DEFAULT_PING_INTERVAL_MSEC = 2000;
+    public static final long DEFAULT_PING_INTERVAL_MSEC = 10000;
     @GuardedBy("lock") private long pingIntervalMsec = DEFAULT_PING_INTERVAL_MSEC;
 
     @GuardedBy("lock") private boolean useLocalhostPeerWhenPossible = true;
@@ -503,14 +503,14 @@ public class PeerGroup implements TransactionBroadcaster {
 
     private Runnable triggerConnectionsJob = new Runnable() {
         private boolean firstRun = true;
-        private final static long MIN_PEER_DISCOVERY_INTERVAL = 1000L;
+        private final static long MIN_PEER_DISCOVERY_INTERVAL = 4000L;
 
         @Override
         public void run() {
             try {
                 go();
             } catch (Throwable e) {
-                log.error(String.format("Exception when trying to build connections (Net: {})", params.getClass().getName()), e);  // The executor swallows exceptions :(
+                log.error(String.format("Exception when trying to build connections (Net: %s)", params.getClass().getName()), e);  // The executor swallows exceptions :(
             }
         }
 
