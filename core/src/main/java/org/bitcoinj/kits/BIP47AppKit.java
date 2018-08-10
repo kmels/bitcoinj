@@ -47,10 +47,7 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.spec.InvalidKeySpecException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -267,7 +264,7 @@ public class BIP47AppKit {
                             saveBip47MetaData();
                         }
                     }
-                } else if (isToBIP47Address(transaction)) {
+                } else if (isAddressIncomingBIP47(transaction)) {
                     log.debug("New BIP47 payment received to address: "+getAddressOfReceived(transaction));
                     boolean needsSaving = generateNewBip47IncomingAddress(getAddressOfReceived(transaction).toString());
                     if (needsSaving) {
@@ -535,7 +532,7 @@ public class BIP47AppKit {
 
     /** <p> Retrieve the relevant address (P2PKH or P2PSH), return true if any key in this wallet translates to it. </p> */
     // TODO: return true if and only if it is a channel address.
-    public boolean isToBIP47Address(Transaction transaction) {
+    public boolean isAddressIncomingBIP47(Transaction transaction) {
         List<ECKey> keys = vWallet.getImportedKeys();
         for (ECKey key : keys) {
             Address address = LegacyAddress.fromKey(getParams(), key);
@@ -545,6 +542,24 @@ public class BIP47AppKit {
             Address addressOfReceived = getAddressOfReceived(transaction);
             if (addressOfReceived != null && address.toString().equals(addressOfReceived.toString())) {
                 return true;
+            }
+        }
+        return false;
+    }
+    public boolean IsAddressOutgoingBIP47(Transaction transaction){
+        List<ECKey> keys = vWallet.getImportedKeys();
+        for (ECKey key : keys) {
+            Address address = key.toAddress(getParams());
+            if (address == null) {
+                continue;
+            }
+            Address addressOfSent = getAddressOfSent(transaction);
+            if (addressOfSent != null && address.toString().equals(addressOfSent.toString())) {
+                for (String payCode : this.bip47MetaData.keySet()) {
+                    BIP47Channel chan = bip47MetaData.get(payCode);
+                    if (chan.getOutgoingAddresses().contains(address.toString()))
+                        return true;
+                }
             }
         }
         return false;
