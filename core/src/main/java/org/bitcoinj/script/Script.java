@@ -306,7 +306,7 @@ public class Script {
         else if (ScriptPattern.isPayToScriptHash(this))
             return LegacyAddress.fromScriptHash(params, ScriptPattern.extractHashFromPayToScriptHash(this));
         else if (forcePayToPubKey && ScriptPattern.isPayToPubKey(this))
-            return LegacyAddress.fromKey(params, ECKey.fromPublicOnly(ScriptPattern.extractKeyFromPayToPubKey(this)));
+            return LegacyAddress.fromKey(params, ECKey.fromPublicOnly(ScriptPattern.extractKeyFromPayToPubKey(this, params.getUseForkId())));
         else if (ScriptPattern.isPayToWitnessHash(this))
             return SegwitAddress.fromHash(params, ScriptPattern.extractHashFromPayToWitnessHash(this));
         else

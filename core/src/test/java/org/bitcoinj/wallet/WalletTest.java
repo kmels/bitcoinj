@@ -2280,7 +2280,7 @@ public class WalletTest extends TestWithWallet {
         ECKey key = new ECKey();
         SendRequest req = SendRequest.to(UNITTEST, key, SATOSHI.multiply(12));
         assertArrayEquals(key.getPubKey(),
-                ScriptPattern.extractKeyFromPayToPubKey(req.tx.getOutputs().get(0).getScriptPubKey()));
+                ScriptPattern.extractKeyFromPayToPubKey(req.tx.getOutputs().get(0).getScriptPubKey(), UNITTEST.getUseForkId()));
     }
 
     @Test

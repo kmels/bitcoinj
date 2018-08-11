@@ -136,8 +136,29 @@ public class ScriptPattern {
      * Extract the pubkey from a P2SH scriptPubKey. It's important that the script is in the correct form, so you will
      * want to guard calls to this method with {@link #isPayToPubKey(Script)}.
      */
-    public static byte[] extractKeyFromPayToPubKey(Script script) {
-        return script.chunks.get(0).data;
+    public static byte[] extractKeyFromPayToPubKey(Script script, boolean useForkId) {
+        if (!useForkId)
+            return script.chunks.get(0).data;
+
+        List<ScriptChunk> chunks = script.chunks;
+        if (chunks.size() != 2) {
+            throw new ScriptException(ScriptError.SCRIPT_ERR_UNEXPECTED_PAYTO_PUBKEY_FORM, "Script not of right size, expecting 2 but got " + chunks.size());
+        }
+        final ScriptChunk chunk0 = chunks.get(0);
+        final byte[] chunk0data = chunk0.data;
+        final ScriptChunk chunk1 = chunks.get(1);
+        final byte[] chunk1data = chunk1.data;
+        if (chunk0data != null && chunk0data.length > 2 && chunk1data != null && chunk1data.length > 2) {
+            // If we have two large constants assume the input to a pay-to-address output.
+            return chunk1data;
+        } else if (chunk1.equalsOpCode(OP_CHECKSIG) && chunk0data != null && chunk0data.length > 2) {
+            // A large constant followed by an OP_CHECKSIG is the key.
+            return chunk0data;
+        } else {
+            throw new ScriptException(ScriptError.SCRIPT_ERR_UNEXPECTED_PAYTO_PUBKEY_FORM,
+                    "Script did not match expected form: " + script);
+        }
+
     }
 
     /**

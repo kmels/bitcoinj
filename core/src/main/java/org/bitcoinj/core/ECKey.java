@@ -575,7 +575,7 @@ public class ECKey implements EncryptableItem {
                 decoder = new ASN1InputStream(bytes);
                 final ASN1Primitive seqObj = decoder.readObject();
                 if (seqObj == null)
-                    throw new IllegalArgumentException("Reached past end of ASN.1 stream.");
+                    throw new RuntimeException("Reached past end of ASN.1 stream.");
                 if (!(seqObj instanceof DLSequence))
                     throw new IllegalArgumentException("Read unexpected class: " + seqObj.getClass().getName());
                 final DLSequence seq = (DLSequence) seqObj;

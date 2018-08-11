@@ -71,10 +71,7 @@ public class BIP47Util {
     public static BIP47PaymentCode getPaymentCodeInNotificationTransaction(byte[] privKeyBytes, Transaction tx) {
         log.debug( "Getting pub key");
         Script sigScript = tx.getInput(0).getScriptSig();
-        if (!ScriptPattern.isPayToPubKey(sigScript)) {
-            return null;
-        }
-        byte[] pubKeyBytes = ScriptPattern.extractKeyFromPayToPubKey(sigScript);
+        byte[] pubKeyBytes = ScriptPattern.extractKeyFromPayToPubKey(sigScript, tx.getParams().getUseForkId());
 
         log.debug( "Private Key: "+ Utils.HEX.encode(privKeyBytes));
         log.debug( "Public Key: "+Utils.HEX.encode(pubKeyBytes));

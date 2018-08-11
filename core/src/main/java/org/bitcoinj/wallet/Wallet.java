@@ -1081,7 +1081,7 @@ public class Wallet extends BaseTaggableObject
                 try {
                     Script script = o.getScriptPubKey();
                     if (ScriptPattern.isPayToPubKey(script)) {
-                        byte[] pubkey = ScriptPattern.extractKeyFromPayToPubKey(script);
+                        byte[] pubkey = ScriptPattern.extractKeyFromPayToPubKey(script, tx.getParams().getUseForkId());
                         keyChainGroup.markPubKeyAsUsed(pubkey);
                     } else if (ScriptPattern.isPayToPubKeyHash(script)) {
                         byte[] pubkeyHash = ScriptPattern.extractHashFromPayToPubKeyHash(script);
@@ -4150,7 +4150,7 @@ public class Wallet extends BaseTaggableObject
      */
     public boolean canSignFor(Script script) {
         if (ScriptPattern.isPayToPubKey(script)) {
-            byte[] pubkey = ScriptPattern.extractKeyFromPayToPubKey(script);
+            byte[] pubkey = ScriptPattern.extractKeyFromPayToPubKey(script, getParams().getUseForkId());
             ECKey key = findKeyFromPubKey(pubkey);
             return key != null && (key.isEncrypted() || key.hasPrivKey());
         } if (ScriptPattern.isPayToScriptHash(script)) {

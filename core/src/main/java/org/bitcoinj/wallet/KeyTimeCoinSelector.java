@@ -63,7 +63,7 @@ public class KeyTimeCoinSelector implements CoinSelector {
                 final Script scriptPubKey = output.getScriptPubKey();
                 ECKey controllingKey;
                 if (ScriptPattern.isPayToPubKey(scriptPubKey)) {
-                    controllingKey = wallet.findKeyFromPubKey(ScriptPattern.extractKeyFromPayToPubKey(scriptPubKey));
+                    controllingKey = wallet.findKeyFromPubKey(ScriptPattern.extractKeyFromPayToPubKey(scriptPubKey, wallet.getParams().getUseForkId()));
                 } else if (ScriptPattern.isPayToPubKeyHash(scriptPubKey)) {
                     controllingKey = wallet.findKeyFromPubHash(ScriptPattern.extractHashFromPayToPubKeyHash(scriptPubKey));
                 } else {
