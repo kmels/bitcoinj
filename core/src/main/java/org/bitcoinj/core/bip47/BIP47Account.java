@@ -22,7 +22,7 @@ import static org.bitcoinj.core.bip47.BIP47PaymentCode.createMasterPubKeyFromPay
  * <p>A {@link BIP47Account} is necessary for BIP47 payment channels. It holds the notification key used to derive the
  * notification address and the key to derive payment addresses in a channel.</p>
  *
- * <p>The BIP47 account is at the derivation path <pre>m / 47' / coin_type' / account_id'.</pre>. </p>
+ * <p>The BIP47 account is at the derivation path m / 47' / coin_type' / account_id'.</p>.
  *
  * <p>Properties:</p>
  * <ul>
