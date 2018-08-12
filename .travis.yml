@@ -6,7 +6,7 @@ addons:
   hosts:
     - host
   hostname: host
-jdk: oraclejdk8
+jdk: openjdk7
 install:
 # before_install:
   - sudo apt-get -qq update
