@@ -95,7 +95,8 @@ public class VersionMessage extends Message {
     }
 
     // It doesn't really make sense to ever lazily parse a version message or to retain the backing bytes.
-    // If you're receiving this on the wire you need to check the protocol version and it will never need to be sent
+    // If you're receiving th
+    // is on the wire you need to check the protocol version and it will never need to be sent
     // back down the wire.
     
     public VersionMessage(NetworkParameters params, int newBestHeight) {

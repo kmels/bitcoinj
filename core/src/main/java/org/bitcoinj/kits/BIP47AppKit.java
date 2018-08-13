@@ -40,6 +40,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Type;
 import java.nio.charset.Charset;
 import java.security.InvalidKeyException;
@@ -84,6 +85,7 @@ public class BIP47AppKit {
     // the blokstore is used by a blockchain as a memory data structure
     private volatile BlockChain vChain;
     private volatile BlockStore vStore;
+    protected InputStream checkpoints;
     private volatile org.bitcoinj.wallet.Wallet vWallet;
     // sync with the blockchain by using a peergroup
     private volatile PeerGroup vPeerGroup;
@@ -160,38 +162,47 @@ public class BIP47AppKit {
         log.debug(vWallet.toString());
 
         // Initiate Bitcoin network objects (block store, blockchain and peer group)
+        deriveBlockStore(restoreFromSeed, chainFile);
 
-        // open the blockstore file
-        vStore = new SPVBlockStore(params, chainFile);
-
-        // create a fresh blockstore file before restoring a wallet
-        if (restoreFromSeed != null && chainFileExists) {
-            log.info( "Deleting the chain file in preparation from restore.");
-            vStore.close();
-            if (!chainFile.delete())
-                log.warn("start: ", new IOException("Failed to delete chain file in preparation for restore."));
-            vStore = new SPVBlockStore(params, chainFile);
-        }
-
-        try {
-            // create the blockchain object using the file-backed blockstore
-            vChain = new BlockChain(params, vStore);
-        } catch (BlockStoreException e){
-
-            //  - we can create a new blockstore in case it is corrupted, the wallet should have a last height
-            if (chainFile.exists()) {
-                log.debug("deleteSpvFile: exits");
-                chainFile.delete();
-            }
-
-            vStore = new SPVBlockStore(params, chainFile);
-            vChain = new BlockChain(params, vStore);
-        }
+        // create the blockchain object using the file-backed blockstore
+        vChain = new BlockChain(params, vStore);
 
         // add the wallet so that syncing and rolling the chain can affect this wallet
         vChain.addWallet(vWallet);
         derivePeerGroup();
         addTransactionsListener();
+    }
+
+    // reload the block headers from file
+    protected void deriveBlockStore(DeterministicSeed restoreFromSeed, File chainFile) throws BlockStoreException, IOException {
+
+        final boolean chainFileExists = chainFile.exists();
+        final boolean shouldRescanChain = restoreFromSeed != null;
+
+        // If chain file exists, it should remove the file if it's creating from seed.
+        if (shouldRescanChain && chainFileExists) {
+            if (vStore != null)
+                vStore.close();
+            if (!chainFile.delete())
+                log.warn("start: ", new IOException("Failed to delete chain file in preparation for restore."));
+            vStore = new SPVBlockStore(params, chainFile); //file is created
+        }
+
+        // if the chain already existed in the first place,
+        // it shouldn't load checkpoints, only if wallet is created for the first time
+        final boolean isWalletNew = !chainFileExists || shouldRescanChain;
+
+        if (isWalletNew) {
+            if (vStore == null)
+                vStore = new SPVBlockStore(params, chainFile);
+            checkpoints = CheckpointManager.openStream(params);
+            long time = vWallet.getEarliestKeyCreationTime();
+            if (time > 0)
+                CheckpointManager.checkpoint(params, checkpoints, vStore, time);
+            else
+                log.warn("Creating a new uncheckpointed block store due to a wallet with a creation time of zero: this will result in a very slow chain sync");
+        } else if (vStore == null)
+            vStore = new SPVBlockStore(params, chainFile);
     }
 
     // create peergroup for the blockchain
