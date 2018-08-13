@@ -118,7 +118,7 @@ public class BuildCheckpoints {
         if (port < 0)
             port = params.getPort();
 
-        final PeerAddress peerAddress = new PeerAddress(ipAddress, port);
+        final PeerAddress peerAddress = new PeerAddress(params, ipAddress, port);
 
         // Sorted map of block height to StoredBlock object.
         final TreeMap<Integer, StoredBlock> checkpoints = new TreeMap<Integer, StoredBlock>();
