@@ -137,7 +137,7 @@ public class ScriptPattern {
      * want to guard calls to this method with {@link #isPayToPubKey(Script)}.
      */
     public static byte[] extractKeyFromPayToPubKey(Script script, boolean useForkId) {
-        if (!useForkId)
+        if (isPayToWitnessScriptHash(script))
             return script.chunks.get(0).data;
 
         List<ScriptChunk> chunks = script.chunks;
