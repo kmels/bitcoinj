@@ -20,9 +20,11 @@ package org.bitcoinj.script;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Charsets;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.Transaction.SigHash;
 import org.bitcoinj.crypto.TransactionSignature;
+import org.bitcoinj.params.BCCMainNetParams;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.script.Script.VerifyFlag;
@@ -59,6 +61,7 @@ public class ScriptTest {
 
     private static final NetworkParameters TESTNET = TestNet3Params.get();
     private static final NetworkParameters MAINNET = MainNetParams.get();
+    private static final NetworkParameters CASHNET = BCCMainNetParams.get();
 
     private static final Logger log = LoggerFactory.getLogger(ScriptTest.class);
 
@@ -315,29 +318,45 @@ public class ScriptTest {
     }
 
     @Test
-    public void dataDrivenCashScripts() throws Exception {
-        JsonNode json = new ObjectMapper()
-                .readTree(new InputStreamReader(getClass().getResourceAsStream("script_tests.cashfork.json"), StandardCharsets.UTF_8));
+    public void dataDrivenValidCashScripts() throws Exception {
+        JsonNode json = new ObjectMapper().readTree(new InputStreamReader(getClass().getResourceAsStream(
+                "script_valid_cash.json"), Charsets.UTF_8));
         for (JsonNode test : json) {
-            if (test.size() == 1)
-                continue; // skip comment
+            Script scriptSig = parseScriptString(test.get(0).asText());
+            Script scriptPubKey = parseScriptString(test.get(1).asText());
             Set<VerifyFlag> verifyFlags = parseVerifyFlags(test.get(2).asText());
-            ScriptError expectedError = ScriptError.fromMnemonic(test.get(3).asText());
+            try {
+                scriptSig.correctlySpends(new Transaction(CASHNET), 0, scriptPubKey, verifyFlags);
+            } catch (ScriptException e) {
+                System.err.println("ValidCash. ScriptException: ");
+                System.err.println(test);
+                System.err.flush();
+                throw e;
+            } catch (Exception e) {
+                System.err.println("Unexpected exception: ");
+                System.err.println(test);
+                System.err.flush();
+                throw e;
+            }
+
+        }
+    }
+
+    @Test
+    public void dataDrivenInvalidCashScripts() throws Exception {
+        JsonNode json = new ObjectMapper().readTree(new InputStreamReader(getClass().getResourceAsStream(
+                "script_invalid_cash.json"), Charsets.UTF_8));
+        for (JsonNode test : json) {
             try {
                 Script scriptSig = parseScriptString(test.get(0).asText());
                 Script scriptPubKey = parseScriptString(test.get(1).asText());
-                Transaction txCredit = buildCreditingTransaction(scriptPubKey);
-                Transaction txSpend = buildSpendingTransaction(txCredit, scriptSig);
-                scriptSig.correctlySpends(txSpend, 0, scriptPubKey, verifyFlags);
-                if (!expectedError.equals(ScriptError.SCRIPT_ERR_OK))
-                    fail(test + " is expected to fail");
-            } catch (ScriptException e) {
-                if (!e.getError().equals(expectedError)) {
-                    System.err.println(test);
-                    e.printStackTrace();
-                    System.err.flush();
-                    throw e;
-                }
+                Set<VerifyFlag> verifyFlags = parseVerifyFlags(test.get(2).asText());
+                scriptSig.correctlySpends(new Transaction(CASHNET), 0, scriptPubKey, verifyFlags);
+                System.err.println(test);
+                System.err.flush();
+                fail();
+            } catch (VerificationException e) {
+                // Expected.
             }
         }
     }

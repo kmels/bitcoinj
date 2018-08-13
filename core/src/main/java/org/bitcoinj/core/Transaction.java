@@ -592,7 +592,7 @@ public class Transaction extends ChildMessage {
         version = readUint32();
         // peek at marker
         byte marker = payload[cursor];
-        boolean useSegwit = marker == 0;
+        boolean useSegwit = marker == 0 && !params.getUseForkId();
         // marker, flag
         if (useSegwit) {
             readBytes(2);
