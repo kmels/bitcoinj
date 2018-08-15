@@ -589,6 +589,13 @@ public class BIP47AppKit {
         return org.bitcoinj.core.bip47.BIP47Util.getPaymentCodeInNotificationTransaction(privKeyBytes, tx);
     }
 
+    // Return notification transaction cost
+    public Coin getNtxCost() {
+        Coin fee = getDefaultFee(getParams());
+        Coin payload = getParams().getMinNonDustOutput();
+        return fee.add(payload);
+    }
+
     // <p> Receives a payment code and returns true iff there is already an incoming address generated for the channel</p>
     public boolean savePaymentCode(BIP47PaymentCode BIP47PaymentCode) {
         if (bip47MetaData.containsKey(BIP47PaymentCode.toString())) {
