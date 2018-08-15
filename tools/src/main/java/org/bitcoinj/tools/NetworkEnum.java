@@ -20,5 +20,7 @@ public enum NetworkEnum {
     MAIN,
     PROD, // alias for MAIN
     TEST,
-    REGTEST
+    REGTEST,
+    MAIN_CASH,
+    TEST_CASH
 }

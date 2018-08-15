@@ -75,19 +75,25 @@ public abstract class Address extends PrefixedChecksummedBytes {
             throw x;
         } catch (AddressFormatException x) {
             try {
-                return SegwitAddress.fromBech32(params, str);
+                if (!params.getUseForkId())
+                    return SegwitAddress.fromBech32(params, str);
             } catch (Exception x1) {
+                throw x1;
+            }
+        }
+
+        if (params.getUseForkId()) {
+            try {
+                return CashAddress.decode(str);
+            } catch (Exception e2) {
                 try {
-                    return CashAddress.decode(str);
-                } catch (Exception e2) {
-                    try {
-                        return CopayAddress.decode(params, str);
-                    } catch (Exception e3) {
-                        throw e3;
-                    }
+                    return CopayAddress.decode(params, str);
+                } catch (Exception e3) {
+                    throw e3;
                 }
             }
         }
+        throw new AddressFormatException("Invalid address: "+str);
     }
 
     /**

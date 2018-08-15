@@ -27,6 +27,7 @@ import org.bitcoinj.core.listeners.*;
 import org.bitcoinj.net.*;
 import org.bitcoinj.net.discovery.*;
 import org.bitcoinj.script.*;
+import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.utils.*;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
@@ -81,7 +82,7 @@ public class PeerGroup implements TransactionBroadcaster {
      */
     public static final int DEFAULT_CONNECTIONS = 12;
     private volatile int vMaxPeersToDiscoverCount = 100;
-    private static final long DEFAULT_PEER_DISCOVERY_TIMEOUT_MILLIS = 5000;
+    private static final long DEFAULT_PEER_DISCOVERY_TIMEOUT_MILLIS = 60000;
     private volatile long vPeerDiscoveryTimeoutMillis = DEFAULT_PEER_DISCOVERY_TIMEOUT_MILLIS;
 
     protected final ReentrantLock lock = Threading.lock("peergroup");
@@ -146,7 +147,7 @@ public class PeerGroup implements TransactionBroadcaster {
     private volatile int vMinRequiredProtocolVersion;
 
     /** How many milliseconds to wait after receiving a pong before sending another ping. */
-    public static final long DEFAULT_PING_INTERVAL_MSEC = 2000;
+    public static final long DEFAULT_PING_INTERVAL_MSEC = 10000;
     @GuardedBy("lock") private long pingIntervalMsec = DEFAULT_PING_INTERVAL_MSEC;
 
     @GuardedBy("lock") private boolean useLocalhostPeerWhenPossible = true;
@@ -423,14 +424,14 @@ public class PeerGroup implements TransactionBroadcaster {
 
     private Runnable triggerConnectionsJob = new Runnable() {
         private boolean firstRun = true;
-        private final static long MIN_PEER_DISCOVERY_INTERVAL = 1000L;
+        private final static long MIN_PEER_DISCOVERY_INTERVAL = 4000L;
 
         @Override
         public void run() {
             try {
                 go();
             } catch (Throwable e) {
-                log.error("Exception when trying to build connections", e);  // The executor swallows exceptions :(
+                log.error(String.format("Exception when trying to build connections (Net: %s)", params.getClass().getName()), e);  // The executor swallows exceptions :(
             }
         }
 
@@ -1088,8 +1089,9 @@ public class PeerGroup implements TransactionBroadcaster {
             @Override
             public void run() {
                 try {
-                    log.info("Stopping ...");
+                    log.info("Stopping {}...", params.getClass().getName());
                     Stopwatch watch = Stopwatch.createStarted();
+
                     // Blocking close of all sockets.
                     channels.stopAsync();
                     channels.awaitTerminated();
@@ -1097,7 +1099,7 @@ public class PeerGroup implements TransactionBroadcaster {
                         peerDiscovery.shutdown();
                     }
                     vRunning = false;
-                    log.info("Stopped, took {}.", watch);
+                    log.info("Stopped {}, took {}.", params.getClass().getName(), watch);
                 } catch (Throwable e) {
                     log.error("Exception when shutting down", e);  // The executor swallows exceptions :(
                 }
@@ -1899,6 +1901,7 @@ public class PeerGroup implements TransactionBroadcaster {
 
             // startBlockChainDownload will setDownloadData(true) on itself automatically.
             peer.startBlockChainDownload();
+
         } finally {
             lock.unlock();
         }

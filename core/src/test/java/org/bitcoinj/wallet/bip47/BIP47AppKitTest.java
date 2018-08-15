@@ -279,21 +279,29 @@ public class BIP47AppKitTest extends TestWithBIP47AppKit {
 
     @Test
     public void testIsValidAddress() throws Exception {
-        BIP47AppKit w = new BIP47AppKit("tBTC", TestNet3Params.get(), new File("validAdress"), null);
-        assertFalse(w.isValidAddress(null));
-        assertFalse(w.isValidAddress(""));
+        BIP47AppKit tbtc = new BIP47AppKit("tBTC", TestNet3Params.get(), new File("validAdress"), null);
+        BIP47AppKit bch = new BIP47AppKit("BCH", BCCMainNetParams.get(), new File("validAdress2"), null);
+        BIP47AppKit btc = new BIP47AppKit("BTC", MainNetParams.get(), new File("validAdress3"), null);
+        BIP47AppKit tbch = new BIP47AppKit("tBCH", BCCTestNet3Params.get(), new File("validAdress4"), null);
+
+        assertFalse(tbtc.isValidAddress(null));
+        assertFalse(tbtc.isValidAddress(""));
 
         // bip47 or bch should work by default as fallbacks
-        assertTrue(w.isValidAddress(ALICE_PAYMENT_CODE_V1));
-        assertTrue(w.isValidAddress("bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a"));
+        assertTrue(tbtc.isValidAddress(ALICE_PAYMENT_CODE_V1));
+        assertFalse(tbtc.isValidAddress("bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a"));
+
+        assertTrue(bch.isValidAddress("bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a"));
+        assertTrue(bch.isValidAddress("CTH8H8Zj6DSnXFBKQeDG28ogAS92iS16Bp")); // copay
+        assertTrue(bch.isValidAddress("1BpEi6DfDAUFd7GtittLSdBeYJvcoaVggu")); // legacy
+
 
         // BTC shouldn't work on a tBTC wallet
-        assertTrue(w.isValidAddress("2NBMEXqk5SMdHsEeATAByw7DqZ8jjLwf1MY")); // tBTC
-        assertFalse(w.isValidAddress("3CMXDwnQfyGmTkw5U58f2ffoVYroMBWrJe")); //BTC
+        assertTrue(tbtc.isValidAddress("2NBMEXqk5SMdHsEeATAByw7DqZ8jjLwf1MY")); // tBTC
+        assertFalse(tbtc.isValidAddress("3CMXDwnQfyGmTkw5U58f2ffoVYroMBWrJe")); //BTC
 
         // BTC should work
-        BIP47AppKit w2 = new BIP47AppKit("BTC", MainNetParams.get(), new File("validAdress"), null);
-        assertTrue(w2.isValidAddress("3CMXDwnQfyGmTkw5U58f2ffoVYroMBWrJe"));
+        assertTrue(btc.isValidAddress("3CMXDwnQfyGmTkw5U58f2ffoVYroMBWrJe"));
     }
 
     @Test

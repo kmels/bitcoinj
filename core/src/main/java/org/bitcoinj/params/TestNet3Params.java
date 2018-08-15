@@ -90,7 +90,7 @@ public class TestNet3Params extends AbstractBitcoinCoreParams {
 
     @Override
     public void checkDifficultyTransitions(final StoredBlock storedPrev, final Block nextBlock,
-					   final BlockStore blockStore) throws VerificationException, BlockStoreException {
+                                           final BlockStore blockStore) throws VerificationException, BlockStoreException {
         if (!isDifficultyTransitionPoint(storedPrev.getHeight()) && nextBlock.getTime().after(testnetDiffDate)) {
             Block prev = storedPrev.getHeader();
 
