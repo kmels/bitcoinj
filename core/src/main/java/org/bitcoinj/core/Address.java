@@ -30,6 +30,7 @@ import java.io.ObjectOutputStream;
 import org.bitcoinj.params.Networks;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.Script.ScriptType;
+import org.bitcoinj.uri.BitcoinURIParseException;
 
 /**
  * <p>
@@ -75,10 +76,16 @@ public abstract class Address extends PrefixedChecksummedBytes {
         } catch (AddressFormatException x) {
             try {
                 return SegwitAddress.fromBech32(params, str);
-            } catch (AddressFormatException.WrongNetwork x2) {
-                throw x;
-            } catch (AddressFormatException x2) {
-                throw new AddressFormatException(str);
+            } catch (Exception x1) {
+                try {
+                    return CashAddress.decode(str);
+                } catch (Exception e2) {
+                    try {
+                        return CopayAddress.decode(params, str);
+                    } catch (Exception e3) {
+                        throw e3;
+                    }
+                }
             }
         }
     }

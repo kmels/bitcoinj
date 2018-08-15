@@ -780,15 +780,10 @@ public class BIP47AppKit {
         }
 
         try {
-            LegacyAddress.fromBase58(getParams(), address);
+            Address.fromString(getParams(), address);
             return true;
-        } catch (AddressFormatException e) {
-            try {
-                CashAddress.decode(address);
-                return true;
-            } catch (AddressFormatException e2) {
-                return false;
-            }
+        } catch (Exception e) {
+            return false;
         }
     }
 
