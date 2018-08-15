@@ -24,6 +24,7 @@ import java.util.Arrays;
 
 import javax.annotation.Nullable;
 
+import org.bitcoinj.params.BCCMainNetParams;
 import org.bitcoinj.params.Networks;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.Script.ScriptType;
@@ -143,7 +144,8 @@ public class LegacyAddress extends Address {
      */
     public static LegacyAddress fromBase58(@Nullable NetworkParameters params, String base58)
             throws AddressFormatException, AddressFormatException.WrongNetwork {
-        byte[] versionAndDataBytes = Base58.decodeChecked(base58);
+        byte[] versionAndDataBytes;
+        versionAndDataBytes = Base58.decodeChecked(base58);
         int version = versionAndDataBytes[0] & 0xFF;
         byte[] bytes = Arrays.copyOfRange(versionAndDataBytes, 1, versionAndDataBytes.length);
         if (params == null) {
@@ -159,6 +161,13 @@ public class LegacyAddress extends Address {
                 return new LegacyAddress(params, false, bytes);
             else if (version == params.getP2SHHeader())
                 return new LegacyAddress(params, true, bytes);
+
+            if (params.getUseForkId()) {
+                if (version == BCCMainNetParams.get().COPAY_ADDRESS_HEADER)
+                    return new LegacyAddress(params, false, bytes);
+                else if (version == BCCMainNetParams.get().COPAY_P2SH_HEADER)
+                    return new LegacyAddress(params, true, bytes);
+            }
             throw new AddressFormatException.WrongNetwork(version);
         }
     }

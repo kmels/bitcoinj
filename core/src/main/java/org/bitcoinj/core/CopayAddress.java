@@ -28,7 +28,7 @@ public class CopayAddress {
     }
 
     public static Address decode(NetworkParameters params, String address) {
-        Address addr = Address.fromString(params, address);
+        Address addr = LegacyAddress.fromBase58(params, address);
         if (params.getId().equals(NetworkParameters.ID_TESTNET)) {
             return addr;
         } else {

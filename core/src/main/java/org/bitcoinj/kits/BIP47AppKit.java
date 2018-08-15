@@ -801,13 +801,10 @@ public class BIP47AppKit {
     public Transaction createSend(String strAddr, long amount) throws InsufficientMoneyException {
         Address address;
         try {
-            address = LegacyAddress.fromBase58(getParams(), strAddr);
+            address = Address.fromString(getParams(), strAddr);
         } catch (AddressFormatException e1) {
-            try {
-                address = CashAddress.decode(strAddr);
-            } catch (AddressFormatException e2) {
-                return null;
-            }
+            return null;
+
         }
         return createSend(address, amount);
     }
