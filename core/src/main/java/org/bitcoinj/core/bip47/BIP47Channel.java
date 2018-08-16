@@ -32,7 +32,7 @@ public class BIP47Channel {
     private String paymentCode;
     private String label = "";
     private List<BIP47Address> incomingAddresses = new ArrayList<>();
-    private List<String> outgoingAddresses = new ArrayList<>();
+    private List<BIP47Address> outgoingAddresses = new ArrayList<>();
     private int status = STATUS_NOT_SENT;
     private int currentOutgoingIndex = 0;
     private int currentIncomingIndex = -1;
@@ -102,7 +102,7 @@ public class BIP47Channel {
         label = l;
     }
 
-    public List<String> getOutgoingAddresses() {
+    public List<BIP47Address> getOutgoingAddresses() {
         return outgoingAddresses;
     }
 
@@ -122,8 +122,9 @@ public class BIP47Channel {
         currentOutgoingIndex++;
     }
 
-    public void addAddressToOutgoingAddresses(String address) {
-        outgoingAddresses.add(address);
+    public void addAddressToOutgoingAddresses(String address, int nextIndex) {
+        outgoingAddresses.add(nextIndex,new BIP47Address(address,nextIndex));
+        currentOutgoingIndex = nextIndex;
     }
 
     public void setStatusNotSent() {

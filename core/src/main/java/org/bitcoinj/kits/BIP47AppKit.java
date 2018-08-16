@@ -709,8 +709,8 @@ public class BIP47AppKit {
 
     public BIP47Channel getBip47MetaForOutgoingAddress(String address) {
         for (BIP47Channel BIP47Channel : bip47MetaData.values()) {
-            for (String outgoingAddress : BIP47Channel.getOutgoingAddresses()) {
-                if (outgoingAddress.equals(address)) {
+            for (BIP47Address outgoingAddress : BIP47Channel.getOutgoingAddresses()) {
+                if (outgoingAddress.getAddress().equals(address)) {
                     return BIP47Channel;
                 }
             }
@@ -819,14 +819,41 @@ public class BIP47AppKit {
             return false;
         }
     }
-
-    public Transaction createSend(String strAddr, long amount) throws InsufficientMoneyException {
+    public Boolean generateNewOutGoingAddress(String address){
+        for (BIP47Channel BIP47Channel : bip47MetaData.values()) {
+            for (BIP47Address bip47Address : BIP47Channel.getOutgoingAddresses()) {
+                if (!bip47Address.getAddress().equals(address)) {
+                    continue;
+                }
+                int nextIndex = BIP47Channel.getCurrentOutgoingIndex() + 1;
+                try {
+                    BIP47Channel.addAddressToOutgoingAddresses(address, nextIndex);
+                    BIP47Channel.incrementOutgoingIndex();
+                    return true;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return false;
+            }
+        }
+        return false;
+    }
+    public Transaction createSend(String strAddr, long amount,boolean isBip47Payment) throws InsufficientMoneyException {
         Address address;
         try {
             address = Address.fromString(getParams(), strAddr);
+            if(isBip47Payment && generateNewOutGoingAddress(address.toString())) {
+                saveBip47MetaData();
+            }
         } catch (AddressFormatException e1) {
-            return null;
-
+            try {
+                address = CashAddress.decode(strAddr);
+                if(isBip47Payment && generateNewOutGoingAddress(address.toString())) {
+                    saveBip47MetaData();
+                }
+            } catch (AddressFormatException e2) {
+                return null;
+            }
         }
         return createSend(address, amount);
     }
