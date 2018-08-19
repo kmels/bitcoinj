@@ -1,4 +1,11 @@
+
 # BlockChainJ Release History
+
+0.15.1-SNAPSHOT
+ - Merge bitcoinj/master with:
+ - Core Segwit support
+ - checksequenceverify
+sha256: 20ac7078e434e1029565a8385966e35e4547ed6934ec7250da303c590aae0faf
 
 0.14.9
  - Update BuildCheckpoints with cash network parameters
