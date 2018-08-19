@@ -166,6 +166,8 @@ public class BIP47AppKitTest extends TestWithBIP47AppKit {
         File workingDir = new File("bob");
 
         BIP47AppKit w = createWallet("BTC", MainNetParams.get(), workingDir, BOB_BIP39_MNEMONIC);
+        assertEquals(w.getMnemonicCode(), BOB_BIP39_MNEMONIC);
+
         //assertEquals("tpubDCyvczNnKRM37QUHTCG1d6dFbXXkPUNfoay6XjVRhBKaGy47i1nFJQEmusyybMjaHBgpBbPFJRvwsWjtqQ8GTNiDw62ngm18w3QqyV6eHrY", w.getAccount(0).getXPub());
         assertEquals(BOB_PAYMENT_CODE_V1, w.getPaymentCode());
 

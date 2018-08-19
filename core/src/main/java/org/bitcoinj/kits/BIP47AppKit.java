@@ -767,7 +767,7 @@ public class BIP47AppKit {
     public String getMnemonicCode() {
         return join(this.restoreFromSeed != null ?
                 this.restoreFromSeed.getMnemonicCode() :
-                vWallet.getKeyChainSeed().getMnemonicCode());
+                vWallet.getKeyChainSeed().getMnemonicCode(), " ");
     }
 
     public Address getCurrentAddress() {
