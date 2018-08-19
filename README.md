@@ -24,6 +24,12 @@ To perform a full build use
 ```
 gradle clean build
 ```
+
+To generate a jar bundle use
+```
+gradle clean fatJar
+```
+
 You can also run
 ```
 gradle javadoc
