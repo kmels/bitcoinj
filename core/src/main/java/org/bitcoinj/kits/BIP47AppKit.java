@@ -549,7 +549,7 @@ public class BIP47AppKit {
     public boolean IsAddressOutgoingBIP47(Transaction transaction){
         List<ECKey> keys = vWallet.getImportedKeys();
         for (ECKey key : keys) {
-            Address address = key.toAddress(getParams());
+            Address address = LegacyAddress.fromKey(getParams(), key);
             if (address == null) {
                 continue;
             }
