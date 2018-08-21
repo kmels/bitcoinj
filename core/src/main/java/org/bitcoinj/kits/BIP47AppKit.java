@@ -47,10 +47,7 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.spec.InvalidKeySpecException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -267,7 +264,7 @@ public class BIP47AppKit {
                             saveBip47MetaData();
                         }
                     }
-                } else if (isToBIP47Address(transaction)) {
+                } else if (isAddressIncomingBIP47(transaction)) {
                     log.debug("New BIP47 payment received to address: "+getAddressOfReceived(transaction));
                     boolean needsSaving = generateNewBip47IncomingAddress(getAddressOfReceived(transaction).toString());
                     if (needsSaving) {
@@ -535,7 +532,7 @@ public class BIP47AppKit {
 
     /** <p> Retrieve the relevant address (P2PKH or P2PSH), return true if any key in this wallet translates to it. </p> */
     // TODO: return true if and only if it is a channel address.
-    public boolean isToBIP47Address(Transaction transaction) {
+    public boolean isAddressIncomingBIP47(Transaction transaction) {
         List<ECKey> keys = vWallet.getImportedKeys();
         for (ECKey key : keys) {
             Address address = LegacyAddress.fromKey(getParams(), key);
@@ -545,6 +542,24 @@ public class BIP47AppKit {
             Address addressOfReceived = getAddressOfReceived(transaction);
             if (addressOfReceived != null && address.toString().equals(addressOfReceived.toString())) {
                 return true;
+            }
+        }
+        return false;
+    }
+    public boolean IsAddressOutgoingBIP47(Transaction transaction){
+        List<ECKey> keys = vWallet.getImportedKeys();
+        for (ECKey key : keys) {
+            Address address = LegacyAddress.fromKey(getParams(), key);
+            if (address == null) {
+                continue;
+            }
+            Address addressOfSent = getAddressOfSent(transaction);
+            if (addressOfSent != null && address.toString().equals(addressOfSent.toString())) {
+                for (String payCode : this.bip47MetaData.keySet()) {
+                    BIP47Channel chan = bip47MetaData.get(payCode);
+                    if (chan.getOutgoingAddresses().contains(address.toString()))
+                        return true;
+                }
             }
         }
         return false;
@@ -587,6 +602,13 @@ public class BIP47AppKit {
         byte[] privKeyBytes = mAccounts.get(0).getNotificationKey().getPrivKeyBytes();
 
         return org.bitcoinj.core.bip47.BIP47Util.getPaymentCodeInNotificationTransaction(privKeyBytes, tx);
+    }
+
+    // Return notification transaction cost
+    public Coin getNtxCost() {
+        Coin fee = getDefaultFee(getParams());
+        Coin payload = getParams().getMinNonDustOutput();
+        return fee.add(payload);
     }
 
     // <p> Receives a payment code and returns true iff there is already an incoming address generated for the channel</p>
@@ -687,8 +709,8 @@ public class BIP47AppKit {
 
     public BIP47Channel getBip47MetaForOutgoingAddress(String address) {
         for (BIP47Channel BIP47Channel : bip47MetaData.values()) {
-            for (String outgoingAddress : BIP47Channel.getOutgoingAddresses()) {
-                if (outgoingAddress.equals(address)) {
+            for (BIP47Address outgoingAddress : BIP47Channel.getOutgoingAddresses()) {
+                if (outgoingAddress.getAddress().equals(address)) {
                     return BIP47Channel;
                 }
             }
@@ -797,14 +819,24 @@ public class BIP47AppKit {
             return false;
         }
     }
-
-    public Transaction createSend(String strAddr, long amount) throws InsufficientMoneyException {
+    public boolean incrementOutgoing(String paymentCode, String address) {
+        BIP47Channel channel = bip47MetaData.get(paymentCode);
+        if (channel == null)
+            return false;
+        channel.addAddressToOutgoingAddresses(address, channel.getCurrentOutgoingIndex());
+        channel.incrementOutgoingIndex();
+        saveBip47MetaData();
+        return true;
+    }
+    public Transaction createSend(String strAddr, long amount,boolean isBip47Payment) throws InsufficientMoneyException {
         Address address;
         try {
             address = Address.fromString(getParams(), strAddr);
-        } catch (AddressFormatException e1) {
+            if(isBip47Payment ) {
+                saveBip47MetaData();
+            }
+        }catch (AddressFormatException e1) {
             return null;
-
         }
         return createSend(address, amount);
     }
