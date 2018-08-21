@@ -819,41 +819,24 @@ public class BIP47AppKit {
             return false;
         }
     }
-    public Boolean generateNewOutGoingAddress(String address){
-        for (BIP47Channel BIP47Channel : bip47MetaData.values()) {
-            for (BIP47Address bip47Address : BIP47Channel.getOutgoingAddresses()) {
-                if (!bip47Address.getAddress().equals(address)) {
-                    continue;
-                }
-                int nextIndex = BIP47Channel.getCurrentOutgoingIndex() + 1;
-                try {
-                    BIP47Channel.addAddressToOutgoingAddresses(address, nextIndex);
-                    BIP47Channel.incrementOutgoingIndex();
-                    return true;
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                return false;
-            }
-        }
-        return false;
+    public boolean incrementOutgoing(String paymentCode, String address) {
+        BIP47Channel channel = bip47MetaData.get(paymentCode);
+        if (channel == null)
+            return false;
+        channel.addAddressToOutgoingAddresses(address, channel.getCurrentOutgoingIndex());
+        channel.incrementOutgoingIndex();
+        saveBip47MetaData();
+        return true;
     }
     public Transaction createSend(String strAddr, long amount,boolean isBip47Payment) throws InsufficientMoneyException {
         Address address;
         try {
             address = Address.fromString(getParams(), strAddr);
-            if(isBip47Payment && generateNewOutGoingAddress(address.toString())) {
+            if(isBip47Payment ) {
                 saveBip47MetaData();
             }
-        } catch (AddressFormatException e1) {
-            try {
-                address = CashAddress.decode(strAddr);
-                if(isBip47Payment && generateNewOutGoingAddress(address.toString())) {
-                    saveBip47MetaData();
-                }
-            } catch (AddressFormatException e2) {
-                return null;
-            }
+        }catch (AddressFormatException e1) {
+            return null;
         }
         return createSend(address, amount);
     }
