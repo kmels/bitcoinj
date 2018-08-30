@@ -107,6 +107,8 @@ public class BIP47AppKitTest extends TestWithBIP47AppKit {
 
     @Test
     public void aliceWalletTest() throws Exception {
+        deleteFolder("target/test/output/aliceWalletTest");
+        File workingDir = new File("target/test/output/aliceWalletTest");
 
         //  - test bip 39
         MnemonicCode mc = new MnemonicCode();
@@ -117,8 +119,6 @@ public class BIP47AppKitTest extends TestWithBIP47AppKit {
         assertEquals(ALICE_BIP39_RAW_ENTROPY, HEX.encode(entropy));
         assertEquals(ALICE_BIP39_MNEMONIC, join(code, " "));
         assertEquals(ALICE_BIP32_SEED, HEX.encode(seed));
-
-        File workingDir = new File("alice");
 
         //  - test bip 47
         BIP47AppKit w = createWallet("BTC", MainNetParams.get(),workingDir,ALICE_BIP39_MNEMONIC);
@@ -150,10 +150,13 @@ public class BIP47AppKitTest extends TestWithBIP47AppKit {
         assertEquals(ALICE_PAYMENT_CODE_V1, w.getPaymentCode());
         //assertEquals(ALICE_NOTIFICATION_ADDRESS, w.getAccount(0).getNotificationAddress().toString());
 
+        deleteFolder("target/test/output/aliceWalletTest");
     }
 
     @Test
     public void bobWalletTest() throws Exception {
+        deleteFolder("target/test/output/bobWalletTest");
+
         //  - test bip 39
         MnemonicCode mc = new MnemonicCode();
         List<String> code = mc.toMnemonic(HEX.decode(BOB_BIP39_RAW_ENTROPY));
@@ -163,7 +166,7 @@ public class BIP47AppKitTest extends TestWithBIP47AppKit {
         assertEquals(BOB_BIP39_MNEMONIC, join(code, " "));
         assertEquals(BOB_BIP32_SEED, HEX.encode(seed));
 
-        File workingDir = new File("bob");
+        File workingDir = new File("target/test/output/bobWalletTest");
 
         BIP47AppKit w = createWallet("BTC", MainNetParams.get(), workingDir, BOB_BIP39_MNEMONIC);
         assertEquals(w.getMnemonicCode(), BOB_BIP39_MNEMONIC);
@@ -185,19 +188,20 @@ public class BIP47AppKitTest extends TestWithBIP47AppKit {
         //assertEquals(BOB_BIP44_PUBKEY, w.getAccount(0).getXPub());
         assertEquals(BOB_PAYMENT_CODE_V1, w.getPaymentCode());
         //assertEquals(BOB_NOTIFICATION_ADDRESS, w.getAccount(0).getNotificationAddress().toString());
+        deleteFolder("target/test/output/bobWalletTest");
     }
 
     @Test
     public void notificationTransactionTest() throws Exception {
         super.setUp();
         // folders for alice and bob wallets
+        String aliceDir = "target/test/output/notificationTransactionTest/alice";
+        String bobDir = "target/test/output/notificationTransactionTest/bob";
 
-        deleteFolder("alice2");deleteFolder("bob2");
-        File aliceDir = new File("alice2");
-        File bobDir = new File("bob2");
+        deleteFolder(aliceDir);deleteFolder(bobDir);
 
-        BIP47AppKit Alice = createWallet("BTC", MainNetParams.get(), aliceDir, ALICE_BIP39_MNEMONIC);
-        BIP47AppKit Bob = createWallet("BTC", MainNetParams.get(), bobDir, BOB_BIP39_MNEMONIC);
+        BIP47AppKit Alice = createWallet("BTC", MainNetParams.get(), new File(aliceDir), ALICE_BIP39_MNEMONIC);
+        BIP47AppKit Bob = createWallet("BTC", MainNetParams.get(), new File(bobDir), BOB_BIP39_MNEMONIC);
 
         // Alice sends a payment to Bob, she saves Bob's payment code.
 
@@ -249,24 +253,14 @@ public class BIP47AppKitTest extends TestWithBIP47AppKit {
 
         //assertEquals("736a25d9250238ad64ed5da03450c6a3f4f8f4dcdf0b58d1ed69029d76ead48d", HEX.encode(firstAddress.getSharedSecret().getPrivKey().getEncoded()));
         //assertEquals("tpubDCyvczNnKRM37QUHTCG1d6dFbXXkPUNfoay6XjVRhBKaGy47i1nFJQEmusyybMjaHBgpBbPFJRvwsWjtqQ8GTNiDw62ngm18w3QqyV6eHrY", w.getAccount(0).getXPub());
-
-    }
-
-    @Test
-    public void carlosWalletTest() throws Exception {
-        File workingDir = new File("carlos");
-
-        BIP47AppKit w = createWallet("tBTC", TestNet3Params.get(), workingDir,CARLOS_BIP39_MNEMONIC);
-        assertEquals("tpubDCfC54qrR5PkDXCL2TkCJ46pYbFt7CX3UDF9e7qxsQw8Nm9HQy7eZ7tL3FrHhJhxAZU8dwmqpzhntLxax93914cq8vQUTsAxcKPBBoZDm28", w.getAccount(0).getXPub());
-        assertEquals(CARLOS_PAYMENT_CODE, w.getPaymentCode());
-
-        w = createWallet("BTC", MainNetParams.get(), workingDir,CARLOS_BIP39_MNEMONIC);
-        //assertEquals("tpubDDX2RK6EL7nuqjxFuZZTKsyMDx7PvPnbXmAtwuZaL9QorhjtussQTW5ReBF3G8G3wAY3RyusFkW2AuWz8YsiNXtkHZn2DmJRXA6m3rRwH8A", w.getAccount(0).getXPub());
+        deleteFolder(aliceDir);deleteFolder(bobDir);
     }
 
     @Test
     public void testPeerGroupStart() throws Exception{
-        BIP47AppKit w = new BIP47AppKit("tBTC", TestNet3Params.get(), new File("peerGroup"), null);
+        deleteFolder("target/test/output/testPeerGroupStart");
+        File workingDir = new File("target/test/output/testPeerGroupStart");
+        BIP47AppKit w = new BIP47AppKit("tBTC", TestNet3Params.get(), workingDir, null);
         assertFalse(w.isStarted());
         assertFalse(w.isStarted());
         w.startBlockchainDownload();
@@ -277,14 +271,18 @@ public class BIP47AppKitTest extends TestWithBIP47AppKit {
         assertFalse(w.isStarted());
         w.startBlockchainDownload();
         assertTrue(w.isStarted());
+        deleteFolder("target/test/output/testPeerGroupStart");
     }
 
     @Test
     public void testIsValidAddress() throws Exception {
-        BIP47AppKit tbtc = new BIP47AppKit("tBTC", TestNet3Params.get(), new File("validAdress"), null);
-        BIP47AppKit bch = new BIP47AppKit("BCH", BCCMainNetParams.get(), new File("validAdress2"), null);
-        BIP47AppKit btc = new BIP47AppKit("BTC", MainNetParams.get(), new File("validAdress3"), null);
-        BIP47AppKit tbch = new BIP47AppKit("tBCH", BCCTestNet3Params.get(), new File("validAdress4"), null);
+        deleteFolder("target/test/output/testIsValidAddress");
+        File workingDir = new File("target/test/output/testIsValidAddress");
+
+        BIP47AppKit tbtc = new BIP47AppKit("tBTC", TestNet3Params.get(), workingDir, null);
+        BIP47AppKit bch = new BIP47AppKit("BCH", BCCMainNetParams.get(), workingDir, null);
+        BIP47AppKit btc = new BIP47AppKit("BTC", MainNetParams.get(), workingDir, null);
+        BIP47AppKit tbch = new BIP47AppKit("tBCH", BCCTestNet3Params.get(), workingDir, null);
 
         assertFalse(tbtc.isValidAddress(null));
         assertFalse(tbtc.isValidAddress(""));
@@ -304,14 +302,16 @@ public class BIP47AppKitTest extends TestWithBIP47AppKit {
 
         // BTC should work
         assertTrue(btc.isValidAddress("3CMXDwnQfyGmTkw5U58f2ffoVYroMBWrJe"));
+        deleteFolder("target/test/output/testIsValidAddress");
     }
 
     @Test
     public void testUnsafeRemoveTx() throws Exception {
         super.setUp();
-        deleteFolder("charly");
-        File charlyDir = new File("charly");
-        BIP47AppKit Charly = createWallet("BTC", MainNetParams.get(), charlyDir, ALICE_BIP39_MNEMONIC);
+        deleteFolder("target/test/output/testUnsafeRemoveTx");
+        File workingDir = new File("target/test/output/testUnsafeRemoveTx");
+        ;
+        BIP47AppKit Charly = createWallet("BTC", MainNetParams.get(), workingDir, ALICE_BIP39_MNEMONIC);
 
         setWallet(Charly);
         sendMoneyToWallet(Charly.getvWallet(), AbstractBlockChain.NewBlockType.BEST_CHAIN, Coin.FIFTY_COINS, Charly.getCurrentAddress());
@@ -361,31 +361,32 @@ public class BIP47AppKitTest extends TestWithBIP47AppKit {
         Charly.getvWallet().saveToFile(Charly.getvWalletFile());
         Charly.stop();
         Charly.closeBlockStore();
-        BIP47AppKit CharlyReload = createWallet(Charly.getCoinName(), Charly.getParams(), charlyDir, null); //should not fail
+        BIP47AppKit CharlyReload = createWallet(Charly.getCoinName(), Charly.getParams(), workingDir, null); //should not fail
         assertEquals(Coin.MILLICOIN, Charly.getBalance());
         assertEquals(1, CharlyReload.getTransactions().size());
+        deleteFolder("target/test/output/testUnsafeRemoveTx");
     }
 
     /* Test that a wallet restored from seed is persistent */
     @Test
     public void testMnemonicWordsPersistence() throws Exception{
         // create a fresh new wallet
-        String davesPath = "src/test/resources/org/bitcoinj/wallet/dave-bip47";
-        File davesDir = new File(davesPath);
-        deleteFolder(davesPath);
+        deleteFolder("target/test/output/testMnemonicWordsPersistence");
+        File workingDir = new File("target/test/output/testMnemonicWordsPersistence");
+
         DeterministicSeed davesSeed = new DeterministicSeed(new SecureRandom(), 256, "", System.currentTimeMillis() / 1000);
-        assertFalse(davesDir.exists()); //delete previous wallets created by this test
+        assertFalse(workingDir.exists()); //delete previous wallets created by this test
         //create Dave's wallet and save it
-        BIP47AppKit Dave = new BIP47AppKit("BTC", MainNetParams.get(), davesDir, davesSeed);
+        BIP47AppKit Dave = new BIP47AppKit("BTC", MainNetParams.get(), workingDir, davesSeed);
         String davesMnemonic = Dave.getMnemonicCode();
         String davesPaymentCode = Dave.getPaymentCode();
-        assertTrue(davesDir.exists());
+        assertTrue(workingDir.exists());
         Dave.stop();
         Dave.closeBlockStore();
         // the same directory/coin will have the same seed as saved before.
-        BIP47AppKit DaveReload = new BIP47AppKit("BTC", MainNetParams.get(), davesDir, null);
+        BIP47AppKit DaveReload = new BIP47AppKit("BTC", MainNetParams.get(), workingDir, null);
         assertEquals(DaveReload.getMnemonicCode(), davesMnemonic);
         assertEquals(DaveReload.getPaymentCode(), davesPaymentCode);
-        deleteFolder(davesPath);
+        deleteFolder("target/test/output/testMnemonicWordsPersistence");
     }
 }
