@@ -66,9 +66,9 @@ public class BCCTestNet3Params extends AbstractBitcoinCashParams {
 
         dnsSeeds = new String[] {
                 "testnet-seed.bitcoinabc.org",
-                "testnet-seed-abc.bitcoinforks.org",
-                "testnet-seed.bitprim.org",
+                "testnet-seeder.criptolayer.net",
                 "testnet-seed.deadalnix.me",
+                "testnet-seed.bitprim.org"
         };
         addrSeeds = null;
         bip32HeaderPub = 0x043587CF;
