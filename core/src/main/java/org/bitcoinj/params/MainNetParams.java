@@ -73,14 +73,13 @@ public class MainNetParams extends AbstractBitcoinCoreParams {
         dnsSeeds = new String[] {
                 "seed.bitcoin.sipa.be",         // Pieter Wuille
                 "dnsseed.bluematt.me",          // Matt Corallo
+                "seed.bitcoin.jonasschnelli.ch",// Jonas Schnelli
                 "dnsseed.bitcoin.dashjr.org",   // Luke Dashjr
                 "seed.bitcoinstats.com",        // Chris Decker
+                "seed.btc.petertodd.org",       // Peter Todd
+                "seed.bitcoin.sprovoost.nl",    // Bloq
                 "seed.bitnodes.io",             // Addy Yeow
                 "bitseed.xf2.org",              // Jeff Garzik
-                "bitcoin.bloqseeds.net",        // Bloq		
-	        "seed.bitcoin.jonasschnelli.ch",// Jonas Schnelli
-                "bitcoin.bloqseeds.net",        // Bloq
-                "seed.ob1.io",                  // OpenBazaar
         };
         httpSeeds = new HttpDiscovery.Details[] {
                 // Andreas Schildbach

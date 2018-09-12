@@ -94,7 +94,6 @@ public class BCCMainNetParams extends AbstractBitcoinCashParams {
 
         dnsSeeds = new String[] {
                 "seed.bitcoinabc.org",
-                "seed-abc.bitcoinforks.org",
                 "btccash-seeder.bitcoinunlimited.info",
                 "seed.bitprim.org",
                 "seed.deadalnix.me",
