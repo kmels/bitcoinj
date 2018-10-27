@@ -52,7 +52,7 @@ public class BIP47Account {
 
     /**
      * Constructor expecting a Base58Check encoded payment code.
-     * @throws AddressFormatException if the payment code is invalid
+     * throws AddressFormatException if the payment code is invalid
      */
     public BIP47Account(NetworkParameters parameters, String strPaymentCode) {
         mNetworkParameters = parameters;
